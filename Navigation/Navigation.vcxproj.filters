@@ -1,0 +1,219 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Detour">
+      <UniqueIdentifier>{9f575569-2cd2-4bf2-899b-d769da478d2a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Navigation">
+      <UniqueIdentifier>{f9577de1-a378-4c5e-9154-1bc3cf599dd7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Navigation\Headers">
+      <UniqueIdentifier>{b6aedaa1-91a1-458f-a83a-71ce867fe2fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{5d337deb-f2b6-4ed3-9f3d-5a25762576ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Header">
+      <UniqueIdentifier>{91d515cc-9f36-4091-bc68-714a64d0fe67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Navigation\Enums">
+      <UniqueIdentifier>{2a6ca1b3-36bd-42a0-8b5d-56f56306e08d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Navigation\Filter">
+      <UniqueIdentifier>{dda971b5-f3f9-4a6d-a1c0-7079176f20a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Navigation\Filter\Header">
+      <UniqueIdentifier>{0aaf79dd-c061-45ed-9819-e853c4d1cf33}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="framework.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourAlloc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourAssert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourMath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourNavMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourNavMeshBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourNavMeshQuery.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Detour\Include\DetourStatus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DetourCrowd\Include\DetourCrowd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DetourCrowd\Include\DetourLocalBoundary.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DetourCrowd\Include\DetourObstacleAvoidance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DetourCrowd\Include\DetourPathCorridor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DetourCrowd\Include\DetourPathQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DetourCrowd\Include\DetourProximityGrid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DetourTileCache\Include\DetourTileCache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DetourTileCache\Include\DetourTileCacheBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="File.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Mapper.h">
+      <Filter>Navigation\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Pathfinder.h">
+      <Filter>Navigation\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MapSharedData.h">
+      <Filter>Navigation\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="NavigationManager.h">
+      <Filter>Navigation\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Utilities\Platform\CompilerDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utilities\UnorderedMapSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AreaEnums.h">
+      <Filter>Navigation\Enums</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector3.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Defines.h">
+      <Filter>Common\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="NavigationFilter.h">
+      <Filter>Navigation\Filter\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Marker.h">
+      <Filter>Navigation\Filter\Header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Detour\Source\DetourAlloc.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="Detour\Source\DetourAssert.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="Detour\Source\DetourCommon.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="DetourCrowd\Source\DetourCrowd.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="DetourCrowd\Source\DetourLocalBoundary.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="Detour\Source\DetourNavMesh.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="Detour\Source\DetourNavMeshBuilder.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="Detour\Source\DetourNavMeshQuery.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="Detour\Source\DetourNode.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="DetourCrowd\Source\DetourObstacleAvoidance.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="DetourCrowd\Source\DetourPathCorridor.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="DetourCrowd\Source\DetourPathQueue.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="DetourCrowd\Source\DetourProximityGrid.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="DetourTileCache\Source\DetourTileCache.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="DetourTileCache\Source\DetourTileCacheBuilder.cpp">
+      <Filter>Detour</Filter>
+    </ClCompile>
+    <ClCompile Include="File.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Common.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Mapper.cpp">
+      <Filter>Navigation</Filter>
+    </ClCompile>
+    <ClCompile Include="Pathfinder.cpp">
+      <Filter>Navigation</Filter>
+    </ClCompile>
+    <ClCompile Include="NavigationManager.cpp">
+      <Filter>Navigation</Filter>
+    </ClCompile>
+    <ClCompile Include="Vector3.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="PathHelpers.cpp">
+      <Filter>Navigation</Filter>
+    </ClCompile>
+    <ClCompile Include="NavigationFilter.cpp">
+      <Filter>Navigation\Filter</Filter>
+    </ClCompile>
+    <ClCompile Include="Marker.cpp">
+      <Filter>Navigation\Filter</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
