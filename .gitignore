@@ -1,0 +1,9 @@
+**/__pycache__/
+**/Debug/
+**/Release/
+**/PNG/
+**/dbc/
+**/mmaps/
+**/.vs/
+*.conf
+*.pdb
