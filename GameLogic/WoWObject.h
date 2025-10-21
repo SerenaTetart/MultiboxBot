@@ -165,7 +165,7 @@ class WoWUnit : public WoWObject {
         bool hasDebuff(int* IDs, int size);
         int getNbrDebuff();
         bool isFacing(Position, float);
-        bool isBehind(WoWUnit target);
+        bool isBehind(WoWUnit* target);
         bool isChanneling(int* IDs, int size);
         UnitReaction getUnitReaction(uintptr_t);
         bool canAttack(uintptr_t);

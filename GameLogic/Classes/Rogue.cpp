@@ -43,7 +43,7 @@ void ListAI::RogueDps() {
 					//Stealth
 					FunctionsLua::CastSpellByName("Stealth");
 				}
-				else if (StealthBuff && !targetStunned && FunctionsLua::IsSpellReady("Cheap Shot")) {
+				else if (StealthBuff && FunctionsLua::IsSpellReady("Cheap Shot")) {
 					//Cheap Shot
 					FunctionsLua::CastSpellByName("Cheap Shot");
 				}

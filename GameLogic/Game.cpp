@@ -454,14 +454,18 @@ void Game::MainLoop() {
 			//start = std::chrono::high_resolution_clock::now();
 
 			if (localPlayer != NULL && !IsSitting) {
-				localPlayer->isMoving = ((localPlayer->speed > 0) || (localPlayer->movement_flags & MOVEFLAG_FORWARD) || (localPlayer->movement_flags & MOVEFLAG_BACKWARD));
-				if (playerClass == "Druid" && playerSpec == 0) ListAI::DruidBalance();
-				else if (playerClass == "Druid" && playerSpec == 3) ListAI::DruidHeal();
+				if (playerClass == "Druid") {
+					if (playerSpec == 0) ListAI::DruidBalance();
+					else if (playerSpec == 2) ListAI::DruidFeralCat();
+					else if (playerSpec == 3) ListAI::DruidHeal();
+				}
 				else if (playerClass == "Hunter") ListAI::HunterDps();
 				else if (playerClass == "Mage") ListAI::MageDps();
-				else if (playerClass == "Paladin" && playerSpec == 0) ListAI::PaladinHeal();
-				else if (playerClass == "Paladin" && playerSpec == 1) ListAI::PaladinTank();
-				else if (playerClass == "Paladin") ListAI::PaladinDps();
+				else if (playerClass == "Paladin") {
+					if (playerSpec == 0) ListAI::PaladinHeal();
+					else if (playerSpec == 1) ListAI::PaladinTank();
+					else if (playerSpec == 2) ListAI::PaladinDps();
+				}
 				else if (playerClass == "Priest") ListAI::PriestHeal();
 				else if (playerClass == "Rogue") ListAI::RogueDps();
 				else if (playerClass == "Warlock") ListAI::WarlockDps();

@@ -73,14 +73,14 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::UseHPotion();
 		return 0;
 	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 40) && FunctionsLua::IsSpellReady("Barkskin")) {
-		//Barkskin
-		FunctionsLua::CastSpellByName("Barkskin");
-		return 0;
-	}
 	else if (MoonkinFormBuff && (HpRatio < 40.0f) && (localPlayer->prctMana > 33.0f)) {
 		//Disable Moonkin Form
 		FunctionsLua::CastSpellByName("Moonkin Form");
+	}
+	else if (isPlayer && Combat && (HasAggro[0].size() > 0) && (localPlayer->prctHP < 70) && FunctionsLua::IsSpellReady("Barkskin")) {
+		//Barkskin
+		FunctionsLua::CastSpellByName("Barkskin");
+		return 0;
 	}
 	else if (Combat && (AoEHeal >= 4) && (distAlly < 40.0f) && FunctionsLua::IsSpellReady("Tranquility")) {
 		//Tranquility

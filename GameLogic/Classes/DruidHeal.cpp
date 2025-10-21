@@ -62,7 +62,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::UseHPotion();
 		return 0;
 	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 40) && FunctionsLua::IsSpellReady("Barkskin")) {
+	else if (isPlayer && Combat && (localPlayer->prctHP < 70) && FunctionsLua::IsSpellReady("Barkskin")) {
 		//Barkskin
 		FunctionsLua::CastSpellByName("Barkskin");
 		return 0;

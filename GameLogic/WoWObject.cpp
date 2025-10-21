@@ -168,21 +168,35 @@ bool WoWUnit::isFacing(Position pos, float angle) {
     else return false;
 }
 
-bool WoWUnit::isBehind(WoWUnit target) {
-    float halfPI = acosf(0.0);
-    float twoPi = halfPI * 4;
-    float leftThreshold = target.facing - halfPI;
-    float rightThreshold = target.facing + halfPI;
+static inline float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-    bool condition;
-    if (leftThreshold < 0)
-        condition = facing < rightThreshold || facing > twoPi + leftThreshold;
-    else if (rightThreshold > twoPi)
-        condition = facing > leftThreshold || facing < rightThreshold - twoPi;
-    else
-        condition = facing > leftThreshold && facing < rightThreshold;
+bool WoWUnit::isBehind(WoWUnit* target)
+{
+    // --- choose your ground plane here ---
 
-    return condition && isFacing(target.position, 0.4f);
+    float dx = this->position.X - target->position.X;
+    float dy = (this->position.Y - target->position.Y);
+
+    float len2 = dx * dx + dy * dy;
+
+    float invLen = 1.0f / std::sqrt(len2);
+    float rx = dx * invLen;
+    float ry = dy * invLen;
+
+    float facing = target->facing;
+
+    float fx = std::cos(facing);
+    float fy = std::sin(facing);
+
+    float dot = fx * rx + fy * ry;
+    dot = clampf(dot, -1.0f, 1.0f); // numeric safety
+
+    const float coneHalfAngle = 0.4f; // ≈ 23°
+    float threshold = -std::cos(coneHalfAngle);
+
+    bool behind = (dot <= threshold);
+
+    return behind;
 }
 
 bool WoWUnit::isChanneling(int* IDs, int size) {
