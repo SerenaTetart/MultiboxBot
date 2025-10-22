@@ -139,9 +139,6 @@ void ListAI::PaladinHeal() {
 	}
 	else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 		ThreadSynchronizer::RunOnMainThread([=]() {
-			int DevotionAuraIDs[7] = { 465, 10290, 643, 10291, 1032, 10292, 10293 };
-			bool DevotionAuraBuff = localPlayer->hasBuff(DevotionAuraIDs, 7);
-
 			bool BoSanctuaryExist = FunctionsLua::IsPlayerSpell("Blessing of Sanctuary");
 			WoWUnit* BoSalvationTarget = NULL; WoWUnit* BoSanctuaryTarget = NULL;
 			if (BoSanctuaryExist) {
@@ -167,13 +164,30 @@ void ListAI::PaladinHeal() {
 				int BoMightIDs[7] = { 19740, 19834, 19835, 19836, 19837, 19838, 25291 };
 				BoMightTarget = Functions::GetMissingBuff(BoMightIDs, 7, 2);
 			}
+			
+			unsigned int index_paladin = 0;
+			for (int i = 1; i <= NumGroupMembers; i++) {
+				if (GroupMember[i] != NULL && localPlayer->indexGroup > GroupMember[i]->indexGroup && FunctionsLua::UnitClass(tarType+std::string(i)) == "Paladin") {
+					index_paladin = index_paladin + 1;
+					break;
+				}
+			}
+			
+			int DevotionAuraIDs[7] = { 465, 10290, 643, 10291, 1032, 10292, 10293 };
+			bool DevotionAuraBuff = localPlayer->hasBuff(DevotionAuraIDs, 7);
+			int RetributionAuraIDs[5] = { 7294, 10298, 10299, 10300, 10301 };
+			bool RetributionAuraBuff = localPlayer->hasBuff(RetributionAuraIDs, 5);
 
 			WoWUnit* PurifyTarget = FunctionsLua::GetGroupDispel("Disease", "Poison");
 			WoWUnit* CleanseTarget = FunctionsLua::GetGroupDispel("Disease", "Poison", "Magic");
 			WoWUnit* deadPlayer = Functions::GetGroupDead();
-			if (!DevotionAuraBuff && FunctionsLua::IsPlayerSpell("Devotion Aura")) {
+			if (!DevotionAuraBuff && index_paladin == 0 && FunctionsLua::IsPlayerSpell("Devotion Aura")) {
 				//Devotion Aura
 				FunctionsLua::CastSpellByName("Devotion Aura");
+			}
+			else if (!RetributionAuraBuff && index_paladin == 1 && FunctionsLua::IsPlayerSpell("Retribution Aura")) {
+			        //Retribution Aura
+			        FunctionsLua::CastSpellByName("Retribution Aura");
 			}
 			else if (!Combat && !localPlayer->isMoving && (deadPlayer != NULL) && FunctionsLua::IsSpellReady("Redemption")) {
 				//Redemption

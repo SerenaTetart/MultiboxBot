@@ -121,8 +121,10 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
 
     unitReaction = Neutral;
     attackable = false;
-    role = -1;
+    
+    className = "";
     indexGroup = -1;
+    role = -1;
 }
 
 int WoWUnit::getHealth() {
@@ -216,13 +218,6 @@ bool WoWUnit::canAttack(uintptr_t unitPtr2) {
     typedef bool(__thiscall* func)(uintptr_t unitPtr1, uintptr_t unitPtr2);
     func function = (func)CAN_ATTACK_UNIT_FUN_PTR;
     return function(Pointer, unitPtr2);
-}
-
-/* === Player === */
-
-WoWPlayer::WoWPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objType)
-    : WoWUnit(pointer, guid, objType) {
-    //
 }
 
 /* === Local Player === */

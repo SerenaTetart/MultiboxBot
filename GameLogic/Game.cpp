@@ -27,16 +27,19 @@ void Game::MainLoop() {
 
 					if (playerGuid != pastPlayerGuid) {
 						pastPlayerGuid = playerGuid;
-						playerClass = FunctionsLua::UnitClass("player");
-						std::string playerName = FunctionsLua::UnitName("player");
-						std::string msg = ("Name " + playerName + " Class " + playerClass);
-						Client::sendMessage(msg);
+						
+						Functions::EnumerateVisibleObjects(0);
+						
+						if (localPlayer != NULL) {
+							std::string msg = ("Name " + localPlayer->name + " Class " + localPlayer->className);
+							Client::sendMessage(msg);
 
-						std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering"};
-						int skills[] = { 0, 0 };
-						std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
-						msg = ("Craft"+std::to_string(skills[0])+std::to_string(skills[1]));
-						Client::sendMessage(msg);
+							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering"};
+							int skills[] = { 0, 0 };
+							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
+							msg = ("Craft"+std::to_string(skills[0])+std::to_string(skills[1]));
+							Client::sendMessage(msg);
+						}
 					}
 				}
 			}
@@ -54,8 +57,9 @@ void Game::MainLoop() {
 						mapID = Functions::GetMapID();
 
 						Functions::EnumerateVisibleObjects(0);
-
-						if (localPlayer != NULL) targetUnit = localPlayer->getTarget();
+						
+						if (localPlayer == NULL) return;
+						targetUnit = localPlayer->getTarget();
 
 						FunctionsLua::MakeVirtualInventory(&virtualInventory);
 
@@ -72,12 +76,11 @@ void Game::MainLoop() {
 						}
 
 						if (playerGuid != pastPlayerGuid) {
-							pastPlayerGuid = playerGuid;
-							playerClass = FunctionsLua::UnitClass("player");
-							std::string playerName = FunctionsLua::UnitName("player");
-							std::string msg = ("Name " + playerName + " Class " + playerClass);
-							Client::sendMessage(msg);
-						}
+						        pastPlayerGuid = playerGuid;
+						        
+						        std::string msg = ("Name " + localPlayer->name + " Class " + localPlayer->className);
+						        Client::sendMessage(msg);
+					        }
 						skinningLevel = FunctionsLua::GetTradingSkill("Skinning");
 						miningLevel = FunctionsLua::GetTradingSkill("Mining");
 						herbalismLevel = FunctionsLua::GetTradingSkill("Herbalism");
@@ -454,22 +457,22 @@ void Game::MainLoop() {
 			//start = std::chrono::high_resolution_clock::now();
 
 			if (localPlayer != NULL && !IsSitting) {
-				if (playerClass == "Druid") {
+				if (localPlayer->className == "Druid") {
 					if (playerSpec == 0) ListAI::DruidBalance();
 					else if (playerSpec == 2) ListAI::DruidFeralCat();
 					else if (playerSpec == 3) ListAI::DruidHeal();
 				}
-				else if (playerClass == "Hunter") ListAI::HunterDps();
-				else if (playerClass == "Mage") ListAI::MageDps();
-				else if (playerClass == "Paladin") {
+				else if (localPlayer->className == "Hunter") ListAI::HunterDps();
+				else if (localPlayer->className == "Mage") ListAI::MageDps();
+				else if (localPlayer->className == "Paladin") {
 					if (playerSpec == 0) ListAI::PaladinHeal();
 					else if (playerSpec == 1) ListAI::PaladinTank();
 					else if (playerSpec == 2) ListAI::PaladinDps();
 				}
-				else if (playerClass == "Priest") ListAI::PriestHeal();
-				else if (playerClass == "Rogue") ListAI::RogueDps();
-				else if (playerClass == "Warlock") ListAI::WarlockDps();
-				else if (playerClass == "Warrior" && playerSpec == 2) ListAI::WarriorTank();
+				else if (localPlayer->className == "Priest") ListAI::PriestHeal();
+				else if (localPlayer->className == "Rogue") ListAI::RogueDps();
+				else if (localPlayer->className == "Warlock") ListAI::WarlockDps();
+				else if (localPlayer->className == "Warrior" && playerSpec == 2) ListAI::WarriorTank();
 			}
 
 			if (localPlayer != NULL) playerLastPos = localPlayer->position;
@@ -496,7 +499,7 @@ int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEn
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0;
-std::string tarType = "party", playerClass = "null", srcPath="";
+std::string tarType = "party", srcPath="";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 std::vector<int> HealTargetArray;

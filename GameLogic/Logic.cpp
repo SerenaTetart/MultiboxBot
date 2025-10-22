@@ -64,70 +64,70 @@ void Game::CorpseRun() {
 void Game::TrainSpellRun() {
 	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
 		//Stormwind
-		if (playerClass == "Druid") {
+		if (localPlayer->className == "Druid") {
 			MoveToMap(Position(-8774.315430f, 1096.036255f, 92.540367f));
 		}
-		else if (playerClass == "Hunter") {
+		else if (localPlayer->className == "Hunter") {
 			MoveToMap(Position(-8417.456055f, 550.952087f, 95.449081f));
 		}
-		else if (playerClass == "Mage") {
+		else if (localPlayer->className == "Mage") {
 			MoveToMap(Position(-9014.357422f, 873.637695f, 148.616272f));
 		}
-		else if (playerClass == "Paladin") {
+		else if (localPlayer->className == "Paladin") {
 			MoveToMap(Position(-8571.522461f, 863.083008f, 106.518623f));
 		}
-		else if (playerClass == "Priest") {
+		else if (localPlayer->className == "Priest") {
 			MoveToMap(Position(-8516.106445f, 859.622742f, 109.844681f));
 		}
-		else if (playerClass == "Rogue") {
+		else if (localPlayer->className == "Rogue") {
 			MoveToMap(Position(-8751.646484f, 380.214447f, 101.067060f));
 		}
-		else if (playerClass == "Warlock") {
+		else if (localPlayer->className == "Warlock") {
 			MoveToMap(Position(-8973.632813f, 1033.069702f, 101.404121f));
 		}
-		else if (playerClass == "Warrior") {
+		else if (localPlayer->className == "Warrior") {
 			MoveToMap(Position(-8686.984375f, 323.889099f, 109.437485f));
 		}
 	}
 	else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
 		//Ironforge
-		if (playerClass == "Hunter") {
+		if (localPlayer->className == "Hunter") {
 			MoveToMap(Position(-5012.019043f, -1273.012085f, 507.753845f));
 		}
-		else if (playerClass == "Mage") {
+		else if (localPlayer->className == "Mage") {
 			MoveToMap(Position(-4613.083008f, -927.388550f, 501.068207f));
 		}
-		else if (playerClass == "Paladin") {
+		else if (localPlayer->className == "Paladin") {
 			MoveToMap(Position(-4601.828613f, -897.461487f, 502.766815f));
 		}
-		else if (playerClass == "Priest") {
+		else if (localPlayer->className == "Priest") {
 			MoveToMap(Position(-4617.910645f, -907.910706f, 501.070557f));
 		}
-		else if (playerClass == "Rogue") {
+		else if (localPlayer->className == "Rogue") {
 			MoveToMap(Position(-4641.600098f, -1132.239990f, 507.243988f));
 		}
-		else if (playerClass == "Warlock") {
+		else if (localPlayer->className == "Warlock") {
 			MoveToMap(Position(-4602.515137f, -1111.653076f, 504.939484f));
 		}
-		else if (playerClass == "Warrior") {
+		else if (localPlayer->className == "Warrior") {
 			MoveToMap(Position(-5042.364258f, -1243.405273f, 507.754944f));
 		}
 	}
 	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
 		//Darnassus
-		if (playerClass == "Druid") {
+		if (localPlayer->className == "Druid") {
 			MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f));
 		}
-		else if (playerClass == "Hunter") {
+		else if (localPlayer->className == "Hunter") {
 			MoveToMap(Position(10176.217773f, 2511.905518f, 1342.807129f));
 		}
-		else if (playerClass == "Priest") {
+		else if (localPlayer->className == "Priest") {
 			MoveToMap(Position(9655.435547f, 2535.975586f, 1331.519043f));
 		}
-		else if (playerClass == "Rogue") {
+		else if (localPlayer->className == "Rogue") {
 			MoveToMap(Position(10084.106445f, 2548.979492f, 1294.893555f));
 		}
-		else if (playerClass == "Warrior") {
+		else if (localPlayer->className == "Warrior") {
 			MoveToMap(Position(9940.208008f, 2282.287842f, 1341.394409f));
 		}
 	}

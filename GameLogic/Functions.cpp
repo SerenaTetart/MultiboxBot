@@ -137,6 +137,7 @@ int Functions::Callback(unsigned long long guid, int filter) {
 				}
 				if (guid == GetPlayerGuid()) {
 					localPlayer = new LocalPlayer(pointer, guid, objectType);
+					localPlayer->className = FunctionsLua::UnitClass("player");
 					GroupMember[0] = &ListUnits.back();
 					PartyMember[0] = &ListUnits.back();
 				}

@@ -158,7 +158,9 @@ class WoWUnit : public WoWObject {
         int buff[30]; int debuff[16]; bool isdead, isMoving;
         CreatureType creatureType; float speed; unsigned long long targetGuid;
         float facing; int level; char* name; int channelInfo; UnitReaction unitReaction;
-        bool attackable; int hpLost; int role; int indexGroup, factionTemplateID;
+        bool attackable; int hpLost; int factionTemplateID;
+        
+        int indexGroup, role;
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);
         bool hasBuff(int* IDs, int size);
@@ -172,15 +174,9 @@ class WoWUnit : public WoWObject {
         int getHealth(); int getMaxHealth();
 };
 
-class WoWPlayer : public WoWUnit {
+class LocalPlayer : public WoWUnit {
     public:
         char* className;
-
-        WoWPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
-};
-
-class LocalPlayer : public WoWPlayer {
-    public:
         int castInfo, zoneID;
         Position corpse_position;
 

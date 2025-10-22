@@ -22,7 +22,7 @@ extern std::vector<int> HealTargetArray;
 extern int AoEHeal, nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, Moving, NumGroupMembers, playerSpec, positionCircle,
 			skinningLevel, miningLevel, herbalismLevel, mapID, keybindTrigger;
 extern unsigned int LastTarget;
-extern std::string tarType, playerClass, srcPath;
+extern std::string tarType, srcPath;
 extern std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 extern std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 extern WoWUnit* ccTarget; extern WoWUnit* targetUnit; extern WoWUnit* TankTarget; extern WoWUnit* GroupMember[40]; extern WoWUnit* PartyMember[5]; extern WoWUnit* Leader; extern WoWUnit* PvPTarget;

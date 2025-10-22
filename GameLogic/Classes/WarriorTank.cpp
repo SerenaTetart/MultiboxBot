@@ -84,7 +84,7 @@ void ListAI::WarriorTank() {
 						//Overpower
 						FunctionsLua::CastSpellByName("Overpower");
 					}
-					else if (targetPlayer && !RendDebuff && (FunctionsLua::UnitClass("target") == "Rogue") && FunctionsLua::IsSpellReady("Rend")) {
+					else if (targetPlayer && !RendDebuff && (FunctionsLua::UnitClass("target") == "Rogue" || FunctionsLua::UnitClass("target") == "Druid") && FunctionsLua::IsSpellReady("Rend")) {
 						//Rend
 						FunctionsLua::CastSpellByName("Rend");
 					}
@@ -146,7 +146,7 @@ void ListAI::WarriorTank() {
 						//Cleave (dump excessive rage)
 						FunctionsLua::CastSpellByName("Cleave");
 					}
-					else if (targetPlayer && !RendDebuff && (FunctionsLua::UnitClass("target") == "Rogue") && FunctionsLua::IsSpellReady("Rend")) {
+					else if (targetPlayer && !RendDebuff && (FunctionsLua::UnitClass("target") == "Rogue" || FunctionsLua::UnitClass("target") == "Druid") && FunctionsLua::IsSpellReady("Rend")) {
 						//Rend
 						FunctionsLua::CastSpellByName("Rend");
 					}

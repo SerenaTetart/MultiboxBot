@@ -52,19 +52,19 @@ static void PriestAttack() {
 			//Holy Nova
 			FunctionsLua::CastSpellByName("Holy Nova");
 		}
-		else if (IsFacing && !ShadowWordPainDebuff && !FunctionsLua::IsInGroup() && FunctionsLua::IsSpellReady("Shadow Word: Pain")) {
+		else if (IsFacing && !ShadowWordPainDebuff && !IsInGroup && FunctionsLua::IsSpellReady("Shadow Word: Pain")) {
 			//Shadow Word: Pain
 			FunctionsLua::CastSpellByName("Shadow Word: Pain");
 		}
-		else if (!Combat && IsFacing && !localPlayer->isMoving && !HolyFireDebuff && !FunctionsLua::IsInGroup() && FunctionsLua::IsSpellReady("Holy Fire")) {
+		else if (!Combat && IsFacing && !localPlayer->isMoving && !HolyFireDebuff && !IsInGroup && FunctionsLua::IsSpellReady("Holy Fire")) {
 			//Holy Fire
 			FunctionsLua::CastSpellByName("Holy Fire");
 		}
-		else if (IsFacing && !localPlayer->isMoving && !FunctionsLua::IsInGroup() && FunctionsLua::IsSpellReady("Mind Blast")) {
+		else if (IsFacing && !localPlayer->isMoving && !IsInGroup && FunctionsLua::IsSpellReady("Mind Blast")) {
 			//Mind Blast
 			FunctionsLua::CastSpellByName("Mind Blast");
 		}
-		else if (!Combat && IsFacing && !localPlayer->isMoving && !FunctionsLua::IsInGroup() && FunctionsLua::IsSpellReady("Smite")) {
+		else if (!Combat && IsFacing && !localPlayer->isMoving && !IsInGroup && FunctionsLua::IsSpellReady("Smite")) {
 			//Smite
 			FunctionsLua::CastSpellByName("Smite");
 		}
@@ -244,7 +244,7 @@ void ListAI::PriestHeal() {
 				//Mana Potion
 				FunctionsLua::UseMPotion();
 			}
-			else if ((HasAggro[0].size() > 0) && FunctionsLua::IsSpellReady("Fade")) {
+			else if (IsInGroup && (HasAggro[0].size() > 0) && FunctionsLua::IsSpellReady("Fade")) {
 				//Fade (Aggro)
 				FunctionsLua::CastSpellByName("Fade");
 			}
