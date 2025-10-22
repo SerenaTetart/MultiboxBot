@@ -80,18 +80,3 @@ void FactionTemplateDBC::load(const std::string& path) {
 }
 
 FactionTemplateDBC FactionTemplate("dbc/FactionTemplate.dbc");
-
-//FactionTemplateDBC FactionTemplate("dbc/FactionTemplate.dbc");
-
-/*int main()
-{
-    try {
-        FactionTemplateDBC ft("dbc/FactionTemplate.dbc");
-        ft.showData(25);
-        ft.showData(350);
-    }
-    catch (const std::exception& ex) {
-        std::cerr << "Erreur: " << ex.what() << "\n";
-        return 2;
-    }
-}*/

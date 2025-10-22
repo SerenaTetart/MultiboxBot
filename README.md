@@ -1,8 +1,7 @@
-# MultiboxBot
+## Warning
 
-## Table of contents
-* [General infos](#general-infos)
-* [Requirements and compilation](#requirements-and-compilation)
+You need to extract and place the **MMAPS** inside **test/src/mmaps/**, and the **DBC** files inside **test/src/dbc/**.
+Why? Because the program now reads various kinds of data to handle pathfinding and compute specific information.
 
 ## General Infos
 

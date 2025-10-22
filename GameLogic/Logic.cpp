@@ -43,7 +43,6 @@ void Game::CorpseRun() {
 			//Gnomeregan
 			if (localPlayer->position.Z < 280.0f) MoveToMap(Position(-5162.885254f, 928.664246f, 257.180511f));
 			else if (localPlayer->position.DistanceTo(Position(-5163.476563f, 659.317871f, 348.278412f)) < 5.0f) {
-				std::cout << "called\n";
 				ThreadSynchronizer::RunOnMainThread([]() {
 					localPlayer->ClickToMove(Move, localPlayer->Guid, Position(-5164.700195f, 649.046021f, 348.270874f));
 				});

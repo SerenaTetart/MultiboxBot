@@ -467,6 +467,9 @@ bool Functions::StepBack(Position target_pos, int move_type) {
 		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f);
 		// Position aléatoire ici
 		Functions::MoveObstacle(candidate);
+		if (playerClass == "Mage" && candidate.DistanceTo(localPlayer->position) > 10.0f && FunctionsLua::IsSpellReady("Blink")) {
+			FunctionsLua::CastSpellByName("Blink");
+		}
 		Moving = move_type;
 		return true;
 	}
@@ -604,7 +607,7 @@ std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_r
 	std::vector<Position> clusters_center;
 	//1- Chaque position est un cluster
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && ListUnits[i].attackable && (ListUnits[i].unitReaction < Neutral || (ListUnits[i].unitReaction == Neutral && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))) && ListUnits[i].speed <= 4.5f) {
+		if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && ListUnits[i].attackable && (ListUnits[i].unitReaction < Neutral || (ListUnits[i].unitReaction == Neutral && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))) && ListUnits[i].speed <= 4.5f && !(ListUnits[i].flags & UNIT_FLAG_CONFUSED)) {
 			std::vector<Position> cluster;
 			cluster.push_back(ListUnits[i].position);
 			clustersArr.push_back(cluster);
