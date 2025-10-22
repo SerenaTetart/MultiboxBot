@@ -122,7 +122,6 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     unitReaction = Neutral;
     attackable = false;
     
-    className = "";
     indexGroup = -1;
     role = -1;
 }
@@ -223,7 +222,7 @@ bool WoWUnit::canAttack(uintptr_t unitPtr2) {
 /* === Local Player === */
 
 LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objType)
-    : WoWPlayer(pointer, guid, objType) {
+    : WoWUnit(pointer, guid, objType) {
     castInfo = *(int*)(CASTING_STATIC_OFFSET);
     targetGuid = *(unsigned long long*)LOCKED_TARGET_STATIC_OFFSET;
     float x = *(float*)(PLAYER_CORPSE_POSITION_X);

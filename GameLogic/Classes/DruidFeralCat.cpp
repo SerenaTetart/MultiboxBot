@@ -137,12 +137,20 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::CastSpellByName("Barkskin");
 		return 0;
 	}
-	else if (!CatFormBuff && Combat && (AoEHeal >= 4) && (distAlly < 40.0f) && FunctionsLua::IsSpellReady("Tranquility")) {
+	else if (!CatFormBuff && !localPlayer->isMoving && Combat && (AoEHeal >= 4) && (distAlly < 40.0f) && FunctionsLua::IsSpellReady("Tranquility")) {
 		//Tranquility
 		FunctionsLua::CastSpellByName("Tranquility");
 		return 0;
 	}
-	else if (!CatFormBuff && (HpRatio < 60) && (distAlly < 40.0f) && !RegrowthBuff && FunctionsLua::IsSpellReady("Regrowth")) {
+	else if ((HpRatio < 40) && (distAlly < 40.0f) && (RegrowthBuff || RejuvenationBuff) && FunctionsLua::IsSpellReady("Swiftmend")) {
+		//Swiftmend
+		localPlayer->SetTarget(healGuid);
+		FunctionsLua::CastSpellByName("Swiftmend");
+		LastTarget = indexP;
+		if (!los_heal) Moving = 5;
+		return 0;
+	}
+	else if (!CatFormBuff && !localPlayer->isMoving && (HpRatio < 60) && (distAlly < 40.0f) && !RegrowthBuff && FunctionsLua::IsSpellReady("Regrowth")) {
 		//Regrowth
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Regrowth");
@@ -150,7 +158,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if (!CatFormBuff && (HpRatio < 40) && (distAlly < 40.0f) && FunctionsLua::IsSpellReady("Healing Touch")) {
+	else if (!CatFormBuff && !localPlayer->isMoving && (HpRatio < 40) && (distAlly < 40.0f) && FunctionsLua::IsSpellReady("Healing Touch")) {
 		//Healing Touch
 		localPlayer->SetTarget(healGuid);
 		if (FunctionsLua::IsSpellReady("Nature's Swiftness")) FunctionsLua::CastSpellByName("Nature's Swiftness");

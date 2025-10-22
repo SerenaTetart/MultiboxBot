@@ -98,13 +98,11 @@ void Functions::EnumerateVisibleObjects(int filter) {
 		function((uintptr_t)callbackPtr, filter);
 	}
 	catch (...) {}
-
-	Leader = GetLeader();
-	
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		ListUnits[i].unitReaction = localPlayer->getUnitReaction(ListUnits[i].Pointer);
 		ListUnits[i].attackable = localPlayer->canAttack(ListUnits[i].Pointer);
 	}
+	localPlayer->className = FunctionsLua::UnitClass("player");
 
 	positionCircle = GetPositionCircle();
 }
@@ -137,7 +135,6 @@ int Functions::Callback(unsigned long long guid, int filter) {
 				}
 				if (guid == GetPlayerGuid()) {
 					localPlayer = new LocalPlayer(pointer, guid, objectType);
-					localPlayer->className = FunctionsLua::UnitClass("player");
 					GroupMember[0] = &ListUnits.back();
 					PartyMember[0] = &ListUnits.back();
 				}
@@ -468,7 +465,7 @@ bool Functions::StepBack(Position target_pos, int move_type) {
 		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f);
 		// Position aléatoire ici
 		Functions::MoveObstacle(candidate);
-		if (playerClass == "Mage" && candidate.DistanceTo(localPlayer->position) > 10.0f && FunctionsLua::IsSpellReady("Blink")) {
+		if (localPlayer->className == "Mage" && candidate.DistanceTo(localPlayer->position) > 10.0f && FunctionsLua::IsSpellReady("Blink")) {
 			FunctionsLua::CastSpellByName("Blink");
 		}
 		Moving = move_type;
@@ -734,8 +731,8 @@ int Functions::getNbrCreatureType(int range, CreatureType type1, CreatureType ty
 }
 
 bool Functions::PlayerIsRanged() {
-	if(playerClass == "Mage" || playerClass == "Priest" || playerClass == "Warlock" || playerClass == "Hunter"
-		|| (playerClass == "Druid" && (playerSpec == 0 || playerSpec == 3)) || (playerClass == "Shaman" && (playerSpec == 0 || playerSpec == 2))) return true;
+	if(localPlayer->className == "Mage" || localPlayer->className == "Priest" || localPlayer->className == "Warlock" || localPlayer->className == "Hunter"
+		|| (localPlayer->className == "Druid" && (playerSpec == 0 || playerSpec == 3)) || (localPlayer->className == "Shaman" && (playerSpec == 0 || playerSpec == 2))) return true;
 	else return false;
 }
 
@@ -755,7 +752,7 @@ WoWUnit* Functions::GetGroupDead(int mode) {
 
 WoWUnit* Functions::GetLeader() {
 	// Return only the first account
-	if (localPlayer == NULL || leaderInfos.size() == 1) return NULL;
+	if (localPlayer == NULL || leaderInfos.size() <= 1) return NULL;
 	for (unsigned int z = 0; z < ListUnits.size(); z++) {
 		if (!ListUnits[z].attackable && (ListUnits[z].unitReaction >= Neutral) && ListUnits[z].name == get<0>(leaderInfos[0])) {
 			return &(ListUnits[z]);

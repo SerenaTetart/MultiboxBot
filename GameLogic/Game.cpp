@@ -29,9 +29,9 @@ void Game::MainLoop() {
 						pastPlayerGuid = playerGuid;
 						
 						Functions::EnumerateVisibleObjects(0);
-						
+
 						if (localPlayer != NULL) {
-							std::string msg = ("Name " + localPlayer->name + " Class " + localPlayer->className);
+							std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
 							Client::sendMessage(msg);
 
 							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering"};
@@ -39,6 +39,8 @@ void Game::MainLoop() {
 							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
 							msg = ("Craft"+std::to_string(skills[0])+std::to_string(skills[1]));
 							Client::sendMessage(msg);
+
+							Leader = Functions::GetLeader();
 						}
 					}
 				}
@@ -78,9 +80,11 @@ void Game::MainLoop() {
 						if (playerGuid != pastPlayerGuid) {
 						        pastPlayerGuid = playerGuid;
 						        
-						        std::string msg = ("Name " + localPlayer->name + " Class " + localPlayer->className);
+						        std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
 						        Client::sendMessage(msg);
-					        }
+					    }
+						Leader = Functions::GetLeader();
+
 						skinningLevel = FunctionsLua::GetTradingSkill("Skinning");
 						miningLevel = FunctionsLua::GetTradingSkill("Mining");
 						herbalismLevel = FunctionsLua::GetTradingSkill("Herbalism");

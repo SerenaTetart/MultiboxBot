@@ -182,7 +182,7 @@ void ListAI::PaladinDps() {
 			
 			unsigned int index_paladin = 0;
 			for (int i = 1; i <= NumGroupMembers; i++) {
-				if (GroupMember[i] != NULL && localPlayer->indexGroup > GroupMember[i]->indexGroup && FunctionsLua::UnitClass(tarType+std::string(i)) == "Paladin") {
+				if (GroupMember[i] != NULL && localPlayer->indexGroup > GroupMember[i]->indexGroup && FunctionsLua::UnitClass(tarType+std::to_string(i)) == "Paladin") {
 					index_paladin = index_paladin + 1;
 					break;
 				}

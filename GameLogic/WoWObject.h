@@ -176,7 +176,7 @@ class WoWUnit : public WoWObject {
 
 class LocalPlayer : public WoWUnit {
     public:
-        char* className;
+        std::string className;
         int castInfo, zoneID;
         Position corpse_position;
 
