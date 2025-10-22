@@ -7,7 +7,7 @@
 #include "Navigation.h"
 
 #include <iostream>
-//#include <chrono>
+#include <chrono>
 
 static unsigned long long playerGuid = 0;
 static unsigned long long pastPlayerGuid = 0;
@@ -31,23 +31,25 @@ void Game::MainLoop() {
 						Functions::EnumerateVisibleObjects(0);
 
 						if (localPlayer != NULL) {
-							std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
-							Client::sendMessage(msg);
+							if (localPlayer->name == "") pastPlayerGuid = 0;
+							else {
+								std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
+								Client::sendMessage(msg);
 
-							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering"};
-							int skills[] = { 0, 0 };
-							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
-							msg = ("Craft"+std::to_string(skills[0])+std::to_string(skills[1]));
-							Client::sendMessage(msg);
-
-							Leader = Functions::GetLeader();
+								std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
+								int skills[] = { 0, 0 };
+								std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
+								msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
+								Client::sendMessage(msg);
+							}
 						}
 					}
 				}
 			}
 		);
 
-		while (Client::bot_running == true && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || !MCNoAuto)) {
+		while (Client::bot_running == true && (Leader == NULL || (Leader->Guid != playerGuid) || !MCNoAuto)) {
+			//std::cout << "Preprocessing\n";
 			ThreadSynchronizer::RunOnMainThread(
 				[]() {
 					playerGuid = Functions::GetPlayerGuid();
@@ -60,38 +62,40 @@ void Game::MainLoop() {
 
 						Functions::EnumerateVisibleObjects(0);
 						
-						if (localPlayer == NULL) return;
-						targetUnit = localPlayer->getTarget();
+						if (localPlayer != NULL) {
+							targetUnit = localPlayer->getTarget();
 
-						FunctionsLua::MakeVirtualInventory(&virtualInventory);
+							FunctionsLua::MakeVirtualInventory(&virtualInventory);
 
-						if (FunctionsLua::GetRepairAllCost() > 0) Functions::LuaCall("RepairAllItems()");
-						if (FunctionsLua::GetMerchantNumItems() > 0) FunctionsLua::SellUselessItems();
+							if (FunctionsLua::GetRepairAllCost() > 0) Functions::LuaCall("RepairAllItems()");
+							if (FunctionsLua::GetMerchantNumItems() > 0) FunctionsLua::SellUselessItems();
 
-						if (keybindTrigger == 1) {
-							FunctionsLua::UseItem(6948);
-							keybindTrigger = 0;
+							if (keybindTrigger == 1) {
+								FunctionsLua::UseItem(6948);
+								keybindTrigger = 0;
+							}
+							else if (keybindTrigger == 2) {
+								//FunctionsLua::UseItem("Bridle");
+								keybindTrigger = 0;
+							}
+
+							if (playerGuid != pastPlayerGuid) {
+								if (localPlayer->name == "") pastPlayerGuid = 0;
+								else {
+									pastPlayerGuid = playerGuid;
+									std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
+									Client::sendMessage(msg);
+								}
+							}
+
+							skinningLevel = FunctionsLua::GetTradingSkill("Skinning");
+							miningLevel = FunctionsLua::GetTradingSkill("Mining");
+							herbalismLevel = FunctionsLua::GetTradingSkill("Herbalism");
+
+							if (FunctionsLua::SpellIsTargeting()) FunctionsLua::SpellStopTargeting();
+
+							Functions::LuaCall("AcceptTrade()");
 						}
-						else if (keybindTrigger == 2) {
-							//FunctionsLua::UseItem("Bridle");
-							keybindTrigger = 0;
-						}
-
-						if (playerGuid != pastPlayerGuid) {
-						        pastPlayerGuid = playerGuid;
-						        
-						        std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
-						        Client::sendMessage(msg);
-					    }
-						Leader = Functions::GetLeader();
-
-						skinningLevel = FunctionsLua::GetTradingSkill("Skinning");
-						miningLevel = FunctionsLua::GetTradingSkill("Mining");
-						herbalismLevel = FunctionsLua::GetTradingSkill("Herbalism");
-
-						if (FunctionsLua::SpellIsTargeting()) FunctionsLua::SpellStopTargeting();
-
-						Functions::LuaCall("AcceptTrade()");
 					}
 				}
 			);
@@ -100,7 +104,8 @@ void Game::MainLoop() {
 			// ===========   Initialisation   =========== //
 			// ========================================== //
 
-			//auto start = std::chrono::high_resolution_clock::now();
+			/*auto start = std::chrono::high_resolution_clock::now();
+			std::cout << "Initialisation start\n";*/
 
 			if (localPlayer == NULL) {
 				Sleep(333);

@@ -102,8 +102,8 @@ void Functions::EnumerateVisibleObjects(int filter) {
 		ListUnits[i].unitReaction = localPlayer->getUnitReaction(ListUnits[i].Pointer);
 		ListUnits[i].attackable = localPlayer->canAttack(ListUnits[i].Pointer);
 	}
-	localPlayer->className = FunctionsLua::UnitClass("player");
-
+	if (localPlayer != NULL) localPlayer->className = FunctionsLua::UnitClass("player");
+	Leader = Functions::GetLeader();
 	positionCircle = GetPositionCircle();
 }
 
@@ -431,6 +431,10 @@ bool Functions::StepBack(Position target_pos, int move_type) {
 		Check every directions for a position where you have line of sight of target_pos,
 		if there is an obstacle on the path check a new direction
 	*/
+	if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving == move_type) {
+		Moving = move_type;
+		return true;
+	}
 	Position list_pos[16] = { Position(0.0f, 0.0f, 0.0f) };
 	float halfPI = acosf(0);
 	for (int i = 0; i < 16; i++) {
@@ -471,12 +475,9 @@ bool Functions::StepBack(Position target_pos, int move_type) {
 		Moving = move_type;
 		return true;
 	}
-	else if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
+	else {
 		Moving = 0;
 		return false;
-	}
-	else {
-		return true;
 	}
 }
 

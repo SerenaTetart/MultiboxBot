@@ -1,13 +1,14 @@
 #include "../ListAI.h"
 
 void ListAI::DPSTargeting() {
-	if (PvPTarget != NULL) localPlayer->SetTarget(PvPTarget->Guid);
+	if ((Leader != NULL) && (Leader->Guid == localPlayer->Guid) && !MCAutoMove) return;
+	else if (PvPTarget != NULL) localPlayer->SetTarget(PvPTarget->Guid);
 	else {
 		bool tankInGrp = false;
 		for (int i = 1; i <= NumGroupMembers; i++) {
 			if (GroupMember[i] != NULL && GroupMember[i]->role == 0) tankInGrp = true;
 		}
-		if (tankInGrp) {
+		if (tankInGrp && (Combat || Leader == NULL || Leader->Guid != localPlayer->Guid)) {
 			bool targetFocusingTank = false;
 			if (targetUnit != NULL && !targetUnit->isdead && targetUnit->attackable) {
 				for (int i = 1; i <= NumGroupMembers; i++) {

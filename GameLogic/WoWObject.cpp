@@ -223,6 +223,7 @@ bool WoWUnit::canAttack(uintptr_t unitPtr2) {
 
 LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     : WoWUnit(pointer, guid, objType) {
+    className = "";
     castInfo = *(int*)(CASTING_STATIC_OFFSET);
     targetGuid = *(unsigned long long*)LOCKED_TARGET_STATIC_OFFSET;
     float x = *(float*)(PLAYER_CORPSE_POSITION_X);
