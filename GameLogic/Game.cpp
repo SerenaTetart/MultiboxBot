@@ -33,11 +33,10 @@ void Game::MainLoop() {
 						
 						Functions::EnumerateVisibleObjects(0);
 
-						if (localPlayer == NULL || localPlayer->name == "") pastPlayerGuid = 0;
-						else pastPlayerGuid = playerGuid;
+						pastPlayerGuid = playerGuid;
 
 						if (localPlayer != NULL) {
-							std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
+							std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
 							Client::sendMessage(msg);
 
 							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
@@ -91,7 +90,7 @@ void Game::MainLoop() {
 
 							if (playerGuid != pastPlayerGuid) {
 								pastPlayerGuid = playerGuid;
-								std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
+								std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
 								Client::sendMessage(msg);
 							}
 
