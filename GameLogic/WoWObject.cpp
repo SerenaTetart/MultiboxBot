@@ -102,15 +102,14 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     targetGuid = *(unsigned long long*)(descriptor + TARGET_GUID_OFFSET);
     facing = *(float*)(Pointer + FACING_OFFSET);
     level = *(int*)(descriptor + LEVEL_OFFSET);
-    if(objType == Unit) name = (char*)(*(uintptr_t*)(*(uintptr_t*)(Pointer + NAME_OFFSET)));
+    if (objType == Unit) name = (char*)(*(uintptr_t*)(*(uintptr_t*)(Pointer + NAME_OFFSET)));
     else {
-        uintptr_t namePtr = *(uintptr_t*)(NAME_BASE_OFFSET);
-        unsigned int i = 0;
-        while (i <= 1000) {
+        uintptr_t namePtr = NAME_BASE_OFFSET;
+        while (true) {
             unsigned long long nextGuid = *(unsigned long long*)(namePtr + NEXT_NAME_OFFSET);
-            if (nextGuid != Guid) namePtr = *(uintptr_t*)(namePtr);
+
+            if (nextGuid != guid) namePtr = *(int*)(namePtr);
             else break;
-            i++;
         }
         name = (char*)(namePtr + PLAYER_NAME_OFFSET);
     }
