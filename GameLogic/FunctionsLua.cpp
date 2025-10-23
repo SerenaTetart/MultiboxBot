@@ -56,20 +56,6 @@ int FunctionsLua::GetNumGroupMembers() {
 	else return nbrParty;
 }
 
-bool FunctionsLua::IsInGroup() {
-	Functions::LuaCall("count = GetNumPartyMembers()");
-	int nbrParty = GetIntFromChar((char*)Functions::GetText("count"));
-	if (nbrParty > 0) return true;
-	else return false;
-}
-
-bool FunctionsLua::IsInRaid() {
-	Functions::LuaCall("count = GetNumRaidMembers()");
-	int nbrRaid = GetIntFromChar((char*)Functions::GetText("count"));
-	if (nbrRaid > 0) return true;
-	else return false;
-}
-
 bool FunctionsLua::HasPetUI() {
 	Functions::LuaCall("UI = HasPetUI()");
 	int hasUI = GetIntFromChar((char*)Functions::GetText("UI"));

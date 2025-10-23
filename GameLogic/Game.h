@@ -14,13 +14,13 @@ private:
 };
 
 //Global Variables
-extern bool Combat, IsSitting, IsInGroup, IsFacing, hasTargetAggro, MCNoAuto, MCAutoMove, los_target, passiveGroup, autoLearnSpells;
+extern bool Combat, IsSitting, IsFacing, hasTargetAggro, MCNoAuto, MCAutoMove, los_target, passiveGroup, autoLearnSpells;
 extern float distTarget;
 extern std::vector<WoWUnit*> HasAggro[40];
 extern std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 extern std::vector<int> HealTargetArray;
 extern int AoEHeal, nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, Moving, NumGroupMembers, playerSpec, positionCircle,
-			skinningLevel, miningLevel, herbalismLevel, mapID, keybindTrigger;
+			skinningLevel, miningLevel, herbalismLevel, mapID, keybindTrigger, IsInGroup;
 extern unsigned int LastTarget;
 extern std::string tarType, srcPath;
 extern std::vector<std::tuple<std::string, int, int, int>> leaderInfos;

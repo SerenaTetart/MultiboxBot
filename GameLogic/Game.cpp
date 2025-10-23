@@ -20,10 +20,14 @@ void Game::MainLoop() {
 			[]() {
 				playerGuid = Functions::GetPlayerGuid();
 				if (playerGuid > 0) {
-					if (FunctionsLua::IsInRaid()) tarType = "raid";
-					else tarType = "party";
 					NumGroupMembers = FunctionsLua::GetNumGroupMembers();
-					IsInGroup = FunctionsLua::IsInGroup();
+					tarType = "party";
+					if (NumGroupMembers > 5) {
+					        IsInGroup = 2;
+					        tarType = "raid";
+					}
+					else if (NumGroupMembers > 0) IsInGroup = 1;
+					else IsInGroup = 0;
 
 					if (playerGuid != pastPlayerGuid) {
 						pastPlayerGuid = playerGuid;
@@ -54,10 +58,14 @@ void Game::MainLoop() {
 				[]() {
 					playerGuid = Functions::GetPlayerGuid();
 					if (playerGuid > 0) {
-						if (FunctionsLua::IsInRaid()) tarType = "raid";
-						else tarType = "party";
 						NumGroupMembers = FunctionsLua::GetNumGroupMembers();
-						IsInGroup = FunctionsLua::IsInGroup();
+						tarType = "party";
+					        if (NumGroupMembers > 5) {
+					                IsInGroup = 2;
+					                tarType = "raid";
+					        }
+					        else if (NumGroupMembers > 0) IsInGroup = 1;
+					        else IsInGroup = 0;
 						mapID = Functions::GetMapID();
 
 						Functions::EnumerateVisibleObjects(0);
@@ -502,7 +510,7 @@ void Game::MainLoop() {
 }
 
 std::vector<WoWUnit*> HasAggro[40]; std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
-bool Combat = false, IsSitting = false, IsInGroup = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
+bool Combat = false, IsSitting = false, IsInGroup = 0, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
 los_target = false, passiveGroup = false, autoLearnSpells = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0;
