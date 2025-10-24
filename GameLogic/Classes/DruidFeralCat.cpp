@@ -82,7 +82,7 @@ static void DruidAttack() {
 				FunctionsLua::CastSpellByName("Hurricane");
 				Functions::ClickAOE(cluster_center);
 			}
-			else if (IsFacing && !MoonfireDebuff && FunctionsLua::IsSpellReady("Moonfire") && !FunctionsLua::IsInGroup()) {
+			else if (IsFacing && !MoonfireDebuff && !IsInGroup && FunctionsLua::IsSpellReady("Moonfire")) {
 				//Moonfire
 				FunctionsLua::CastSpellByName("Moonfire");
 			}
@@ -91,7 +91,7 @@ static void DruidAttack() {
 				FunctionsLua::CastSpellByName("Entangling Roots");
 				if (localPlayer->isCasting()) current_time = time(0);
 			}
-			else if (IsFacing && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Wrath") && !FunctionsLua::IsInGroup()) {
+			else if (IsFacing && !localPlayer->isMoving && !IsInGroup && FunctionsLua::IsSpellReady("Wrath")) {
 				//Wrath
 				FunctionsLua::CastSpellByName("Wrath");
 			}

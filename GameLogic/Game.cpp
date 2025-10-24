@@ -20,28 +20,30 @@ void Game::MainLoop() {
 			[]() {
 				playerGuid = Functions::GetPlayerGuid();
 				if (playerGuid > 0) {
-					if (FunctionsLua::IsInRaid()) tarType = "raid";
-					else tarType = "party";
 					NumGroupMembers = FunctionsLua::GetNumGroupMembers();
-					IsInGroup = FunctionsLua::IsInGroup();
+					tarType = "party";
+					if (NumGroupMembers > 5) {
+					        IsInGroup = 2;
+					        tarType = "raid";
+					}
+					else if (NumGroupMembers > 0) IsInGroup = 1;
+					else IsInGroup = 0;
 
 					if (playerGuid != pastPlayerGuid) {
-						pastPlayerGuid = playerGuid;
 						
 						Functions::EnumerateVisibleObjects(0);
 
-						if (localPlayer != NULL) {
-							if (localPlayer->name == "") pastPlayerGuid = 0;
-							else {
-								std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
-								Client::sendMessage(msg);
+						pastPlayerGuid = playerGuid;
 
-								std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
-								int skills[] = { 0, 0 };
-								std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
-								msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
-								Client::sendMessage(msg);
-							}
+						if (localPlayer != NULL) {
+							std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
+							Client::sendMessage(msg);
+
+							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
+							int skills[] = { 0, 0 };
+							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
+							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
+							Client::sendMessage(msg);
 						}
 					}
 				}
@@ -54,13 +56,20 @@ void Game::MainLoop() {
 				[]() {
 					playerGuid = Functions::GetPlayerGuid();
 					if (playerGuid > 0) {
-						if (FunctionsLua::IsInRaid()) tarType = "raid";
-						else tarType = "party";
 						NumGroupMembers = FunctionsLua::GetNumGroupMembers();
-						IsInGroup = FunctionsLua::IsInGroup();
+						tarType = "party";
+					        if (NumGroupMembers > 5) {
+					                IsInGroup = 2;
+					                tarType = "raid";
+					        }
+					        else if (NumGroupMembers > 0) IsInGroup = 1;
+					        else IsInGroup = 0;
 						mapID = Functions::GetMapID();
 
 						Functions::EnumerateVisibleObjects(0);
+
+						if (localPlayer == NULL || localPlayer->name == "") pastPlayerGuid = 0;
+						else pastPlayerGuid = playerGuid;
 						
 						if (localPlayer != NULL) {
 							targetUnit = localPlayer->getTarget();
@@ -80,12 +89,9 @@ void Game::MainLoop() {
 							}
 
 							if (playerGuid != pastPlayerGuid) {
-								if (localPlayer->name == "") pastPlayerGuid = 0;
-								else {
-									pastPlayerGuid = playerGuid;
-									std::string msg = ("Name " + std::string(localPlayer->name) + " Class " + localPlayer->className);
-									Client::sendMessage(msg);
-								}
+								pastPlayerGuid = playerGuid;
+								std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
+								Client::sendMessage(msg);
 							}
 
 							skinningLevel = FunctionsLua::GetTradingSkill("Skinning");
@@ -502,10 +508,10 @@ void Game::MainLoop() {
 }
 
 std::vector<WoWUnit*> HasAggro[40]; std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
-bool Combat = false, IsSitting = false, IsInGroup = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
+bool Combat = false, IsSitting = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
 los_target = false, passiveGroup = false, autoLearnSpells = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
-skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0;
+skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0;
 std::string tarType = "party", srcPath="";

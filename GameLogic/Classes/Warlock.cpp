@@ -134,10 +134,10 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Rain of Fire");
 					Functions::ClickAOE(cluster_center);
 				}
-				/*else if (!CoShadowDebuff && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Curse of Shadow")) {
+				else if (!CoShadowDebuff && targetUnit->level == -1 && FunctionsLua::IsSpellReady("Curse of Shadow")) {
 					//Curse of Shadow (Boss)
 					FunctionsLua::CastSpellByName("Curse of Shadow");
-				}*/
+				}
 				else if (!localPlayer->isMoving && (localPlayer->prctHP < 40.0f) && FunctionsLua::IsSpellReady("Drain Life")) {
 					//Drain Life
 					FunctionsLua::CastSpellByName("Drain Life");

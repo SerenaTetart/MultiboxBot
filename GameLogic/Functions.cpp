@@ -282,6 +282,35 @@ bool MoveObstacleSwim_tmp(const Position& target_pos, const Position& start_pos)
 	return false;
 }
 
+bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
+	constexpr float STEP = 2.5f;
+	constexpr int   MAX_STEPS = 16;          // 16 * 2.5 = 40 yards
+
+	float dx = target_pos.X - start_pos.X;
+	float dy = target_pos.Y - start_pos.Y;
+	float base = std::atan2(dy, dx); // radians
+
+	Position last = start_pos;
+
+	int i = 0;
+	while (i < MAX_STEPS) {
+		Position stepPos(last.X + std::cos(base) * STEP, last.Y + std::sin(base) * STEP, last.Z);
+		Position next = Functions::ProjectPos(stepPos, 2.0f);
+
+		// Reject if snap is too big or the segment hits something
+		if (next.DistanceTo(stepPos) > 2.0f) return false;
+		if (Functions::Intersect(last, next)) return false;
+
+		// Progress guard (avoid potential stalls on weird projections)
+		if (next.DistanceTo(last) < 1e-3f) return false;
+
+		last = next;
+		if (last.DistanceTo(target_pos) <= STEP) return true;
+		++i;
+	}
+	return false;
+}
+
 bool Functions::MoveObstacleSwim(Position target_pos, bool checkEnemyClose) {
 	constexpr float STEP = 2.5f;
 	constexpr int   MAX_STEPS = 12;
@@ -344,35 +373,6 @@ bool Functions::MoveLoSSwim(Position target_pos) {
 			}
 			break;
 		}
-	}
-	return false;
-}
-
-bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
-	constexpr float STEP = 2.5f;
-	constexpr int   MAX_STEPS = 16;          // 16 * 2.5 = 40 yards
-
-	float dx = target_pos.X - start_pos.X;
-	float dy = target_pos.Y - start_pos.Y;
-	float base = std::atan2(dy, dx); // radians
-
-	Position last = start_pos;
-
-	int i = 0;
-	while (i < MAX_STEPS) {
-		Position stepPos(last.X + std::cos(base) * STEP, last.Y + std::sin(base) * STEP, last.Z);
-		Position next = Functions::ProjectPos(stepPos, 2.0f);
-
-		// Reject if snap is too big or the segment hits something
-		if (next.DistanceTo(stepPos) > 2.0f) return false;
-		if (Functions::Intersect(last, next)) return false;
-
-		// Progress guard (avoid potential stalls on weird projections)
-		if (next.DistanceTo(last) < 1e-3f) return false;
-
-		last = next;
-		if (last.DistanceTo(target_pos) <= STEP) return true;
-		++i;
 	}
 	return false;
 }
@@ -732,8 +732,14 @@ int Functions::getNbrCreatureType(int range, CreatureType type1, CreatureType ty
 }
 
 bool Functions::PlayerIsRanged() {
-	if(localPlayer->className == "Mage" || localPlayer->className == "Priest" || localPlayer->className == "Warlock" || localPlayer->className == "Hunter"
-		|| (localPlayer->className == "Druid" && (playerSpec == 0 || playerSpec == 3)) || (localPlayer->className == "Shaman" && (playerSpec == 0 || playerSpec == 2))) return true;
+        if(localPlayer->className == "Druid") {
+                int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
+                int BearFormIDs[1] = { 768 }; bool BearFormBuff = localPlayer->hasBuff(BearFormIDs, 1);
+                if (CatFormBuff || BearFormBuff) return false;
+                else return true;
+        }
+	else if(localPlayer->className == "Mage" || localPlayer->className == "Priest" || localPlayer->className == "Warlock" || localPlayer->className == "Hunter"
+		|| (localPlayer->className == "Shaman" && (playerSpec == 0 || playerSpec == 2))) return true;
 	else return false;
 }
 
