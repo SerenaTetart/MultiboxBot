@@ -19,11 +19,11 @@ static void DruidAttack() {
 			FunctionsLua::CastSpellByName("Hurricane");
 			Functions::ClickAOE(cluster_center);
 		}
-		else if (IsFacing && !MoonfireDebuff && !IsInGroup && FunctionsLua::IsSpellReady("Moonfire")) {
+		else if (IsFacing && !MoonfireDebuff && targetUnit->getNbrDebuff() < 16 && !IsInGroup && FunctionsLua::IsSpellReady("Moonfire")) {
 			//Moonfire
 			FunctionsLua::CastSpellByName("Moonfire");
 		}
-		else if (!localPlayer->isMoving && targetPlayer && (EntanglingRootsTimer == 0) && FunctionsLua::IsSpellReady("Entangling Roots")) {
+		else if (!localPlayer->isMoving && targetPlayer && (EntanglingRootsTimer == 0) && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Entangling Roots")) {
 			//Entangling Roots (PvP)
 			FunctionsLua::CastSpellByName("Entangling Roots");
 			if (localPlayer->isCasting()) current_time = time(0);

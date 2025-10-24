@@ -81,7 +81,7 @@ void ListAI::HunterDps() {
 					//Feign Death
 					FunctionsLua::CastSpellByName("Feign Death");
 				}
-				else if (!Combat && (distTarget < 5.0f) && targetPlayer && FunctionsLua::IsSpellReady("Freezing Trap")) {
+				else if (!Combat && (distTarget < 5.0f) && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Freezing Trap")) {
 					//Freezing Trap
 					FunctionsLua::CastSpellByName("Freezing Trap");
 				}
@@ -89,11 +89,11 @@ void ListAI::HunterDps() {
 					//Explosive trap (AoE)
 					FunctionsLua::CastSpellByName("Explosive Trap");
 				}
-				else if ((distTarget < 15.0f) && targetPlayer && !FreezingTrapDebuff && FunctionsLua::IsSpellReady("Scatter Shot")) {
+				else if ((distTarget < 15.0f) && targetPlayer && !FreezingTrapDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Scatter Shot")) {
 					//Scatter Shot
 					FunctionsLua::CastSpellByName("Scatter Shot");
 				}
-				else if ((distTarget < 5.0f) && targetPlayer && !WingClipDebuff && !FreezingTrapDebuff && FunctionsLua::IsSpellReady("Wing Clip")) {
+				else if ((distTarget < 5.0f) && targetPlayer && !WingClipDebuff && targetUnit->getNbrDebuff() < 16 && !FreezingTrapDebuff && FunctionsLua::IsSpellReady("Wing Clip")) {
 					//Wing Clip
 					FunctionsLua::CastSpellByName("Wing Clip");
 				}
@@ -130,7 +130,7 @@ void ListAI::HunterDps() {
 					FunctionsLua::CastSpellByName("Volley");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!HunterMarkDebuff && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Hunter's Mark")) {
+				else if (!HunterMarkDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Hunter's Mark")) {
 					//Hunter's Mark
 					FunctionsLua::CastSpellByName("Hunter's Mark");
 				}
@@ -138,7 +138,7 @@ void ListAI::HunterDps() {
 					//Rapid Fire
 					FunctionsLua::CastSpellByName("Rapid Fire");
 				}
-				else if (IsFacing && autoShotInRange && targetPlayer && !SerpentStingDebuff && FunctionsLua::IsSpellReady("Serpent Sting")) {
+				else if (IsFacing && autoShotInRange && targetPlayer && !SerpentStingDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Serpent Sting")) {
 					//Serpent Sting (PvP)
 					FunctionsLua::CastSpellByName("Serpent Sting");
 				}

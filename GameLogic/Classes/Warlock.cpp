@@ -104,7 +104,7 @@ void ListAI::WarlockDps() {
 					//Howl of Terror
 					FunctionsLua::CastSpellByName("Howl of Terror");
 				}
-				else if (!CoTonguesDebuff && targetPlayer && FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Curse of Tongues")) {
+				else if (!CoTonguesDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Curse of Tongues")) {
 					//Curse of Tongues (PvP -> Caster)
 					FunctionsLua::CastSpellByName("Curse of Tongues");
 				}
@@ -134,7 +134,7 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Rain of Fire");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!CoShadowDebuff && targetUnit->level == -1 && FunctionsLua::IsSpellReady("Curse of Shadow")) {
+				else if (!CoShadowDebuff && targetUnit->getNbrDebuff() < 16 && targetUnit->level == -1 && FunctionsLua::IsSpellReady("Curse of Shadow")) {
 					//Curse of Shadow (Boss)
 					FunctionsLua::CastSpellByName("Curse of Shadow");
 				}
@@ -142,19 +142,19 @@ void ListAI::WarlockDps() {
 					//Drain Life
 					FunctionsLua::CastSpellByName("Drain Life");
 				}
-				else if (!CoAgonyDebuff && !CoTonguesDebuff && targetPlayer && FunctionsLua::IsSpellReady("Curse of Agony")) {
+				else if (!CoAgonyDebuff && targetUnit->getNbrDebuff() < 16 && !CoTonguesDebuff && targetPlayer && FunctionsLua::IsSpellReady("Curse of Agony")) {
 					//Curse of Agony (PvP)
 					FunctionsLua::CastSpellByName("Curse of Agony");
 				}
-				else if (!CorruptionDebuff && targetPlayer && FunctionsLua::IsSpellReady("Corruption")) {
+				else if (!CorruptionDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Corruption")) {
 					//Corruption (PvP)
 					FunctionsLua::CastSpellByName("Corruption");
 				}
-				else if (!SiphonLifeDebuff && targetPlayer && FunctionsLua::IsSpellReady("Siphon Life")) {
+				else if (!SiphonLifeDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Siphon Life")) {
 					//Siphon Life (PvP)
 					FunctionsLua::CastSpellByName("Siphon Life");
 				}
-				else if (!localPlayer->isMoving && !ImmolateDebuff && targetPlayer && FunctionsLua::IsSpellReady("Immolate")) {
+				else if (!localPlayer->isMoving && !ImmolateDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Immolate")) {
 					//Immolate (PvP)
 					FunctionsLua::CastSpellByName("Immolate");
 				}

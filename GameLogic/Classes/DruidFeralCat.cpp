@@ -38,7 +38,7 @@ static void DruidAttack() {
 				// Cower
 				FunctionsLua::CastSpellByName("Cower");
 			}
-			else if (!ProwlBuff && ComboPoints >= 4 && !RipDebuff && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && FunctionsLua::IsSpellReady("Rip")) {
+			else if (!ProwlBuff && ComboPoints >= 4 && !RipDebuff && targetUnit->getNbrDebuff() < 16 && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && FunctionsLua::IsSpellReady("Rip")) {
 				// Rip (PvP)
 				FunctionsLua::CastSpellByName("Rip");
 			}
@@ -50,11 +50,11 @@ static void DruidAttack() {
 				// Shred
 				FunctionsLua::CastSpellByName("Shred");
 			}
-			else if (!ProwlBuff && !FaerieFireDebuff && FunctionsLua::IsSpellReady("Faerie Fire (Feral)")) {
+			else if (!ProwlBuff && !FaerieFireDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Faerie Fire (Feral)")) {
 				// Faerie Fire (Feral)
 				FunctionsLua::CastSpellByName("Faerie Fire (Feral)()");
 			}
-			else if (!ProwlBuff && !RakeDebuff && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && FunctionsLua::IsSpellReady("Rake")) {
+			else if (!ProwlBuff && !RakeDebuff && targetUnit->getNbrDebuff() < 16 && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && FunctionsLua::IsSpellReady("Rake")) {
 				// Rake (PvP)
 				FunctionsLua::CastSpellByName("Rake");
 			}
@@ -82,11 +82,11 @@ static void DruidAttack() {
 				FunctionsLua::CastSpellByName("Hurricane");
 				Functions::ClickAOE(cluster_center);
 			}
-			else if (IsFacing && !MoonfireDebuff && !IsInGroup && FunctionsLua::IsSpellReady("Moonfire")) {
+			else if (IsFacing && !MoonfireDebuff && targetUnit->getNbrDebuff() < 16 && !IsInGroup && FunctionsLua::IsSpellReady("Moonfire")) {
 				//Moonfire
 				FunctionsLua::CastSpellByName("Moonfire");
 			}
-			else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && (EntanglingRootsTimer == 0) && FunctionsLua::IsSpellReady("Entangling Roots")) {
+			else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && (EntanglingRootsTimer == 0) && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Entangling Roots")) {
 				//Entangling Roots (PvP)
 				FunctionsLua::CastSpellByName("Entangling Roots");
 				if (localPlayer->isCasting()) current_time = time(0);

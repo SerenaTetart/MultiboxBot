@@ -734,8 +734,9 @@ int Functions::getNbrCreatureType(int range, CreatureType type1, CreatureType ty
 bool Functions::PlayerIsRanged() {
         if(localPlayer->className == "Druid") {
                 int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
-                int BearFormIDs[1] = { 768 }; bool BearFormBuff = localPlayer->hasBuff(BearFormIDs, 1);
-                if (CatFormBuff || BearFormBuff) return false;
+                if (CatFormBuff) return false;
+                int BearFormIDs[2] = { 5487, 9634 }; bool BearFormBuff = localPlayer->hasBuff(BearFormIDs, 2);
+                if (BearFormBuff) return false;
                 else return true;
         }
 	else if(localPlayer->className == "Mage" || localPlayer->className == "Priest" || localPlayer->className == "Warlock" || localPlayer->className == "Hunter"
