@@ -11,16 +11,23 @@ static void PaladinAttack() {
 		bool SoLBuff = localPlayer->hasBuff(SoLIDs, 4);
 		int SolDebuffIDs[4] = { 20185, 20344, 20345, 20346 };
 		bool SoLDebuff = targetUnit->hasDebuff(SolDebuffIDs, 4);
+		int SoRIDs[9] = { 20154, 21084, 20287, 20288, 20289, 20290, 20291, 20292, 20293 };
+		bool SoRBuff = localPlayer->hasBuff(SoRIDs, 9);
+		bool SealBuff = (SoRBuff || SoLBuff);
 		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
-		if (!SoLBuff && !SoLDebuff && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Seal of Light")) {
+		else if (!SealBuff && !SoLDebuff && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Seal of Light")) {
 			//Seal of Light
 			FunctionsLua::CastSpellByName("Seal of Light");
+		}
+		else if (!SealBuff && FunctionsLua::IsSpellReady("Seal of Righteousness")) {
+			//Seal of Righteousness
+			FunctionsLua::CastSpellByName("Seal of Righteousness");
 		}
 		else if ((localPlayer->prctMana > 33) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Consecration")) {
 			//Consecration
 			FunctionsLua::CastSpellByName("Consecration");
 		}
-		else if (SoLBuff && (distTarget < 10) && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Judgement")) {
+		else if (SealBuff && (distTarget < 10) && FunctionsLua::IsSpellReady("Judgement")) {
 			//Judgement
 			FunctionsLua::CastSpellByName("Judgement");
 		}

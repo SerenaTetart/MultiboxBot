@@ -466,7 +466,7 @@ bool Functions::StepBack(Position target_pos, int move_type) {
 		}
 	}
 	if (min_dist_index > -1 && min_dist > 2.0f) {
-		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f);
+		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f, target_pos, 12.0f);
 		// Position aléatoire ici
 		Functions::MoveObstacle(candidate);
 		if (localPlayer->className == "Mage" && candidate.DistanceTo(localPlayer->position) > 10.0f && FunctionsLua::IsSpellReady("Blink")) {
@@ -546,7 +546,7 @@ unsigned int Functions::GetMapID() {
 //======================================================================//
 //(They don't use Lua calls and memory pointers)
 
-Position Functions::RandomisePos(Position target_pos, float radius) {
+Position Functions::RandomisePos(Position target_pos, float radius, Position away_from, float dist_away) {
 	float halfPI = acosf(0);
 	std::uniform_real_distribution<float> U01(0.0f, 1.0f);
 	std::uniform_real_distribution<float> Uang(0.0f, halfPI * 4); // 2π
@@ -562,7 +562,7 @@ Position Functions::RandomisePos(Position target_pos, float radius) {
 		candidate.Y = target_pos.Y + r * std::sin(theta);
 		candidate.Z = target_pos.Z;
 		NUM_TRY += 1;
-	} while (NUM_TRY < 10 && (Functions::Intersect(target_pos, candidate) || (Functions::GetDepth(candidate, 2.0f) > 2.0f)));
+	} while (NUM_TRY < 10 && ((dist_away > 0.0f && (candidate.DistanceTo(away_from) < dist_away)) || Functions::Intersect(target_pos, candidate) || (Functions::GetDepth(candidate, 2.0f) > 2.0f)));
 
 	if (NUM_TRY == 10) return target_pos;
 	else return candidate;

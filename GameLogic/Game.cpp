@@ -148,10 +148,6 @@ void Game::MainLoop() {
 			int HeroicStrikeIDs[9] = { 78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286 };
 			int CleaveIDs[5] = { 845, 7369, 11608, 11609, 20569 };
 			if (localPlayer != NULL && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
-				float halfPI = acosf(0);
-				Position back_pos = Position((cos(localPlayer->facing + (2 * halfPI)) * 2.0f) + localPlayer->position.X
-					, (sin(localPlayer->facing + (2 * halfPI)) * 2.0f) + localPlayer->position.Y
-					, localPlayer->position.Z);
 				ThreadSynchronizer::RunOnMainThread([=]() {
 					los_target = true;
 					if (targetUnit != NULL) {
@@ -169,7 +165,6 @@ void Game::MainLoop() {
 					if (float(time(0) - get<1>(LootHistory[ind])) >= 20.0f) LootHistory.erase(LootHistory.begin() + ind);
 					else ind++;
 				}
-				bool playerIsRanged = Functions::PlayerIsRanged();
 				int drinkingIDs[15] = { 430, 431, 432, 1133, 1135, 1137, 24355, 25696, 26261, 26402, 26473, 26475, 29007, 10250, 22734 };
 				if (localPlayer->isdead && localPlayer->getHealth() == 1) {
 					//Logic actions
@@ -192,8 +187,10 @@ void Game::MainLoop() {
 					TrainSpellRun();
 				}
 				else if (!passiveGroup && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
-					if (playerIsRanged) {
-						if ((Moving == 4 || Moving == 2 || Moving == 5) && distTarget < 30.0f) {
+					if (Functions::PlayerIsRanged()) {
+						float maxRange = 30.0f;
+						if (localPlayer->className == "Hunter") maxRange = 35.0f;
+						if ((Moving == 4 || Moving == 2 || Moving == 5) && distTarget < maxRange) {
 							//Running and (target < 30 yard) => stop
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
@@ -205,7 +202,7 @@ void Game::MainLoop() {
 								Functions::MoveToLoS(targetUnit->position, 6);
 							});
 						}
-						else if (distTarget > 30.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
+						else if (distTarget > maxRange && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
 							//Target > 30 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
@@ -258,7 +255,7 @@ void Game::MainLoop() {
 						else Moving = 0;
 					}
 				}
-				else if ((Moving == 5 && localPlayer->speed == 0) && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
+				else if ((Moving == 5 && localPlayer->isMoving) && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
 					//Find LoS (ally)
 					ThreadSynchronizer::RunOnMainThread([=]() {
 						Functions::MoveToLoS(targetUnit->position, 5);
