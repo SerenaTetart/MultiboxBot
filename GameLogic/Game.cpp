@@ -255,7 +255,7 @@ void Game::MainLoop() {
 						else Moving = 0;
 					}
 				}
-				else if ((Moving == 5 && localPlayer->isMoving) && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
+				else if (Moving == 5 && !localPlayer->isMoving && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
 					//Find LoS (ally)
 					ThreadSynchronizer::RunOnMainThread([=]() {
 						Functions::MoveToLoS(targetUnit->position, 5);
