@@ -170,10 +170,7 @@ bool WoWUnit::isFacing(Position pos, float angle) {
 
 static inline float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-bool WoWUnit::isBehind(WoWUnit* target)
-{
-    // --- choose your ground plane here ---
-
+bool WoWUnit::isBehind(WoWUnit* target) {
     float dx = this->position.X - target->position.X;
     float dy = (this->position.Y - target->position.Y);
 

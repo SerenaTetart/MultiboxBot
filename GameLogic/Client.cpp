@@ -83,8 +83,7 @@ void Client::recvMessage() {
 		keybindTrigger = 2;
 	}
 	else if (buffer[0] == 'K' && buffer[1] == '3') {
-		if (autoLearnSpells == true) autoLearnSpells = false;
-		else autoLearnSpells = true;
+	        autoLearnSpells = (autoLearnSpells + 1) % 4;
 	}
 	else if (buffer[0] == 'K' && buffer[1] == '4') {
 		if (passiveGroup) passiveGroup = false;
