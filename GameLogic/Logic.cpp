@@ -135,78 +135,88 @@ void Game::TrainSpellRun() {
 	        }
 	}
 	else if (autoLearnSpells == 2) {
-	        // Train trading skills
-	        if(mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
-	                // Stormwind
-	                if ((get<2>(leaderInfos[0]) == 4 || get<3>(leaderInfos[0]) == 4)) {
-	                        //Tailoring
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 5 || get<3>(leaderInfos[0]) == 5)) {
-	                        //Leatherworking
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 6 || get<3>(leaderInfos[0]) == 6)) {
-	                        //Blacksmithing
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 8 || get<3>(leaderInfos[0]) == 8)) {
-	                        //Alchemy
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
+	    // Train trading skills
+	    if(mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
+	        // Stormwind
+	        if ((get<2>(leaderInfos[0]) == 4 || get<3>(leaderInfos[0]) == 4)) {
+				//Tailoring
+				MoveToMap(Position(-8942.839844f, 799.5440006f, 91.025101f));
 	        }
-	        else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
-	                // Ironforge
-	                if ((get<2>(leaderInfos[0]) == 4 || get<3>(leaderInfos[0]) == 4)) {
-	                        //Tailoring
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 5 || get<3>(leaderInfos[0]) == 5)) {
-	                        //Leatherworking
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 6 || get<3>(leaderInfos[0]) == 6)) {
-	                        //Blacksmithing
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 8 || get<3>(leaderInfos[0]) == 8)) {
-	                        //Alchemy
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
+	        else if ((get<2>(leaderInfos[0]) == 5 || get<3>(leaderInfos[0]) == 5)) {
+	            //Leatherworking
+	            MoveToMap(Position(-8722.375977f, 473.982727f, 98.613373f));
 	        }
-	        else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
-	                // Darnassus
-	                if ((get<2>(leaderInfos[0]) == 4 || get<3>(leaderInfos[0]) == 4)) {
-	                        //Tailoring
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 5 || get<3>(leaderInfos[0]) == 5)) {
-	                        //Leatherworking
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 6 || get<3>(leaderInfos[0]) == 6)) {
-	                        //Blacksmithing
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
-	                else if ((get<2>(leaderInfos[0]) == 8 || get<3>(leaderInfos[0]) == 8)) {
-	                        //Alchemy
-	                        MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	                }
+	        else if ((get<2>(leaderInfos[0]) == 6 || get<3>(leaderInfos[0]) == 6)) {
+	            //Blacksmithing
+	            MoveToMap(Position(-8425.0f, 608.796021f, 95.209000f));
 	        }
+			else if ((get<2>(leaderInfos[0]) == 7 || get<3>(leaderInfos[0]) == 7)) {
+				//Enchanting
+				int enchantingLevel = FunctionsLua::GetTradingSkill("Enchanting");
+				if (enchantingLevel < 150) MoveToMap(Position(-8858.309570f, 803.734985f, 96.517502f));
+				else MoveToMap(Position(-9574.972656f, -715.705505f, 99.157860f));
+			}
+	        else if ((get<2>(leaderInfos[0]) == 8 || get<3>(leaderInfos[0]) == 8)) {
+	            //Alchemy
+	            MoveToMap(Position(-8987.856445f, 756.198364f, 98.329971f));
+	        }
+	    }
+	    else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
+	        // Ironforge
+	        if ((get<2>(leaderInfos[0]) == 4 || get<3>(leaderInfos[0]) == 4)) {
+	            //Tailoring
+	            MoveToMap(Position(-4720.207520f, -1057.395264f, 504.196350f));
+	        }
+	        else if ((get<2>(leaderInfos[0]) == 5 || get<3>(leaderInfos[0]) == 5)) {
+	            //Leatherworking
+	            MoveToMap(Position(-4745.913574f, -1024.820313f, 504.428741f));
+	        }
+	        else if ((get<2>(leaderInfos[0]) == 6 || get<3>(leaderInfos[0]) == 6)) {
+	            //Blacksmithing
+	            MoveToMap(Position(-4791.157227f, -1123.242920f, 498.806366f));
+	        }
+			else if ((get<2>(leaderInfos[0]) == 7 || get<3>(leaderInfos[0]) == 7)) {
+				//Enchanting
+				MoveToMap(Position(-4803.927246f, -1191.961060f, 505.815460f));
+			}
+	        else if ((get<2>(leaderInfos[0]) == 8 || get<3>(leaderInfos[0]) == 8)) {
+	            //Alchemy
+	            MoveToMap(Position(-4858.876465f, -1240.255371f, 501.255371f));
+	        }
+	    }
+	    else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
+	        // Darnassus
+	        if ((get<2>(leaderInfos[0]) == 4 || get<3>(leaderInfos[0]) == 4)) {
+	            //Tailoring
+	            MoveToMap(Position(10084.380859f, 2267.175049f, 1333.000732f));
+	        }
+	        else if ((get<2>(leaderInfos[0]) == 5 || get<3>(leaderInfos[0]) == 5)) {
+	            //Leatherworking
+	            MoveToMap(Position(10084.359375f, 2257.949463f, 1343.310791f));
+	        }
+	        else if ((get<2>(leaderInfos[0]) == 7 || get<3>(leaderInfos[0]) == 7)) {
+	            //Enchanting
+	            MoveToMap(Position(10145.700195f, 2320.280029f, 1333.079956f));
+	        }
+	        else if ((get<2>(leaderInfos[0]) == 8 || get<3>(leaderInfos[0]) == 8)) {
+	            //Alchemy
+	            MoveToMap(Position(10097.754883f, 2352.179199f, 1325.527954f));
+	        }
+	    }
 	}
 	else if (autoLearnSpells == 3) {
-	        // Return to center of city
-	        if(mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
-	                // Stormwind
-	                MoveToMap(Position(10177.738281f, 2582.425537f, 1325.966187f)); //?
-	        }
-	        else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
-	                // Ironforge
-	                
-	        }
-	        else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
-	                // Darnassus
-	                
-	        }
+	    // Return to center of city
+	    if(mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
+	        // Stormwind
+	        MoveToMap(Position(-8830.489258f, 625.553711f, 93.943695f));
+	    }
+	    else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
+	        // Ironforge
+			MoveToMap(Position(-4756.274902f, -1154.143677f, 502.211273f));
+	    }
+	    else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
+	        // Darnassus
+			MoveToMap(Position(9952.135742f, 2280.563965f, 1341.394409f));
+	    }
 	}
 }
