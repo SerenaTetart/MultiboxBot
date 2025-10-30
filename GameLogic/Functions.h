@@ -4,7 +4,7 @@
 
 class Functions {
 	public:
-		static bool Intersect(Position start, Position end, float z=1.25f);
+		static bool Intersect(Position start, Position end, float z=1.50f);
 		static float GetDepth(Position pos, float height);
 		static Position ProjectPos(Position pos, float height);
 		static unsigned long GetPlayerGuid();

@@ -402,9 +402,7 @@ bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
 			Position next = Functions::ProjectPos(stepPos, 2.0f);
 
 			// Acceptable snap and clear segment from 'last' -> 'next'?
-			bool snapOk = (next.DistanceTo(stepPos) < 2.0f);
-			bool clear = !Functions::Intersect(localPlayer->position, next);
-			if (snapOk && clear && (!checkEnemyClose || !Functions::enemyClose(next, 20.0f))) {
+			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(localPlayer->position, next) && (!checkEnemyClose || !Functions::enemyClose(next, 20.0f))) {
 				// This is the CLOSEST valid point along this ray so far.
 				// If your extra constraint passes, move there.
 				if (MoveObstacle_tmp(target_pos, next)) {
@@ -505,9 +503,7 @@ bool Functions::MoveLoS(Position target_pos) {
 
 			Position next = Functions::ProjectPos(stepPos, 2.0f);
 
-			bool snapOk = (next.DistanceTo(stepPos) < 2.0f);
-			bool clear = !Functions::Intersect(last, next);
-			if (snapOk && clear && !Functions::enemyClose(next, 20.0f)) {
+			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(last, next) && !Functions::enemyClose(next, 20.0f)) {
 				if (!Functions::Intersect(next, target_pos)) {
 					localPlayer->ClickToMove(Move, localPlayer->Guid, next);
 					return true;
