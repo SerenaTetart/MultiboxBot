@@ -150,7 +150,7 @@ void ListAI::MageDps() {
 				if (Combat && playerSpec == 2 && targetPlayer && FunctionsLua::IsSpellReady("Cold Snap") && !FunctionsLua::IsSpellReady("Frost Nova") && !FunctionsLua::IsSpellReady("Ice Block")) {
 					FunctionsLua::CastSpellByName("Cold Snap");
 				}
-				else if ((nbrCloseEnemy >= 3 || (nbrCloseEnemyFacing >= 1 && targetPlayer) || (nbrCloseEnemy >= 1 && !IsInGroup)) && FunctionsLua::IsSpellReady("Frost Nova")) {
+				else if (nbrCloseEnemy >= 1 && FunctionsLua::IsSpellReady("Frost Nova")) {
 					//Frost Nova
 					FunctionsLua::CastSpellByName("Frost Nova");
 				}

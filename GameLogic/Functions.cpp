@@ -135,6 +135,8 @@ int Functions::Callback(unsigned long long guid, int filter) {
 				}
 				if (guid == GetPlayerGuid()) {
 					localPlayer = new LocalPlayer(pointer, guid, objectType);
+					localPlayer->role = ListUnits.back().role;
+					localPlayer->indexGroup = ListUnits.back().indexGroup;
 					GroupMember[0] = &ListUnits.back();
 					PartyMember[0] = &ListUnits.back();
 				}

@@ -516,7 +516,7 @@ int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEn
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0;
-std::string tarType = "party", srcPath="";
+std::string tarType = "party";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 std::vector<int> HealTargetArray;

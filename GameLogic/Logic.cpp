@@ -24,7 +24,18 @@ void Game::CorpseRun() {
 		//Run to the instance
 		if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(-11207.799805f, 1681.150024f, 60.143227f)) < 5.0f) {
 		    //Deadmines
-		    MoveToMap(Position(-11207.504883f, 1680.481934f, 24.358500f));
+			if (localPlayer->zoneID == 1581) {
+				// Inside Hideout
+				if (localPlayer->position.Z > 38) {
+					MoveToMap(Position(-11105.501953f, 1486.848267f, 32.607071f));
+				}
+				else {
+					MoveToMap(Position(-11207.504883f, 1680.481934f, 24.358500f));
+				}
+			}
+			else {
+				MoveToMap(Position(-11082.001953f, 1527.153931f, 43.320770f));
+			}
 		}
 		else if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(-230.988998f, 1571.569946f, 97.390625f)) < 5.0f) {
 		    //Shadowfang
