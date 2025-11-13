@@ -4,44 +4,37 @@ void ListAI::DPSTargeting() {
 	if ((Leader != NULL) && (Leader->Guid == localPlayer->Guid) && !MCAutoMove) return;
 	else if (PvPTarget != NULL) localPlayer->SetTarget(PvPTarget->Guid);
 	else {
-		bool tankInGrp = false;
-		for (int i = 1; i <= NumGroupMembers; i++) {
-			if (GroupMember[i] != NULL && GroupMember[i]->role == 0) tankInGrp = true;
-		}
-		if (tankInGrp && (Combat || Leader == NULL || Leader->Guid != localPlayer->Guid)) {
-			bool targetFocusingTank = false;
-			if (targetUnit != NULL && !targetUnit->isdead && targetUnit->attackable) {
-				for (int i = 1; i <= NumGroupMembers; i++) {
-					if (GroupMember[i] != NULL && targetUnit->targetGuid == GroupMember[i]->Guid && GroupMember[i]->role == 0) {
-						targetFocusingTank = true;
-						return;
-					}
-				}
-			}
-			if (targetUnit == NULL || targetUnit->isdead || !targetUnit->attackable || !targetFocusingTank) {
-				for (int i = 1; i <= NumGroupMembers; i++) {
-					if (GroupMember[i] != NULL && GroupMember[i]->targetGuid != NULL && GroupMember[i]->role == 0) {
-						localPlayer->SetTarget(GroupMember[i]->targetGuid);
-						return;
-					}
-				}
-				for (int y = 0; y < 4; y++) {
-					for (int i = NumGroupMembers; i >= 0; i--) {
-						if (GroupMember[i] != NULL && GroupMember[i]->role == y && HasAggro[i].size() > 0) {
-							localPlayer->SetTarget(HasAggro[i][0]->Guid);
-							return;
-						}
-					}
+		bool targetFocusingTank = false;
+		if (targetUnit != NULL && !targetUnit->isdead && targetUnit->attackable) {
+			for (int i = 1; i <= NumGroupMembers; i++) {
+				if (GroupMember[i] != NULL && targetUnit->targetGuid == GroupMember[i]->Guid && GroupMember[i]->role == 0) {
+					targetFocusingTank = true;
+					return;
 				}
 			}
 		}
-		else {
+		if (targetUnit == NULL || targetUnit->isdead || !targetUnit->attackable || !targetFocusingTank) {
+			for (int i = 1; i <= NumGroupMembers; i++) {
+				// Assist Tank
+				if (GroupMember[i] != NULL && GroupMember[i]->targetGuid != NULL && GroupMember[i]->role == 0) {
+					localPlayer->SetTarget(GroupMember[i]->targetGuid);
+					return;
+				}
+			}
 			for (int y = 0; y < 4; y++) {
+				// Assist a threatened party member
 				for (int i = NumGroupMembers; i >= 0; i--) {
 					if (GroupMember[i] != NULL && GroupMember[i]->role == y && HasAggro[i].size() > 0) {
 						localPlayer->SetTarget(HasAggro[i][0]->Guid);
 						return;
 					}
+				}
+			}
+			for (unsigned int i = 0; i < ListUnits.size(); i++) {
+				// Attack a random NPC in combat with you
+				if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME)) {
+					localPlayer->SetTarget(ListUnits[i].Guid);
+					return;
 				}
 			}
 		}

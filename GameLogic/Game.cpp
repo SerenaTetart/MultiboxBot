@@ -7,6 +7,7 @@
 #include "Navigation.h"
 
 #include <iostream>
+#include <fstream>
 #include <chrono>
 
 static unsigned long long playerGuid = 0;
@@ -51,7 +52,18 @@ void Game::MainLoop() {
 		);
 
 		while (Client::bot_running == true && (Leader == NULL || (Leader->Guid != playerGuid) || !MCNoAuto)) {
-			//std::cout << "Preprocessing\n";
+
+			// ========================================== //
+			// ===========   Initialisation   =========== //
+			// ========================================== //
+
+			/*auto start = std::chrono::high_resolution_clock::now();
+			std::cout << "Initialisation start\n";*/
+
+			// Open a log file -> write each step -> wait -> destroy everything -> repeat
+			std::ofstream outfile(srcPath+"/log.txt", std::ios::trunc);
+			outfile << "Step 1 - Pre-processing\n";
+
 			ThreadSynchronizer::RunOnMainThread(
 				[]() {
 					playerGuid = Functions::GetPlayerGuid();
@@ -111,13 +123,6 @@ void Game::MainLoop() {
 				}
 			);
 
-			// ========================================== //
-			// ===========   Initialisation   =========== //
-			// ========================================== //
-
-			/*auto start = std::chrono::high_resolution_clock::now();
-			std::cout << "Initialisation start\n";*/
-
 			if (localPlayer == NULL) {
 				Sleep(333);
 				break;
@@ -147,6 +152,7 @@ void Game::MainLoop() {
 			// ========================================== //
 
 			//start = std::chrono::high_resolution_clock::now();
+			outfile << "Step 2 - Movements\n";
 
 
 			int RaptorStrikeIDs[8] = { 2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266 };
@@ -292,7 +298,7 @@ void Game::MainLoop() {
 					if (herbalismLevel > 0 || miningLevel > 0) {
 						for (unsigned int i = 0; i < ListGameObjects.size(); i++) {
 							if (ListGameObjects[i].gatherType == 0) continue;
-							else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 60.0f)
+							else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
 								continue;
 							else if (Functions::enemyClose(ListGameObjects[i].position, 20.0f)) continue;
 							int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
@@ -310,7 +316,7 @@ void Game::MainLoop() {
 									gatheringCD = time(0);
 									if (ListGameObjects[i].gatherType == 1) gatheringCD -= (time_t)1.5f;
 								}
-								else {
+								else if (!localPlayer->isMoving) {
 									ThreadSynchronizer::RunOnMainThread([=]() {
 										Functions::MoveTo(ListGameObjects[i].position, 4);
 									});
@@ -472,6 +478,7 @@ void Game::MainLoop() {
 			// ========================================== //
 
 			//start = std::chrono::high_resolution_clock::now();
+			outfile << "Step 3 - Actions\n";
 
 			if (localPlayer != NULL && !IsSitting) {
 				if (localPlayer->className == "Druid") {
@@ -516,7 +523,7 @@ int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEn
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0;
-std::string tarType = "party";
+std::string tarType = "party", srcPath = "";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 std::vector<int> HealTargetArray;

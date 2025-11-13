@@ -217,11 +217,8 @@ void Functions::MoveTo(Position target_pos, int MoveType, bool checkEnemyClose, 
 	else if (Functions::MoveObstacle(target_pos, checkEnemyClose) == false) {
 		Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
 		if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
-			if (Functions::MoveObstacle(nextpos, checkEnemyClose) == false) {
-				localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-				Moving = MoveType;
-			}
-			else Moving = MoveType;
+			localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
+			Moving = MoveType;
 		}
 	} else Moving = MoveType;
 }
@@ -331,7 +328,7 @@ bool Functions::MoveObstacleSwim(Position target_pos, bool checkEnemyClose) {
 		for (int s = 0; s < MAX_STEPS; ++s) {
 			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
 
-			if (!Functions::Intersect(localPlayer->position, stepPos) && (!checkEnemyClose || !Functions::enemyClose(stepPos, 20.0f))) {
+			if (!Functions::Intersect(localPlayer->position, stepPos) && (!checkEnemyClose || !Functions::enemyClose(stepPos, 30.0f))) {
 				if (MoveObstacleSwim_tmp(target_pos, stepPos)) {
 					if (off == 0) localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
 					else localPlayer->ClickToMove(Move, localPlayer->Guid, stepPos);
@@ -365,7 +362,7 @@ bool Functions::MoveLoSSwim(Position target_pos) {
 		for (int s = 0; s < MAX_STEPS; ++s) {
 			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
 
-			if (!Functions::Intersect(last, stepPos) && !Functions::enemyClose(stepPos, 20.0f)) {
+			if (!Functions::Intersect(last, stepPos) && !Functions::enemyClose(stepPos, 30.0f)) {
 				if (!Functions::Intersect(stepPos, target_pos)) {
 					localPlayer->ClickToMove(Move, localPlayer->Guid, stepPos);
 					return true;
@@ -404,7 +401,7 @@ bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
 			Position next = Functions::ProjectPos(stepPos, 2.0f);
 
 			// Acceptable snap and clear segment from 'last' -> 'next'?
-			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(localPlayer->position, next) && (!checkEnemyClose || !Functions::enemyClose(next, 20.0f))) {
+			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(localPlayer->position, next) && (!checkEnemyClose || !Functions::enemyClose(next, 30.0f))) {
 				// This is the CLOSEST valid point along this ray so far.
 				// If your extra constraint passes, move there.
 				if (MoveObstacle_tmp(target_pos, next)) {
@@ -439,16 +436,28 @@ bool Functions::StepBack(Position target_pos, int move_type) {
 	float halfPI = acosf(0);
 	for (int i = 0; i < 16; i++) {
 		Position last_pos = target_pos; //Take into account the difference in altitude at each point
-		for (int w = 0; w < 6; w++) { //Every 2.5 yards up to 15 check for LoS point
+		for (int w = 0; w < 5; w++) { //Every 2.5 yards up to 15 check for LoS point
 			Position tmp_pos = Position((cos((i * halfPI / 4)) * 2.5f) + last_pos.X, (sin((i * halfPI / 4)) * 2.5f) + last_pos.Y, last_pos.Z);
-			Position next_pos = tmp_pos; bool depthCheck = true;
+			Position next_pos = tmp_pos;
 			if (!(localPlayer->movement_flags & MOVEFLAG_SWIMMING)) {
-				Position next_pos = Functions::ProjectPos(tmp_pos, 2.00f);
-				depthCheck = (next_pos.DistanceTo(tmp_pos) < 2.00f);
+				next_pos = Functions::ProjectPos(tmp_pos, 2.00f);
+				if (!(next_pos.DistanceTo(tmp_pos) < 2.00f)) break;
+				// Test 4 points to check if close to an obstacle
+				bool depthCheck = true;
+				for (int z = 0; z < 4; z++) {
+					tmp_pos = Position((cos((z * halfPI)) * 2.0f) + next_pos.X, (sin((z * halfPI)) * 2.0f) + next_pos.Y, next_pos.Z);
+					Position tmp_pos2 = Functions::ProjectPos(tmp_pos, 2.00f);
+					if (!(tmp_pos2.DistanceTo(tmp_pos) < 2.00f)) {
+						depthCheck = false;
+						break;
+					}
+				}
+				if (!depthCheck) break;
 			}
-			if (!Functions::Intersect(last_pos, next_pos) && depthCheck) {
-				if (target_pos.DistanceTo(next_pos) >= 12.0f && !Functions::Intersect(next_pos, target_pos) && !Functions::enemyClose(next_pos, 20.0f)) {
+			if (!Functions::Intersect(last_pos, next_pos)) {
+				if (target_pos.DistanceTo(next_pos) >= 12.0f && !Functions::Intersect(next_pos, target_pos) && !Functions::enemyClose(next_pos, 30.0f)) {
 					list_pos[i] = next_pos;
+					break;
 				}
 				else { last_pos = next_pos; continue; }
 			}
@@ -469,7 +478,7 @@ bool Functions::StepBack(Position target_pos, int move_type) {
 		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f, target_pos, 12.0f);
 		// Position aléatoire ici
 		Functions::MoveObstacle(candidate);
-		if (localPlayer->className == "Mage" && candidate.DistanceTo(localPlayer->position) > 10.0f && FunctionsLua::IsSpellReady("Blink")) {
+		if (localPlayer->isMoving && localPlayer->className == "Mage" && candidate.DistanceTo(localPlayer->position) > 12.0f && FunctionsLua::IsSpellReady("Blink")) {
 			FunctionsLua::CastSpellByName("Blink");
 		}
 		Moving = move_type;
@@ -505,7 +514,7 @@ bool Functions::MoveLoS(Position target_pos) {
 
 			Position next = Functions::ProjectPos(stepPos, 2.0f);
 
-			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(last, next) && !Functions::enemyClose(next, 20.0f)) {
+			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(last, next) && !Functions::enemyClose(next, 30.0f)) {
 				if (!Functions::Intersect(next, target_pos)) {
 					localPlayer->ClickToMove(Move, localPlayer->Guid, next);
 					return true;
@@ -708,7 +717,8 @@ bool Functions::enemyClose(Position pos, float dist) {
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
 			&& !(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
-			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && ((ListUnits[i].level + 5) >= localPlayer->level) && !ListUnits[i].isdead && (ListUnits[i].position.DistanceTo(pos) < dist)) {
+			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && ((ListUnits[i].level + 5) >= localPlayer->level) && !ListUnits[i].isdead && (ListUnits[i].position.DistanceTo(pos) < dist)
+			&& (abs(ListUnits[i].position.Z-localPlayer->position.Z) < 10.0f)) {
 			return true;
 		}
 	}
