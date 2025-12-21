@@ -59,8 +59,6 @@ void ListAI::HunterDps() {
 			}
 			else if (targetUnit != NULL && targetUnit->attackable && !targetUnit->isdead) {
 				bool targetPlayer = targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED;
-				bool targetStunned = targetUnit->flags & UNIT_FLAG_STUNNED;
-				bool targetConfused = targetUnit->flags & UNIT_FLAG_CONFUSED;
 				int WingClipIDs[3] = { 2974, 14267, 14268 };
 				bool WingClipDebuff = targetUnit->hasDebuff(WingClipIDs, 3);
 				int SerpentStingIDs[9] = { 1978, 13549, 13550, 13551, 13552, 13553, 13554, 13555, 25295 };
@@ -71,17 +69,17 @@ void ListAI::HunterDps() {
 				bool FreezingTrapDebuff = targetUnit->hasDebuff(FreezingTrapIDs, 3);
 				bool attacking = FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"));
 				bool autoShotInRange = FunctionsLua::IsActionInRange(FunctionsLua::GetSlot("Auto Shot"));
-				if ((FreezingTrapDebuff || targetConfused) && attacking) FunctionsLua::CastSpellByName("Attack");
+				if ((FreezingTrapDebuff || (targetUnit->flags & UNIT_FLAG_CONFUSED)) && attacking) FunctionsLua::CastSpellByName("Attack");
 				else if (!autoShotInRange && !attacking) FunctionsLua::CastSpellByName("Attack");
 				if (autoShotInRange && !FunctionsLua::IsAutoRepeatAction(FunctionsLua::GetSlot("Auto Shot"))) FunctionsLua::CastSpellByName("Auto Shot");
-				if (targetUnit->flags & UNIT_FLAG_IN_COMBAT && FunctionsLua::HasPetUI()) {
+				if ((targetUnit->flags & UNIT_FLAG_IN_COMBAT) && FunctionsLua::HasPetUI()) {
 					Functions::LuaCall("PetAttack()");
 				}
 				if ((distTarget < 5.0f) && (localPlayer->prctMana > 10) && targetPlayer && FunctionsLua::IsSpellReady("Feign Death")) {
 					//Feign Death
 					FunctionsLua::CastSpellByName("Feign Death");
 				}
-				else if (!Combat && (distTarget < 5.0f) && targetPlayer && FunctionsLua::IsSpellReady("Freezing Trap")) {
+				else if (!Combat && (distTarget < 5.0f) && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Freezing Trap")) {
 					//Freezing Trap
 					FunctionsLua::CastSpellByName("Freezing Trap");
 				}
@@ -89,11 +87,11 @@ void ListAI::HunterDps() {
 					//Explosive trap (AoE)
 					FunctionsLua::CastSpellByName("Explosive Trap");
 				}
-				else if ((distTarget < 15.0f) && targetPlayer && !FreezingTrapDebuff && FunctionsLua::IsSpellReady("Scatter Shot")) {
+				else if ((distTarget < 15.0f) && targetPlayer && !FreezingTrapDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Scatter Shot")) {
 					//Scatter Shot
 					FunctionsLua::CastSpellByName("Scatter Shot");
 				}
-				else if ((distTarget < 5.0f) && targetPlayer && !WingClipDebuff && !FreezingTrapDebuff && FunctionsLua::IsSpellReady("Wing Clip")) {
+				else if ((distTarget < 5.0f) && targetPlayer && !WingClipDebuff && targetUnit->getNbrDebuff() < 16 && !FreezingTrapDebuff && FunctionsLua::IsSpellReady("Wing Clip")) {
 					//Wing Clip
 					FunctionsLua::CastSpellByName("Wing Clip");
 				}
@@ -101,7 +99,7 @@ void ListAI::HunterDps() {
 					//Scatter Shot (Silence)
 					FunctionsLua::CastSpellByName("Scatter Shot");
 				}
-				else if ((distTarget < 5.0f) && (nbrAggro > 0) && !AspectMonkeyBuff && FunctionsLua::IsSpellReady("Aspect of the Monkey")) {
+				else if ((distTarget < 5.0f) && !AspectMonkeyBuff && (targetUnit->targetGuid == localPlayer->Guid) && FunctionsLua::IsSpellReady("Aspect of the Monkey")) {
 					//Aspect of the Monkey
 					FunctionsLua::CastSpellByName("Aspect of the Monkey");
 				}
@@ -109,7 +107,7 @@ void ListAI::HunterDps() {
 					//Aspect of the Hawk
 					FunctionsLua::CastSpellByName("Aspect of the Hawk");
 				}
-				else if (IsFacing && autoShotInRange && targetPlayer && FunctionsLua::IsSpellReady("Concussive Shot")) {
+				else if (IsFacing && autoShotInRange && (targetUnit->speed > 0) && (targetUnit->level > 0) && FunctionsLua::IsSpellReady("Concussive Shot")) {
 					//Concussive Shot (PvP)
 					FunctionsLua::CastSpellByName("Concussive Shot");
 				}
@@ -130,7 +128,7 @@ void ListAI::HunterDps() {
 					FunctionsLua::CastSpellByName("Volley");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!HunterMarkDebuff && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Hunter's Mark")) {
+				else if (!HunterMarkDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Hunter's Mark")) {
 					//Hunter's Mark
 					FunctionsLua::CastSpellByName("Hunter's Mark");
 				}
@@ -138,7 +136,7 @@ void ListAI::HunterDps() {
 					//Rapid Fire
 					FunctionsLua::CastSpellByName("Rapid Fire");
 				}
-				else if (IsFacing && autoShotInRange && targetPlayer && !SerpentStingDebuff && FunctionsLua::IsSpellReady("Serpent Sting")) {
+				else if (IsFacing && autoShotInRange && targetPlayer && !SerpentStingDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Serpent Sting")) {
 					//Serpent Sting (PvP)
 					FunctionsLua::CastSpellByName("Serpent Sting");
 				}

@@ -150,7 +150,7 @@ void ListAI::MageDps() {
 				if (Combat && playerSpec == 2 && targetPlayer && FunctionsLua::IsSpellReady("Cold Snap") && !FunctionsLua::IsSpellReady("Frost Nova") && !FunctionsLua::IsSpellReady("Ice Block")) {
 					FunctionsLua::CastSpellByName("Cold Snap");
 				}
-				else if ((nbrCloseEnemy >= 3 || (nbrCloseEnemyFacing >= 1 && targetPlayer) || (nbrCloseEnemy >= 1 && !IsInGroup)) && FunctionsLua::IsSpellReady("Frost Nova")) {
+				else if (nbrCloseEnemy >= 1 && FunctionsLua::IsSpellReady("Frost Nova")) {
 					//Frost Nova
 					FunctionsLua::CastSpellByName("Frost Nova");
 				}
@@ -166,7 +166,7 @@ void ListAI::MageDps() {
 					//Counter Spell
 					FunctionsLua::CastSpellByName("Counterspell");
 				}
-				else if ((ccTarget != NULL) && (PolymorphTimer == 0) && !(ccTarget->flags & UNIT_FLAG_CONFUSED) && FunctionsLua::IsSpellReady("Polymorph")) {
+				else if ((ccTarget != NULL) && (PolymorphTimer == 0) && ccTarget->getNbrDebuff() < 16 && !(ccTarget->flags & UNIT_FLAG_CONFUSED) && FunctionsLua::IsSpellReady("Polymorph")) {
 					//Polymorph (second target)
 					WoWUnit* firstTarget = targetUnit;
 					localPlayer->SetTarget(ccTarget->Guid);

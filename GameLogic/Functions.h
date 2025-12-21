@@ -4,9 +4,9 @@
 
 class Functions {
 	public:
-		static bool Intersect(Position start, Position end, float z=1.25f);
+		static bool Intersect(Position start, Position end, float z=1.50f);
 		static float GetDepth(Position pos, float height);
-		static Position ProjectPos(Position pos, float height);
+		static Position ProjectPos(Position pos);
 		static unsigned long GetPlayerGuid();
 		static int GetPositionCircle();
 		static void EnumerateVisibleObjects(int filter);
@@ -18,7 +18,7 @@ class Functions {
 		static void InteractObject(uintptr_t object_ptr, int autoloot);
 		static bool MoveLoS(Position target_pos);
 		static bool MoveLoSSwim(Position target_pos);
-		static bool StepBack(Position target_pos, int move_type);
+		static bool StepBack(WoWUnit* target, int move_type);
 		static bool MoveObstacle(Position target_pos, bool checkEnemyClose=true);
 		static bool MoveObstacleSwim(Position target_pos, bool checkEnemyClose);
 		static void FollowMultibox(int placement = 0);
@@ -27,7 +27,7 @@ class Functions {
 		static unsigned int GetMapID();
 		// === Non-memory Functions === //
 		static void ClassifyHeal();
-		static Position RandomisePos(Position target_pos, float radius);
+		static Position RandomisePos(Position target_pos, float radius, Position away_from = Position(0.0f, 0.0f, 0.0f), float dist_away = 0.0f);
 		static std::tuple<Position, int> getAOETargetPos(float range, float range2);
         static std::tuple<int, int, int, int> countEnemies();
 		static bool enemyClose(Position pos, float dist);

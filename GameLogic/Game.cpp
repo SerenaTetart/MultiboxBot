@@ -7,6 +7,7 @@
 #include "Navigation.h"
 
 #include <iostream>
+#include <fstream>
 #include <chrono>
 
 static unsigned long long playerGuid = 0;
@@ -51,7 +52,18 @@ void Game::MainLoop() {
 		);
 
 		while (Client::bot_running == true && (Leader == NULL || (Leader->Guid != playerGuid) || !MCNoAuto)) {
-			//std::cout << "Preprocessing\n";
+
+			// ========================================== //
+			// ===========   Initialisation   =========== //
+			// ========================================== //
+
+			/*auto start = std::chrono::high_resolution_clock::now();
+			std::cout << "Initialisation start\n";*/
+
+			// Open a log file -> write each step -> wait -> destroy everything -> repeat
+			std::ofstream outfile(srcPath+"/log.txt", std::ios::trunc);
+			outfile << "Step 1 - Pre-processing\n";
+
 			ThreadSynchronizer::RunOnMainThread(
 				[]() {
 					playerGuid = Functions::GetPlayerGuid();
@@ -68,8 +80,7 @@ void Game::MainLoop() {
 
 						Functions::EnumerateVisibleObjects(0);
 
-						if (localPlayer == NULL || localPlayer->name == "") pastPlayerGuid = 0;
-						else pastPlayerGuid = playerGuid;
+						pastPlayerGuid = playerGuid;
 						
 						if (localPlayer != NULL) {
 							targetUnit = localPlayer->getTarget();
@@ -92,6 +103,12 @@ void Game::MainLoop() {
 								pastPlayerGuid = playerGuid;
 								std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
 								Client::sendMessage(msg);
+								
+								std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
+							        int skills[] = { 0, 0 };
+							        std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
+							        msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
+							        Client::sendMessage(msg);
 							}
 
 							skinningLevel = FunctionsLua::GetTradingSkill("Skinning");
@@ -106,13 +123,6 @@ void Game::MainLoop() {
 				}
 			);
 
-			// ========================================== //
-			// ===========   Initialisation   =========== //
-			// ========================================== //
-
-			/*auto start = std::chrono::high_resolution_clock::now();
-			std::cout << "Initialisation start\n";*/
-
 			if (localPlayer == NULL) {
 				Sleep(333);
 				break;
@@ -126,10 +136,12 @@ void Game::MainLoop() {
 			IsFacing = false; distTarget = 0; hasTargetAggro = false;
 			if(targetUnit != NULL) {
 				if(targetUnit->attackable) IsFacing = localPlayer->isFacing(targetUnit->position, 0.3f);
-				distTarget = localPlayer->position.DistanceTo(targetUnit->position);
-
+				distTarget = localPlayer->position.DistanceTo(targetUnit->position) - targetUnit->combatReach;
 				for (unsigned int i = 0; i < HasAggro[0].size(); i++) {
-					if (targetUnit->Guid == HasAggro[0][i]->Guid) hasTargetAggro = true;
+					if (targetUnit->Guid == HasAggro[0][i]->Guid) {
+						hasTargetAggro = true;
+						break;
+					}
 				}
 			}
 
@@ -142,16 +154,13 @@ void Game::MainLoop() {
 			// ========================================== //
 
 			//start = std::chrono::high_resolution_clock::now();
+			outfile << "Step 2 - Movements\n";
 
 
 			int RaptorStrikeIDs[8] = { 2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266 };
 			int HeroicStrikeIDs[9] = { 78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286 };
 			int CleaveIDs[5] = { 845, 7369, 11608, 11609, 20569 };
 			if (localPlayer != NULL && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
-				float halfPI = acosf(0);
-				Position back_pos = Position((cos(localPlayer->facing + (2 * halfPI)) * 2.0f) + localPlayer->position.X
-					, (sin(localPlayer->facing + (2 * halfPI)) * 2.0f) + localPlayer->position.Y
-					, localPlayer->position.Z);
 				ThreadSynchronizer::RunOnMainThread([=]() {
 					los_target = true;
 					if (targetUnit != NULL) {
@@ -160,8 +169,6 @@ void Game::MainLoop() {
 							&& !(targetUnit->flags & UNIT_FLAG_IN_COMBAT) && (targetUnit->Guid != Leader->targetGuid))
 							Functions::LuaCall("ClearTarget()");
 					}
-					if (IsFacing && distTarget < 5.0f && (float(time(0) - autoAttackCD) >= FunctionsLua::UnitAttackSpeed("player")) && FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack")))
-						autoAttackCD = time(0);
 				});
 					//Reset Loot History after 20 sec
 				unsigned int ind = 0;
@@ -169,7 +176,6 @@ void Game::MainLoop() {
 					if (float(time(0) - get<1>(LootHistory[ind])) >= 20.0f) LootHistory.erase(LootHistory.begin() + ind);
 					else ind++;
 				}
-				bool playerIsRanged = Functions::PlayerIsRanged();
 				int drinkingIDs[15] = { 430, 431, 432, 1133, 1135, 1137, 24355, 25696, 26261, 26402, 26473, 26475, 29007, 10250, 22734 };
 				if (localPlayer->isdead && localPlayer->getHealth() == 1) {
 					//Logic actions
@@ -192,8 +198,10 @@ void Game::MainLoop() {
 					TrainSpellRun();
 				}
 				else if (!passiveGroup && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
-					if (playerIsRanged) {
-						if ((Moving == 4 || Moving == 2 || Moving == 5) && distTarget < 30.0f) {
+					if (Functions::PlayerIsRanged()) {
+						float maxRange = 30.0f;
+						if (localPlayer->className == "Hunter") maxRange = 35.0f;
+						if ((Moving == 4 || Moving == 2 || Moving == 5) && distTarget < maxRange) {
 							//Running and (target < 30 yard) => stop
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
@@ -205,7 +213,7 @@ void Game::MainLoop() {
 								Functions::MoveToLoS(targetUnit->position, 6);
 							});
 						}
-						else if (distTarget > 30.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
+						else if (distTarget > maxRange && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
 							//Target > 30 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
@@ -231,7 +239,7 @@ void Game::MainLoop() {
 							|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0))) {
 							//(Creature not aggro || Player slowed) && < 12 yard => Walk backward
 							ThreadSynchronizer::RunOnMainThread([]() {
-								if (Functions::StepBack(targetUnit->position, 3) == false) {
+								if (Functions::StepBack(targetUnit, 3) == false) {
 									localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 								}
 							});
@@ -242,8 +250,8 @@ void Game::MainLoop() {
 						}
 					}
 					else {
-						if (distTarget > 5.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
-							//Target > 5 yard => Run to it
+						if (distTarget > 3.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
+							//Target > 3 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, false, targetSwim);
@@ -258,7 +266,7 @@ void Game::MainLoop() {
 						else Moving = 0;
 					}
 				}
-				else if ((Moving == 5 && localPlayer->speed == 0) && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
+				else if (Moving == 5 && !localPlayer->isMoving && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
 					//Find LoS (ally)
 					ThreadSynchronizer::RunOnMainThread([=]() {
 						Functions::MoveToLoS(targetUnit->position, 5);
@@ -290,7 +298,7 @@ void Game::MainLoop() {
 					if (herbalismLevel > 0 || miningLevel > 0) {
 						for (unsigned int i = 0; i < ListGameObjects.size(); i++) {
 							if (ListGameObjects[i].gatherType == 0) continue;
-							else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 60.0f)
+							else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
 								continue;
 							else if (Functions::enemyClose(ListGameObjects[i].position, 20.0f)) continue;
 							int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
@@ -308,7 +316,7 @@ void Game::MainLoop() {
 									gatheringCD = time(0);
 									if (ListGameObjects[i].gatherType == 1) gatheringCD -= (time_t)1.5f;
 								}
-								else {
+								else if (!localPlayer->isMoving) {
 									ThreadSynchronizer::RunOnMainThread([=]() {
 										Functions::MoveTo(ListGameObjects[i].position, 4);
 									});
@@ -470,6 +478,7 @@ void Game::MainLoop() {
 			// ========================================== //
 
 			//start = std::chrono::high_resolution_clock::now();
+			outfile << "Step 3 - Actions\n";
 
 			if (localPlayer != NULL && !IsSitting) {
 				if (localPlayer->className == "Druid") {
@@ -509,15 +518,15 @@ void Game::MainLoop() {
 
 std::vector<WoWUnit*> HasAggro[40]; std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 bool Combat = false, IsSitting = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
-los_target = false, passiveGroup = false, autoLearnSpells = false;
+los_target = false, passiveGroup = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
-skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0;
+skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0;
-std::string tarType = "party", srcPath="";
+std::string tarType = "party", srcPath = "";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 std::vector<int> HealTargetArray;
-WoWUnit* ccTarget = NULL; WoWUnit* targetUnit = NULL; WoWUnit* TankTarget = NULL; WoWUnit* GroupMember[40]; WoWUnit* PartyMember[5]; WoWUnit* Leader = NULL; WoWUnit* PvPTarget = NULL;
-time_t current_time = time(0), autoAttackCD = time(0), gatheringCD = time(0);
+WoWUnit* ccTarget = NULL; WoWUnit* targetUnit = NULL; WoWUnit* GroupMember[40]; WoWUnit* PartyMember[5]; WoWUnit* Leader = NULL;
+time_t current_time = time(0), gatheringCD = time(0);
 Position playerLastPos = Position(0, 0, 0);

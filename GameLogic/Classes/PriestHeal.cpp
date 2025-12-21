@@ -52,11 +52,11 @@ static void PriestAttack() {
 			//Holy Nova
 			FunctionsLua::CastSpellByName("Holy Nova");
 		}
-		else if (IsFacing && !ShadowWordPainDebuff && !IsInGroup && FunctionsLua::IsSpellReady("Shadow Word: Pain")) {
+		else if (IsFacing && !ShadowWordPainDebuff && targetUnit->getNbrDebuff() < 16 && !IsInGroup && FunctionsLua::IsSpellReady("Shadow Word: Pain")) {
 			//Shadow Word: Pain
 			FunctionsLua::CastSpellByName("Shadow Word: Pain");
 		}
-		else if (!Combat && IsFacing && !localPlayer->isMoving && !HolyFireDebuff && !IsInGroup && FunctionsLua::IsSpellReady("Holy Fire")) {
+		else if (!Combat && IsFacing && !localPlayer->isMoving && !HolyFireDebuff && targetUnit->getNbrDebuff() < 16 && !IsInGroup && FunctionsLua::IsSpellReady("Holy Fire")) {
 			//Holy Fire
 			FunctionsLua::CastSpellByName("Holy Fire");
 		}

@@ -2,9 +2,6 @@
 #include <cstdint>
 #include <vector>
 #include <string>
-#include <fstream>
-#include <stdexcept>
-#include <cstring>
 #include <unordered_map>
 
 struct FactionTemplateEntry

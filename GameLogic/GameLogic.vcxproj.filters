@@ -45,7 +45,7 @@
     <ClInclude Include="rng.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DBCReader.h">
+    <ClInclude Include="FactionTemplate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -104,7 +104,7 @@
     <ClCompile Include="Classes\WarriorTank.cpp">
       <Filter>Source Files\Classes</Filter>
     </ClCompile>
-    <ClCompile Include="Logic.cpp">
+    <ClCompile Include="MoveLogic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Navigation.cpp">
@@ -113,7 +113,7 @@
     <ClCompile Include="Classes\Behavior.cpp">
       <Filter>Source Files\Classes</Filter>
     </ClCompile>
-    <ClCompile Include="DBCReader.cpp">
+    <ClCompile Include="FactionTemplate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Classes\DruidFeralCat.cpp">

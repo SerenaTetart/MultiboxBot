@@ -2,7 +2,7 @@
 #include "../MemoryManager.h"
 #include <iostream>
 
-static void PaladinAttack() {
+static void PaladinAttack(int index_paladin) {
 	ListAI::TankTargeting();
 	if (targetUnit != NULL && targetUnit->attackable && !targetUnit->isdead) {
 		bool targetStunned = targetUnit->flags & UNIT_FLAG_STUNNED;
@@ -184,8 +184,8 @@ void ListAI::PaladinTank() {
 				FunctionsLua::CastSpellByName("Devotion Aura");
 			}
 			else if (!RetributionAuraBuff && index_paladin == 1 && FunctionsLua::IsPlayerSpell("Retribution Aura")) {
-			        //Retribution Aura
-			        FunctionsLua::CastSpellByName("Retribution Aura");
+			    //Retribution Aura
+			    FunctionsLua::CastSpellByName("Retribution Aura");
 			}
 			else if (!RighteousFuryBuff && FunctionsLua::IsSpellReady("Righteous Fury")) {
 				//Righteous Fury
@@ -273,7 +273,7 @@ void ListAI::PaladinTank() {
 					tmp = HealGroup(HealTargetArray[index]);
 					index = index + 1;
 				}
-				if (tmp == 1 && !passiveGroup) PaladinAttack();
+				if (tmp == 1 && !passiveGroup) PaladinAttack(index_paladin);
 			}
 		});
 	}

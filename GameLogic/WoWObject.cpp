@@ -114,6 +114,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
         name = (char*)(namePtr + PLAYER_NAME_OFFSET);
     }
 
+    combatReach = *(float*)(descriptor + COMBAT_REACH_OFFSET);
     channelInfo = *(int*)(descriptor + CHANNEL_OFFSET);
 
     factionTemplateID = *(int*)(descriptor + FACTION_TEMPLATE_ID_OFFSET);
@@ -170,10 +171,7 @@ bool WoWUnit::isFacing(Position pos, float angle) {
 
 static inline float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-bool WoWUnit::isBehind(WoWUnit* target)
-{
-    // --- choose your ground plane here ---
-
+bool WoWUnit::isBehind(WoWUnit* target) {
     float dx = this->position.X - target->position.X;
     float dy = (this->position.Y - target->position.Y);
 

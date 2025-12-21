@@ -153,14 +153,11 @@ class WoWObject {
 
 class WoWUnit : public WoWObject {
     public:
-        Position position; float prctHP; float prctMana; int rage; int energy;
+        Position position; CreatureType creatureType; UnitReaction unitReaction;
         UnitFlags flags; MovementFlags movement_flags; DynamicFlags dynamic_flags;
-        int buff[30]; int debuff[16]; bool isdead, isMoving;
-        CreatureType creatureType; float speed; unsigned long long targetGuid;
-        float facing; int level; char* name; int channelInfo; UnitReaction unitReaction;
-        bool attackable; int hpLost; int factionTemplateID;
-        
-        int indexGroup, role;
+        int buff[30]; int debuff[16]; float prctHP, prctMana, facing, speed, combatReach;
+        unsigned long long targetGuid; char* name; bool attackable, isdead, isMoving;
+        int rage, energy, level, channelInfo, hpLost, factionTemplateID, indexGroup, role;
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);
         bool hasBuff(int* IDs, int size);
@@ -211,6 +208,7 @@ const uintptr_t MOVEMENT_FLAG_OFFSET = 0x9E8;
 const uintptr_t DYNAMIC_FLAG_OFFSET = 0x23C;
 const uintptr_t BUFF_BASE_OFFSET = 0xBC;
 const uintptr_t DEBUFF_BASE_OFFSET = 0x13C;
+const uintptr_t COMBAT_REACH_OFFSET = 0x208;
 const uintptr_t CHANNEL_OFFSET = 0x240;
 const uintptr_t POS_X_OFFSET = 0x9B8;
 const uintptr_t POS_Y_OFFSET = 0x9BC;
