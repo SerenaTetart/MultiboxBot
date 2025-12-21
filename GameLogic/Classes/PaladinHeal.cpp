@@ -107,7 +107,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpRatio < 50) && (distAlly < 20.0f) && FunctionsLua::IsSpellReady("Holy Shock")) {
+	else if ((HpRatio < 60) && (distAlly < 20.0f) && FunctionsLua::IsSpellReady("Holy Shock")) {
 		//Holy Shock
 		localPlayer->SetTarget(healGuid);
 		if (FunctionsLua::IsSpellReady("Divine Favor")) FunctionsLua::CastSpellByName("Divine Favor");
@@ -116,7 +116,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpRatio < 50) && (distAlly < 40.0f) && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Holy Light")) {
+	else if ((HpRatio < 60) && (distAlly < 40.0f) && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Holy Light")) {
 		//Holy Light
 		localPlayer->SetTarget(healGuid);
 		if (FunctionsLua::IsSpellReady("Divine Favor")) FunctionsLua::CastSpellByName("Divine Favor");

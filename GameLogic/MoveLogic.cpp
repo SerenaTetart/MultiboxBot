@@ -26,7 +26,7 @@ void Game::CorpseRun() {
 		    //Deadmines
 			if (localPlayer->zoneID == 1581) {
 				// Inside Hideout
-				if (localPlayer->position.Z > 38) {
+				if (localPlayer->position.Z > 37) {
 					MoveToMap(Position(-11105.501953f, 1486.848267f, 32.607071f));
 				}
 				else {

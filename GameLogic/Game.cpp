@@ -136,10 +136,12 @@ void Game::MainLoop() {
 			IsFacing = false; distTarget = 0; hasTargetAggro = false;
 			if(targetUnit != NULL) {
 				if(targetUnit->attackable) IsFacing = localPlayer->isFacing(targetUnit->position, 0.3f);
-				distTarget = localPlayer->position.DistanceTo(targetUnit->position);
-
+				distTarget = localPlayer->position.DistanceTo(targetUnit->position) - targetUnit->combatReach;
 				for (unsigned int i = 0; i < HasAggro[0].size(); i++) {
-					if (targetUnit->Guid == HasAggro[0][i]->Guid) hasTargetAggro = true;
+					if (targetUnit->Guid == HasAggro[0][i]->Guid) {
+						hasTargetAggro = true;
+						break;
+					}
 				}
 			}
 
@@ -167,8 +169,6 @@ void Game::MainLoop() {
 							&& !(targetUnit->flags & UNIT_FLAG_IN_COMBAT) && (targetUnit->Guid != Leader->targetGuid))
 							Functions::LuaCall("ClearTarget()");
 					}
-					if (IsFacing && distTarget < 5.0f && (float(time(0) - autoAttackCD) >= FunctionsLua::UnitAttackSpeed("player")) && FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack")))
-						autoAttackCD = time(0);
 				});
 					//Reset Loot History after 20 sec
 				unsigned int ind = 0;
@@ -239,7 +239,7 @@ void Game::MainLoop() {
 							|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0))) {
 							//(Creature not aggro || Player slowed) && < 12 yard => Walk backward
 							ThreadSynchronizer::RunOnMainThread([]() {
-								if (Functions::StepBack(targetUnit->position, 3) == false) {
+								if (Functions::StepBack(targetUnit, 3) == false) {
 									localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 								}
 							});
@@ -250,8 +250,8 @@ void Game::MainLoop() {
 						}
 					}
 					else {
-						if (distTarget > 5.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
-							//Target > 5 yard => Run to it
+						if (distTarget > 3.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
+							//Target > 3 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, false, targetSwim);
@@ -527,6 +527,6 @@ std::string tarType = "party", srcPath = "";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 std::vector<int> HealTargetArray;
-WoWUnit* ccTarget = NULL; WoWUnit* targetUnit = NULL; WoWUnit* TankTarget = NULL; WoWUnit* GroupMember[40]; WoWUnit* PartyMember[5]; WoWUnit* Leader = NULL; WoWUnit* PvPTarget = NULL;
-time_t current_time = time(0), autoAttackCD = time(0), gatheringCD = time(0);
+WoWUnit* ccTarget = NULL; WoWUnit* targetUnit = NULL; WoWUnit* GroupMember[40]; WoWUnit* PartyMember[5]; WoWUnit* Leader = NULL;
+time_t current_time = time(0), gatheringCD = time(0);
 Position playerLastPos = Position(0, 0, 0);

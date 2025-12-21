@@ -65,8 +65,7 @@ bool Navigation::Load(const std::string& dllPath) {
 Vector3 Navigation::ComputePath(unsigned int mapId, const Vector3& start, const Vector3& end) {
     int length = 0;
     Vector3* path = calculatePath(mapId, start, end, &length);
-
-    if (!path || length <= 0) {
+    if (!path || length <= 0 || path[length-1].DistanceTo(end) > 5.0f) {
         return start;
     }
 

@@ -1,4 +1,7 @@
-#include "DBCReader.h"
+#include "FactionTemplate.h"
+
+#include <fstream>
+#include <cstring>
 
 const FactionTemplateEntry* FactionTemplateDBC::Get(uint32_t id) const {
     auto it = byId.find(id);

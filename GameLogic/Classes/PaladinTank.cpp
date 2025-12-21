@@ -184,8 +184,8 @@ void ListAI::PaladinTank() {
 				FunctionsLua::CastSpellByName("Devotion Aura");
 			}
 			else if (!RetributionAuraBuff && index_paladin == 1 && FunctionsLua::IsPlayerSpell("Retribution Aura")) {
-			        //Retribution Aura
-			        FunctionsLua::CastSpellByName("Retribution Aura");
+			    //Retribution Aura
+			    FunctionsLua::CastSpellByName("Retribution Aura");
 			}
 			else if (!RighteousFuryBuff && FunctionsLua::IsSpellReady("Righteous Fury")) {
 				//Righteous Fury

@@ -6,7 +6,7 @@ class Functions {
 	public:
 		static bool Intersect(Position start, Position end, float z=1.50f);
 		static float GetDepth(Position pos, float height);
-		static Position ProjectPos(Position pos, float height);
+		static Position ProjectPos(Position pos);
 		static unsigned long GetPlayerGuid();
 		static int GetPositionCircle();
 		static void EnumerateVisibleObjects(int filter);
@@ -18,7 +18,7 @@ class Functions {
 		static void InteractObject(uintptr_t object_ptr, int autoloot);
 		static bool MoveLoS(Position target_pos);
 		static bool MoveLoSSwim(Position target_pos);
-		static bool StepBack(Position target_pos, int move_type);
+		static bool StepBack(WoWUnit* target, int move_type);
 		static bool MoveObstacle(Position target_pos, bool checkEnemyClose=true);
 		static bool MoveObstacleSwim(Position target_pos, bool checkEnemyClose);
 		static void FollowMultibox(int placement = 0);

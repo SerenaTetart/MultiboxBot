@@ -114,6 +114,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
         name = (char*)(namePtr + PLAYER_NAME_OFFSET);
     }
 
+    combatReach = *(float*)(descriptor + COMBAT_REACH_OFFSET);
     channelInfo = *(int*)(descriptor + CHANNEL_OFFSET);
 
     factionTemplateID = *(int*)(descriptor + FACTION_TEMPLATE_ID_OFFSET);

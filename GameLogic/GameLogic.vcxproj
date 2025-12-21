@@ -158,7 +158,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
-    <ClInclude Include="DBCReader.h" />
+    <ClInclude Include="FactionTemplate.h" />
     <ClInclude Include="FunctionsLua.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="ListAI.h" />
@@ -183,12 +183,12 @@
     <ClCompile Include="Classes\Warlock.cpp" />
     <ClCompile Include="Classes\WarriorTank.cpp" />
     <ClCompile Include="Client.cpp" />
-    <ClCompile Include="DBCReader.cpp" />
+    <ClCompile Include="FactionTemplate.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Functions.cpp" />
     <ClCompile Include="FunctionsLua.cpp" />
     <ClCompile Include="Game.cpp" />
-    <ClCompile Include="Logic.cpp" />
+    <ClCompile Include="MoveLogic.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
     <ClCompile Include="Navigation.cpp" />
     <ClCompile Include="WoWObject.cpp" />
