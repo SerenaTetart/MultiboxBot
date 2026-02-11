@@ -13,7 +13,7 @@ public:
      *
      * @return std::string The module path.
      */
-    static std::string GetModulePath();
+    static std::string GetCurrentWorkingDirectory();
 
     /**
      * @brief Get the path to the "mmaps" directory located in the module path.

@@ -1,38 +1,41 @@
 #include "File.h"
-#include <iostream>
-using namespace std;
+#include <string>
+#include <filesystem>
 
-EXTERN_C IMAGE_DOS_HEADER __ImageBase;
-std::string FileManager::GetModulePath()
-{
-    WCHAR DllPath[MAX_PATH] = { 0 };
-    GetModuleFileNameW((HINSTANCE)&__ImageBase, DllPath, _countof(DllPath));
-    wstring ws(DllPath);
-    string pathAndFile(ws.begin(), ws.end());
-    char* c = const_cast<char*>(pathAndFile.c_str());
-    int strLength = strlen(c);
-    int lastOccur = 0;
-    for (int i = 0; i < strLength; i++)
-    {
-        if (c[i] == '\\') lastOccur = i;
+std::string FileManager::GetCurrentWorkingDirectory() {
+    try {
+        // Get current working directory
+        std::filesystem::path cwd = std::filesystem::current_path();
+
+        // Convert to string and ensure trailing backslash
+        std::string path = cwd.string();
+        if (!path.empty() && path.back() != '\\')
+        {
+            path += '\\';
+        }
+
+        return path;
     }
-    string ModulePath = pathAndFile.substr(0, lastOccur + 1);
-
-    return ModulePath;
+    catch (const std::exception&) {
+        return "";
+    }
 }
 
-std::string FileManager::GetMapPath()
-{
-    std::string ModulePath = GetModulePath();
-   
-    ModulePath += "mmaps\\";
+std::string FileManager::GetMapPath() {
+    std::string basePath = GetCurrentWorkingDirectory();
+    if (basePath.empty())
+        return "";
 
-    // Check if the directory exists
-    if (!std::filesystem::exists(ModulePath)) {
-        return ""; // Return empty string if the directory doesn't exist
+    std::filesystem::path mapPath = std::filesystem::path(basePath) / "mmaps";
+
+    // Check if directory exists
+    if (!std::filesystem::exists(mapPath) ||
+        !std::filesystem::is_directory(mapPath))
+    {
+        return "";
     }
 
-    return ModulePath;
+    return mapPath.string() + "\\";
 }
 
 std::string FileManager::MapPath = "";
