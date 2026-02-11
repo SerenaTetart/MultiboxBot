@@ -14,18 +14,6 @@ HANDLE client_thread = NULL;
 
 BOOL running = true;
 
-std::string GetDllFolder(HMODULE hModule) {
-	std::vector<char> pathBuffer(MAX_PATH);
-	DWORD result = GetModuleFileNameA(hModule, pathBuffer.data(), pathBuffer.size());
-
-    std::string fullPath = std::string(pathBuffer.data(), result);
-    size_t pos = fullPath.find_last_of("\\/");
-    if (pos != std::string::npos) {
-        return fullPath.substr(0, pos);
-    }
-    return "";
-}
-
 DWORD WINAPI ThreadMain(void* pParam) {
     AllocConsole();
     FILE* t = freopen("CONOUT$", "w", stdout);
@@ -42,7 +30,6 @@ DWORD WINAPI ThreadMain(void* pParam) {
 
 BOOL WINAPI DllMain( HMODULE hModule, DWORD  dwReason, LPVOID lpReserved ) {
 	if (dwReason == DLL_PROCESS_ATTACH) {
-		srcPath = GetDllFolder(hModule);
         g_hThread = CreateThread(NULL, 0, ThreadMain, NULL, 0, NULL);
 	}
 	else if (dwReason == DLL_PROCESS_DETACH) {
