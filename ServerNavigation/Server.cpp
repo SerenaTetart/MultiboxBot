@@ -38,7 +38,7 @@ static float trunc4(float v) {
 static void handle_client(SOCKET csock, sockaddr_in caddr) {
     char ip[INET_ADDRSTRLEN]{};
     InetNtopA(AF_INET, &caddr.sin_addr, ip, sizeof(ip));
-    std::printf("ServerNavigation: [+] Client %s:%u connecté\n", ip, ntohs(caddr.sin_port));
+    std::printf("ServerNavigation: [+] Client %s:%u connected\n", ip, ntohs(caddr.sin_port));
 
     while (true) {
         char buffer[128];
@@ -83,7 +83,7 @@ static void handle_client(SOCKET csock, sockaddr_in caddr) {
     }
 
     ::closesocket(csock);
-    std::printf("ServerNavigation: [-] Client %s:%u déconnecté\n", ip, ntohs(caddr.sin_port));
+    std::printf("ServerNavigation: [-] Client %s:%u disconnected\n", ip, ntohs(caddr.sin_port));
 }
 
 int main() {
@@ -118,7 +118,7 @@ int main() {
         closesocket(lsock); WSACleanup(); return 1;
     }
 
-    std::printf("ServerNavigation: en écoute sur 127.0.0.1:50002\n");
+    std::printf("ServerNavigation: listening on 127.0.0.1:50002\n");
     while (true) {
         sockaddr_in caddr{}; int clen = sizeof(caddr);
         SOCKET csock = accept(lsock, (sockaddr*)&caddr, &clen);

@@ -2,6 +2,42 @@
 
 #include <fstream>
 #include <cstring>
+#include <Windows.h>
+
+#include <Windows.h>
+#include <string>
+#include <stdexcept>
+
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+
+static std::string WideToUtf8(const std::wstring& w)
+{
+    if (w.empty()) return {};
+    int needed = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), nullptr, 0, nullptr, nullptr);
+    if (needed <= 0) throw std::runtime_error("WideCharToMultiByte failed");
+    std::string s(needed, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), s.data(), needed, nullptr, nullptr);
+    return s;
+}
+
+std::string FactionTemplateDBC::GetModulePath()
+{
+    WCHAR dllPath[MAX_PATH]{};
+    DWORD n = GetModuleFileNameW((HINSTANCE)&__ImageBase, dllPath, (DWORD)std::size(dllPath));
+    if (n == 0 || n == std::size(dllPath))
+        throw std::runtime_error("GetModuleFileNameW failed or path truncated");
+
+    for (DWORD i = n; i > 0; --i)
+    {
+        if (dllPath[i - 1] == L'\\' || dllPath[i - 1] == L'/')
+        {
+            dllPath[i] = L'\0';
+            break;
+        }
+    }
+
+    return WideToUtf8(dllPath);
+}
 
 const FactionTemplateEntry* FactionTemplateDBC::Get(uint32_t id) const {
     auto it = byId.find(id);
@@ -24,33 +60,34 @@ uint32_t FactionTemplateDBC::readU32(const char* p) {
 }
 
 void FactionTemplateDBC::load(const std::string& path) {
-    std::ifstream f(path, std::ios::binary);
-    if (!f) throw std::runtime_error("Impossible d'ouvrir " + path);
+    std::string fullPath = FactionTemplateDBC::GetModulePath() + path;
+    std::ifstream f(fullPath, std::ios::binary);
+    if (!f) throw std::runtime_error("Impossible d'ouvrir " + fullPath);
 
     DbcHeader hdr{};
     f.read(reinterpret_cast<char*>(&hdr), sizeof(hdr));
-    if (!f) throw std::runtime_error("Lecture header échouée: " + path);
+    if (!f) throw std::runtime_error("Lecture header échouée: " + fullPath);
 
     if (std::memcmp(hdr.magic, "WDBC", 4) != 0)
-        throw std::runtime_error("Format non supporté (attendu WDBC): " + path);
+        throw std::runtime_error("Format non supporté (attendu WDBC): " + fullPath);
 
     if (hdr.fieldCount < 14)
         throw std::runtime_error("FactionTemplate.dbc: trop peu de colonnes (attendu >=14)");
 
     if (hdr.recordSize < hdr.fieldCount * 4)
-        throw std::runtime_error("recordSize invalide pour " + path);
+        throw std::runtime_error("recordSize invalide pour " + fullPath);
 
     // Lis le bloc de records
     const size_t recordsBytes = static_cast<size_t>(hdr.recordCount) * hdr.recordSize;
     std::vector<char> records(recordsBytes);
     f.read(records.data(), recordsBytes);
-    if (!f) throw std::runtime_error("Lecture records échouée: " + path);
+    if (!f) throw std::runtime_error("Lecture records échouée: " + fullPath);
 
     // Lis (et jette) le bloc de chaînes
     if (hdr.stringBlockSize)
     {
         f.seekg(hdr.stringBlockSize, std::ios::cur);
-        if (!f) throw std::runtime_error("Lecture string block échouée: " + path);
+        if (!f) throw std::runtime_error("Lecture string block échouée: " + fullPath);
     }
 
     // Parse : on lit au moins les 14 premières colonnes; si le DBC a plus de colonnes,
@@ -82,4 +119,4 @@ void FactionTemplateDBC::load(const std::string& path) {
     }
 }
 
-FactionTemplateDBC FactionTemplate("dbc/FactionTemplate.dbc");
+FactionTemplateDBC FactionTemplate("dbc\\FactionTemplate.dbc");

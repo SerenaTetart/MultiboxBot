@@ -433,11 +433,11 @@ std::string FunctionsLua::UnitBuff(std::string target, int index) {
 }
 
 std::tuple<std::string, int, std::string> FunctionsLua::UnitDebuff(std::string target, int index) {
-	std::string command = "texture,count,type = UnitDebuff(\"" + (std::string)target + "\", " + std::to_string(index) + ")";
+	std::string command = "texture,count,debuffType = UnitDebuff(\"" + (std::string)target + "\", " + std::to_string(index) + ")";
 	Functions::LuaCall(command.c_str());
 	char* texture = (char*)Functions::GetText("texture");
 	int count = GetIntFromChar((char*)Functions::GetText("count"));
-	char* type = (char*)Functions::GetText("type");
+	char* type = (char*)Functions::GetText("debuffType");
 	return std::make_tuple(texture, count, type);
 }
 
@@ -738,8 +738,8 @@ bool FunctionsLua::UnitIsElite(std::string target) {
 }
 
 std::string FunctionsLua::UnitCreatureType(std::string target) {
-	Functions::LuaCall(("type = UnitCreatureType(\"" + target + "\")").c_str());
-	std::string type = (char*)Functions::GetText("type");
+	Functions::LuaCall(("creatureType = UnitCreatureType(\"" + target + "\")").c_str());
+	std::string type = (char*)Functions::GetText("creatureType");
 	return type;
 }
 

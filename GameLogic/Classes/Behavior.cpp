@@ -7,10 +7,14 @@ void ListAI::DPSTargeting() {
 		if (targetUnit == NULL || targetUnit->isdead || !targetUnit->attackable) {
 			WoWUnit* target = NULL; float minDist = INFINITY;
 			for (unsigned int i = 0; i < ListUnits.size(); i++) {
-				if (((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT && (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME))
-					|| (ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)) && ListUnits[i].attackable
+				if (
+					((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT && (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME)) || (ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))
+					&& ListUnits[i].attackable
+					&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
+					&& !ListUnits[i].isFromGroup
 					&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
-					&& (target == NULL || ListUnits[i].position.DistanceTo(target->position) < minDist)) {
+					&& (target == NULL || ListUnits[i].position.DistanceTo(target->position) < minDist)
+				) {
 					target = &ListUnits[i];
 					minDist = ListUnits[i].position.DistanceTo(target->position);
 				}
@@ -21,8 +25,15 @@ void ListAI::DPSTargeting() {
 	else {
 		WoWUnit* target = NULL;
 		for (unsigned int i = 0; i < ListUnits.size(); i++) {
-			if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && ListUnits[i].attackable && (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME)
-				&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)) && (target == NULL || ListUnits[i].level < target->level)) {
+			if (
+				(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT)
+				&& ListUnits[i].attackable
+				&& (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME)
+				&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
+				&& !ListUnits[i].isFromGroup
+				&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
+				&& (target == NULL || ListUnits[i].level < target->level)
+			) {
 				target = &ListUnits[i];
 			}
 		}
@@ -59,8 +70,15 @@ void ListAI::TankTargeting() {
 			}
 			WoWUnit* target = NULL;
 			for (unsigned int i = 0; i < ListUnits.size(); i++) {
-				if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && ListUnits[i].attackable && (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME)
-					&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)) && (target == NULL || ListUnits[i].level < target->level)) {
+				if (
+					(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT)
+					&& ListUnits[i].attackable
+					&& (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME)
+					&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
+					&& !ListUnits[i].isFromGroup
+					&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
+					&& (target == NULL || ListUnits[i].level < target->level)
+				) {
 					target = &ListUnits[i];
 				}
 			}

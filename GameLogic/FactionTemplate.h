@@ -35,6 +35,7 @@ private:
     const std::unordered_map<uint32_t, FactionTemplateEntry>& All() const { return byId; }
     static uint32_t readU32(const char* p);
     void load(const std::string& path);
+    std::string GetModulePath();
 };
 
 extern FactionTemplateDBC FactionTemplate;

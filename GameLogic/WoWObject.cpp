@@ -121,6 +121,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
 
     unitReaction = Neutral;
     attackable = false;
+    isFromGroup = false;
     
     indexGroup = -1;
     role = -1;

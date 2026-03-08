@@ -156,7 +156,7 @@ class WoWUnit : public WoWObject {
         Position position; CreatureType creatureType; UnitReaction unitReaction;
         UnitFlags flags; MovementFlags movement_flags; DynamicFlags dynamic_flags;
         int buff[30]; int debuff[16]; float prctHP, prctMana, facing, speed, combatReach;
-        unsigned long long targetGuid; char* name; bool attackable, isdead, isMoving;
+        unsigned long long targetGuid; char* name; bool attackable, isdead, isMoving, isFromGroup;
         int rage, energy, level, channelInfo, hpLost, factionTemplateID, indexGroup, role;
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);

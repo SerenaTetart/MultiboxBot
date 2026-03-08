@@ -44,10 +44,10 @@ Position Functions::ProjectPos(Position pos) {
 	Position intersection = Position(0, 0, 0);
 	float distance = float(p1.DistanceTo(p2));
 	bool res = function(&p1, &p2, 0, &intersection, &distance, 0x00100111);
-	if (res) {
+	if (res) { // Obstacle
 		Position result = Position(pos.X, pos.Y, intersection.Z);
 		return result;
-	}
+	} // All fine
 	else return pos;
 }
 
@@ -130,6 +130,7 @@ int Functions::Callback(unsigned long long guid, int filter) {
 					if (unit.name == get<0>(leaderInfos[y])) {
 						ListUnits.back().role = get<1>(leaderInfos[y]);
 						ListUnits.back().indexGroup = y;
+						ListUnits.back().isFromGroup = true;
 						break;
 					}
 				}
@@ -145,6 +146,7 @@ int Functions::Callback(unsigned long long guid, int filter) {
 						if (unit.name == FunctionsLua::UnitName("party" + std::to_string(i))) {
 							GroupMember[i] = &ListUnits.back();
 							PartyMember[i] = &ListUnits.back();
+							ListUnits.back().isFromGroup = true;
 							break;
 						}
 					}
@@ -153,12 +155,14 @@ int Functions::Callback(unsigned long long guid, int filter) {
 					for (int i = 1; i <= NumGroupMembers; i++) {
 						if (unit.name == FunctionsLua::UnitName("raid" + std::to_string(i))) {
 							GroupMember[i] = &ListUnits.back();
+							ListUnits.back().isFromGroup = true;
 							break;
 						}
 					}
 					for (int i = 1; i < 5; i++) {
 						if (unit.name == FunctionsLua::UnitName("party" + std::to_string(i))) {
 							PartyMember[i] = &ListUnits.back();
+							ListUnits.back().isFromGroup = true;
 							break;
 						}
 					}
@@ -434,7 +438,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type) {
 				for (int z = 0; z < 4; z++) {
 					tmp_pos = Position((cos((z * halfPI)) * 2.0f) + next_pos.X, (sin((z * halfPI)) * 2.0f) + next_pos.Y, next_pos.Z);
 					Position tmp_pos2 = Functions::ProjectPos(tmp_pos);
-					if (!(tmp_pos2.DistanceTo(tmp_pos) < 2.00f)) {
+					if (!(tmp_pos2.DistanceTo(tmp_pos) < 1.00f) || Functions::Intersect(tmp_pos2, next_pos)) {
 						depthCheck = false;
 						break;
 					}
@@ -595,7 +599,7 @@ std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_r
 	std::vector<Position> clusters_center;
 	//1- Chaque position est un cluster
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && ListUnits[i].attackable && (ListUnits[i].unitReaction < Neutral || (ListUnits[i].unitReaction == Neutral && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))) && ListUnits[i].speed <= 4.5f && !(ListUnits[i].flags & UNIT_FLAG_CONFUSED)) {
+		if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && ListUnits[i].attackable && !(ListUnits[i].flags & UNIT_FLAG_POSSESSED) && (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)) && ListUnits[i].speed <= 4.5f && !(ListUnits[i].flags & UNIT_FLAG_CONFUSED)) {
 			std::vector<Position> cluster;
 			cluster.push_back(ListUnits[i].position);
 			clustersArr.push_back(cluster);
@@ -650,7 +654,7 @@ std::tuple<int, int, int, int> Functions::countEnemies() {
 	}
 	int nbr = 0, nbrClose = 0, nbrCloseFacing = 0, nbrEnemyPlayer = 0;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || ListUnits[i].unitReaction > Neutral || (!(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
+		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].flags & UNIT_FLAG_POSSESSED) || ListUnits[i].isFromGroup || ListUnits[i].unitReaction > Neutral || (!(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
 			continue;
 		else if (ListUnits[i].unitReaction == Neutral && ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
@@ -679,7 +683,7 @@ bool Functions::enemyClose(Position pos, float dist) {
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
 			&& !(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
-			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && ((ListUnits[i].level + 5) >= localPlayer->level) && !ListUnits[i].isdead && (ListUnits[i].position.DistanceTo(pos) < dist)
+			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && (ListUnits[i].level >= localPlayer->level) && !ListUnits[i].isdead && (ListUnits[i].position.DistanceTo(pos) < dist)
 			&& (abs(ListUnits[i].position.Z - pos.Z) < 5.0f)) {
 			return true;
 		}
@@ -732,7 +736,7 @@ WoWUnit* Functions::GetLeader() {
 	// Return only the first account
 	if (localPlayer == NULL || leaderInfos.size() <= 1) return NULL;
 	for (unsigned int z = 0; z < ListUnits.size(); z++) {
-		if (!ListUnits[z].attackable && (ListUnits[z].unitReaction >= Neutral) && ListUnits[z].name == get<0>(leaderInfos[0])) {
+		if (ListUnits[z].name == get<0>(leaderInfos[0])) {
 			return &(ListUnits[z]);
 		}
 	}

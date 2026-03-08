@@ -60,10 +60,6 @@ void Game::MainLoop() {
 			/*auto start = std::chrono::high_resolution_clock::now();
 			std::cout << "Initialisation start\n";*/
 
-			// Open a log file -> write each step -> wait -> destroy everything -> repeat
-			std::ofstream outfile(srcPath+"/log.txt", std::ios::trunc);
-			outfile << "Step 1 - Pre-processing\n";
-
 			ThreadSynchronizer::RunOnMainThread(
 				[]() {
 					playerGuid = Functions::GetPlayerGuid();
@@ -154,8 +150,6 @@ void Game::MainLoop() {
 			// ========================================== //
 
 			//start = std::chrono::high_resolution_clock::now();
-			outfile << "Step 2 - Movements\n";
-
 
 			int RaptorStrikeIDs[8] = { 2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266 };
 			int HeroicStrikeIDs[9] = { 78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286 };
@@ -478,7 +472,6 @@ void Game::MainLoop() {
 			// ========================================== //
 
 			//start = std::chrono::high_resolution_clock::now();
-			outfile << "Step 3 - Actions\n";
 
 			if (localPlayer != NULL && !IsSitting) {
 				if (localPlayer->className == "Druid") {
@@ -523,7 +516,7 @@ int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEn
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0;
-std::string tarType = "party", srcPath = "";
+std::string tarType = "party";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 std::vector<int> HealTargetArray;
