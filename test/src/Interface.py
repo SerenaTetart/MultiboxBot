@@ -117,7 +117,8 @@ class Interface(tk.Tk):
         
     def sendCheckbox(self, msg):
         msg = "C"+msg
-        self.serverthread.sendAllClients(bytes(msg, 'utf-8'))
+        #self.serverthread.sendAllClients(bytes(msg, 'utf-8'))
+        self.serverthread.sendMainClient(bytes(msg, 'utf-8'))
         
     def quit_program(self):
         #Disconnect clients
@@ -633,8 +634,7 @@ class server_thread(threading.Thread):
                         time.sleep(0.01)
                 return
                 
-    #A REFAIRE POUR NE CIBLER QUE LES LEADER
-    def sendTankClients(self, msg):
+    def sendMainClient(self, msg):
         if(len(self.clients) > 0):
             if(interface.NBR_ACCOUNT == 1):
                 if(self.clients[0] != 0):

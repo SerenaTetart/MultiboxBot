@@ -8,6 +8,8 @@
 
 #include <iostream>
 
+static bool movingForward = false;
+
 void MoveToMap(Position targetpos) {
 	Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, targetpos);
 	if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
@@ -56,12 +58,10 @@ void Game::CorpseRun() {
 		else if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(-5162.66f, 931.599f, 408.975f)) < 5.0f) {
 			//Gnomeregan
 			if (localPlayer->position.Z < 280.0f) MoveToMap(Position(-5162.885254f, 928.664246f, 257.180511f));
-			else if (localPlayer->position.DistanceTo(Position(-5163.476563f, 659.317871f, 348.278412f)) < 5.0f) {
-				ThreadSynchronizer::pressKey(0x26);
-			}
 			else MoveToMap(Position(-5163.476563f, 659.317871f, 348.278412f));
 		}
 		else {
+			std::cout << localPlayer->corpse_position.ToString() << "\n";
 			Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, localPlayer->corpse_position);
 			if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
 				ThreadSynchronizer::RunOnMainThread([nextpos]() {

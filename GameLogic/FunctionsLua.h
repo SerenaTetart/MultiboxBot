@@ -4,10 +4,11 @@
 class FunctionsLua {
     public:
         // === Group Functions === //
-        static int GetNumGroupMembers();
-        static bool HasPetUI();
-        static int GetPetHappiness();
-        static WoWUnit* GetHealer();
+    static int GetNumGroupMembers();
+    static bool HasPetUI();
+    static int GetPetHappiness();
+    static WoWUnit* GetHealer();
+	static bool IsInInstance();
         // === Timer/CD === //
 	static float GetTime();
 	static float GetItemCooldownDuration(int item_id);

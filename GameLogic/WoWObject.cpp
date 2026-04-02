@@ -21,6 +21,10 @@ Position::Position(float x, float y, float z) {
     Z = z;
 }
 
+bool Position::operator==(const Position& other) const {
+    return X == other.X && Y == other.Y && Z == other.Z;
+}
+
 std::string Position::ToString() {
     std::string txt = "x: " + std::to_string(X) + " y: " + std::to_string(Y) + " z: " + std::to_string(Z);
     return txt;
@@ -63,7 +67,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     float z = *(float*)(Pointer + POS_Z_OFFSET);
     position = Position(x, y, z);
 
-    int health = *(int*)(descriptor + HEALTH_OFFSET);
+    health = *(int*)(descriptor + HEALTH_OFFSET);
     int max_health = *(int*)(descriptor + MAX_HEALTH_OFFSET);
     prctHP = ((float)health / (float)max_health) * 100;
     hpLost = max_health - health;
@@ -79,6 +83,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     flags = *(UnitFlags*)(descriptor + UNIT_FLAG_OFFSET);
     movement_flags = *(MovementFlags*)(Pointer + MOVEMENT_FLAG_OFFSET);
     dynamic_flags = *(DynamicFlags*)(descriptor + DYNAMIC_FLAG_OFFSET);
+    createdBy = *(int*)(descriptor + CREATED_BY_SPELL_OFFSET);
 
     isdead = false; if (health <= 1 && !(flags & UNIT_FLAG_FEIGN_DEATH)) isdead = true;
 
@@ -102,7 +107,11 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     targetGuid = *(unsigned long long*)(descriptor + TARGET_GUID_OFFSET);
     facing = *(float*)(Pointer + FACING_OFFSET);
     level = *(int*)(descriptor + LEVEL_OFFSET);
-    if (objType == Unit) name = (char*)(*(uintptr_t*)(*(uintptr_t*)(Pointer + NAME_OFFSET)));
+    if (objType == Unit) {
+        uintptr_t cachePtr = *(uintptr_t*)(Pointer + CREATURE_CACHE_OFFSET);
+        name = (char*)(*(uintptr_t*)(cachePtr));
+        rank = *(int*)(cachePtr + 0x20);
+    }
     else {
         uintptr_t namePtr = NAME_BASE_OFFSET;
         while (true) {
@@ -112,7 +121,10 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
             else break;
         }
         name = (char*)(namePtr + PLAYER_NAME_OFFSET);
+        rank = 0;
     }
+
+    entryID = ((uint32_t)((guid >> 24) & 0xFFFF));
 
     combatReach = *(float*)(descriptor + COMBAT_REACH_OFFSET);
     channelInfo = *(int*)(descriptor + CHANNEL_OFFSET);
@@ -125,14 +137,6 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     
     indexGroup = -1;
     role = -1;
-}
-
-int WoWUnit::getHealth() {
-    return *(int*)(WoWObject::GetDescriptorPtr() + HEALTH_OFFSET);
-}
-
-int WoWUnit::getMaxHealth() {
-    return *(int*)(WoWObject::GetDescriptorPtr() + MAX_HEALTH_OFFSET);
 }
 
 bool WoWUnit::hasBuff(int* IDs, int size) {

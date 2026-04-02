@@ -30,7 +30,7 @@ class Functions {
 		static Position RandomisePos(Position target_pos, float radius, Position away_from = Position(0.0f, 0.0f, 0.0f), float dist_away = 0.0f);
 		static std::tuple<Position, int> getAOETargetPos(float range, float range2);
         static std::tuple<int, int, int, int> countEnemies();
-		static bool enemyClose(Position pos, float dist);
+		static bool enemyClose(Position pos, bool inThread = true);
         static int getNbrCreatureType(int range, CreatureType type1, CreatureType type2=Null, CreatureType type3=Null);
         static bool PlayerIsRanged();
 		static WoWUnit* GetGroupDead(int mode = 0);

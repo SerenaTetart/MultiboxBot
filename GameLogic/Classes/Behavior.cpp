@@ -1,5 +1,22 @@
 #include "../ListAI.h"
 #include "../FactionTemplate.h"
+#include <iostream>
+
+static int getCreaturePriority(WoWUnit* unit) {
+	if (unit->creatureType == Totem || (unit->createdBy > 0)) return 0; //Guardian
+	else if (unit->rank == 0 || unit->rank == 4) return 1; //Normal
+	else if (unit->rank == 1 || unit->rank == 2) return 2; //Elite
+	else if (unit->rank == 3) return 3; //Boss
+}
+
+static bool isPrioritary(WoWUnit* unit1, WoWUnit* unit2) {
+	int priority1 = getCreaturePriority(unit1);
+	int priority2 = getCreaturePriority(unit2);
+	if (priority1 < priority2) return true;
+	else if (priority1 == priority2 && unit1->level < unit2->level) return true;
+	else if (priority1 == priority2 && unit1->level == unit2->level && unit1->health < unit2->health) return true;
+	else return false;
+}
 
 void ListAI::DPSTargeting() {
 	if ((Leader != NULL) && (Leader->Guid == localPlayer->Guid) && !MCAutoMove) return;
@@ -8,9 +25,10 @@ void ListAI::DPSTargeting() {
 			WoWUnit* target = NULL; float minDist = INFINITY;
 			for (unsigned int i = 0; i < ListUnits.size(); i++) {
 				if (
-					((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT && (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME)) || (ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))
+					((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT && (inInstance || (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME))) || (ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))
 					&& ListUnits[i].attackable
 					&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
+					&& !ListUnits[i].isdead
 					&& !ListUnits[i].isFromGroup
 					&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
 					&& (target == NULL || ListUnits[i].position.DistanceTo(target->position) < minDist)
@@ -26,13 +44,14 @@ void ListAI::DPSTargeting() {
 		WoWUnit* target = NULL;
 		for (unsigned int i = 0; i < ListUnits.size(); i++) {
 			if (
-				(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT)
+				((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) || ListUnits[i].creatureType == Totem || (ListUnits[i].createdBy > 0))
 				&& ListUnits[i].attackable
-				&& (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME)
+				&& (inInstance || (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME))
 				&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
+				&& !ListUnits[i].isdead
 				&& !ListUnits[i].isFromGroup
 				&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
-				&& (target == NULL || ListUnits[i].level < target->level)
+				&& (target == NULL || isPrioritary(&ListUnits[i], target))
 			) {
 				target = &ListUnits[i];
 			}
@@ -41,10 +60,12 @@ void ListAI::DPSTargeting() {
 			localPlayer->SetTarget(target->Guid);
 			return;
 		}
-		for (int i = NumGroupMembers; i >= 0; i--) { //Tank also
-			if (HasAggro[i].size() > 0) {
-				localPlayer->SetTarget(HasAggro[i][0]->Guid);
-				return;
+		else if (targetUnit == NULL) {
+			for (int i = NumGroupMembers; i >= 0; i--) { //Tank also
+				if (HasAggro[i].size() > 0) {
+					localPlayer->SetTarget(HasAggro[i][0]->Guid);
+					return;
+				}
 			}
 		}
 	}

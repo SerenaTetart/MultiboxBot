@@ -78,6 +78,13 @@ WoWUnit* FunctionsLua::GetHealer() {
 	return NULL;
 }
 
+bool FunctionsLua::IsInInstance() {
+	Functions::LuaCall("inInstance = IsInInstance()");
+	int inInstance = GetIntFromChar((char*)Functions::GetText("inInstance"));
+	if (inInstance == 1) return true;
+	else return false;
+}
+
 //======================================================================//
 //============================   Timer/CD   ============================//
 //======================================================================//

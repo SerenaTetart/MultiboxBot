@@ -12,9 +12,9 @@
 
 static unsigned long long playerGuid = 0;
 static unsigned long long pastPlayerGuid = 0;
+static bool TradeShow = false, TradePendingSelf = false;
 
 void Game::MainLoop() {
-
 	while (Client::client_running == true) {
 
 		ThreadSynchronizer::RunOnMainThread(
@@ -113,7 +113,39 @@ void Game::MainLoop() {
 
 							if (FunctionsLua::SpellIsTargeting()) FunctionsLua::SpellStopTargeting();
 
-							Functions::LuaCall("AcceptTrade()");
+							inInstance = FunctionsLua::IsInInstance();
+
+							const char* tradeShowText = (const char*)Functions::GetText("Multibox_TradeShow");
+							if (std::strcmp(tradeShowText, "") == 0) {
+								Functions::LuaCall(R"(
+									eventFrame = CreateFrame("Frame")
+									eventFrame:RegisterEvent("TRADE_SHOW")
+									eventFrame:RegisterEvent("TRADE_CLOSED")
+									eventFrame:RegisterEvent("TRADE_ACCEPT_UPDATE")
+									eventFrame:SetScript("OnEvent", function()
+										if event == "TRADE_SHOW" then
+											Multibox_TradeShow = 1
+										elseif event == "TRADE_CLOSED" then
+											Multibox_TradeShow = 0
+											Multibox_TradePending = 0
+											Multibox_TradePending2 = 0
+										elseif event == "TRADE_ACCEPT_UPDATE" then
+											if arg2 == 1 then Multibox_TradePending = 1
+											elseif arg2 == 0 then Multibox_TradePending = 0 end
+											if arg1 == 1 then Multibox_TradePending2 = 1
+											elseif arg1 == 0 then Multibox_TradePending2 = 0 end
+										end
+									end)
+								)");
+							}
+							else {
+								const char* tradePendingText = (const char*)Functions::GetText("Multibox_TradePending");
+								const char* tradePendingText2 = (const char*)Functions::GetText("Multibox_TradePending2");
+								TradeShow = tradeShowText && std::strcmp(tradeShowText, "1") == 0;
+								bool TradePending = tradePendingText && std::strcmp(tradePendingText, "1") == 0;
+								TradePendingSelf = tradePendingText2 && std::strcmp(tradePendingText2, "1") == 0;
+								if (TradeShow && TradePending) { Functions::LuaCall("AcceptTrade()"); }
+							}
 						}
 					}
 				}
@@ -171,7 +203,7 @@ void Game::MainLoop() {
 					else ind++;
 				}
 				int drinkingIDs[15] = { 430, 431, 432, 1133, 1135, 1137, 24355, 25696, 26261, 26402, 26473, 26475, 29007, 10250, 22734 };
-				if (localPlayer->isdead && localPlayer->getHealth() == 1) {
+				if (localPlayer->isdead && localPlayer->health == 1) {
 					//Logic actions
 					CorpseRun();
 				}
@@ -248,7 +280,7 @@ void Game::MainLoop() {
 							//Target > 3 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
-								Functions::MoveTo(targetUnit->position, 2, false, targetSwim);
+								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
 							});
 						}
 						else if (Moving == 0 && !IsFacing) ThreadSynchronizer::RunOnMainThread([]() { localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position); });
@@ -285,7 +317,7 @@ void Game::MainLoop() {
 					}
 					Moving = 0;
 				}
-				else if ((!Combat || passiveGroup) && (Moving == 0 || Moving == 4) && !localPlayer->isdead && !IsSitting && (float(time(0) - gatheringCD) > 5.5f) && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
+				else if (!Combat && (Moving == 0 || Moving == 4) && !localPlayer->isdead && !IsSitting && (float(time(0) - gatheringCD) > 5.5f) && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
 					(Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove) && (targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead || passiveGroup)) {
 					//Loot
 					bool looted = false;
@@ -294,7 +326,7 @@ void Game::MainLoop() {
 							if (ListGameObjects[i].gatherType == 0) continue;
 							else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
 								continue;
-							else if (Functions::enemyClose(ListGameObjects[i].position, 20.0f)) continue;
+							else if (Functions::enemyClose(ListGameObjects[i].position, false)) continue;
 							int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
 							if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)
 								|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)) {
@@ -358,7 +390,7 @@ void Game::MainLoop() {
 								looted = true;
 								break;
 							}
-							else if (!Functions::enemyClose(ListUnits[i].position, 20.0f)) {
+							else if (!Functions::enemyClose(ListUnits[i].position, false)) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::MoveTo(ListUnits[i].position, 4);
 								});
@@ -366,7 +398,7 @@ void Game::MainLoop() {
 								break;
 							}
 						}
-						else if (skinnable && skinningLevel > 0 && (ListUnits[i].level <= 20 && ((ListUnits[i].level-10)*10 <= skinningLevel && !Functions::enemyClose(ListUnits[i].position, 20.0f))
+						else if (skinnable && skinningLevel > 0 && (ListUnits[i].level <= 20 && ((ListUnits[i].level-10)*10 <= skinningLevel && !Functions::enemyClose(ListUnits[i].position, false))
 							|| (ListUnits[i].level > 20 && (ListUnits[i].level*5 <= skinningLevel)))) {
 							if (localPlayer->speed == 0.0f && ListUnits[i].position.DistanceTo(localPlayer->position) < 4.0f) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
@@ -376,7 +408,7 @@ void Game::MainLoop() {
 								looted = true;
 								break;
 							}
-							else if (!Functions::enemyClose(ListUnits[i].position, 20.0f)) {
+							else if (!Functions::enemyClose(ListUnits[i].position, false)) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::MoveTo(ListUnits[i].position, 4);
 								});
@@ -391,7 +423,7 @@ void Game::MainLoop() {
 							bool traded = false;
 							for (int y = 1; y <= NumGroupMembers; y++) {
 								for (unsigned int i = 0; i < leaderInfos.size(); i++) {
-									if (GroupMember[y] != NULL && GroupMember[y]->position.DistanceTo(localPlayer->position) < 10.0f && GroupMember[y]->name == get<0>(leaderInfos[i])) {
+									if (GroupMember[y] != NULL && GroupMember[y]->position.DistanceTo(localPlayer->position) < 8.0f && GroupMember[y]->name == get<0>(leaderInfos[i])) {
 										if (!traded && (get<2>(leaderInfos[i]) == 4 || get<3>(leaderInfos[i]) == 4)) {
 											//Tailoring
 											int listID[] = { 2589, 2592, 3182, 4306, 4337, 4338, 10285, 14047, 14227, 14256 };
@@ -447,7 +479,10 @@ void Game::MainLoop() {
 										if (traded) break;
 									}
 								}
-								if (traded) break;
+								if (traded) {
+									if (TradeShow && !TradePendingSelf) { Functions::LuaCall("AcceptTrade()"); }
+									break;
+								}
 							}
 						});
 					}
@@ -511,7 +546,7 @@ void Game::MainLoop() {
 
 std::vector<WoWUnit*> HasAggro[40]; std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 bool Combat = false, IsSitting = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
-los_target = false, passiveGroup = false;
+los_target = false, passiveGroup = false, inInstance = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
 unsigned int LastTarget = 0;

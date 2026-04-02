@@ -137,6 +137,8 @@ public:
     std::string ToString();
     float DistanceTo(Position position);
     float DistanceTo2D(Position position);
+
+    bool operator==(const Position& other) const;
 };
 
 // === Objects === //
@@ -157,7 +159,7 @@ class WoWUnit : public WoWObject {
         UnitFlags flags; MovementFlags movement_flags; DynamicFlags dynamic_flags;
         int buff[30]; int debuff[16]; float prctHP, prctMana, facing, speed, combatReach;
         unsigned long long targetGuid; char* name; bool attackable, isdead, isMoving, isFromGroup;
-        int rage, energy, level, channelInfo, hpLost, factionTemplateID, indexGroup, role;
+        int rage, energy, level, channelInfo, hpLost, factionTemplateID, indexGroup, role, health, createdBy, entryID, rank;
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);
         bool hasBuff(int* IDs, int size);
@@ -168,7 +170,6 @@ class WoWUnit : public WoWObject {
         bool isChanneling(int* IDs, int size);
         UnitReaction getUnitReaction(uintptr_t);
         bool canAttack(uintptr_t);
-        int getHealth(); int getMaxHealth();
 };
 
 class LocalPlayer : public WoWUnit {
@@ -204,6 +205,7 @@ const uintptr_t MAXMANA_OFFSET = 0x74;
 const uintptr_t LEVEL_OFFSET = 0x88;
 const uintptr_t FACTION_TEMPLATE_ID_OFFSET = 0x8c;
 const uintptr_t UNIT_FLAG_OFFSET = 0xB8;
+const uintptr_t CREATED_BY_SPELL_OFFSET = 0x248;
 const uintptr_t MOVEMENT_FLAG_OFFSET = 0x9E8;
 const uintptr_t DYNAMIC_FLAG_OFFSET = 0x23C;
 const uintptr_t BUFF_BASE_OFFSET = 0xBC;
@@ -215,7 +217,7 @@ const uintptr_t POS_Y_OFFSET = 0x9BC;
 const uintptr_t POS_Z_OFFSET = 0x9C0;
 const uintptr_t FACING_OFFSET = 0x9C4;
 const uintptr_t SPEED_OFFSET = 0xA2C;
-const uintptr_t NAME_OFFSET = 0xB30;
+const uintptr_t CREATURE_CACHE_OFFSET = 0xB30;
 const uintptr_t GET_CREATURE_TYPE_FUN_PTR = 0x00605570;
 const uintptr_t GET_UNIT_REACTION_FUN_PTR = 0x006061E0;
 const uintptr_t CAN_ATTACK_UNIT_FUN_PTR = 0x00606980;
