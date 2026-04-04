@@ -326,7 +326,7 @@ void Game::MainLoop() {
 							if (ListGameObjects[i].gatherType == 0) continue;
 							else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
 								continue;
-							else if (Functions::enemyClose(ListGameObjects[i].position, false)) continue;
+							else if (Functions::enemyClose(ListGameObjects[i].position)) continue;
 							int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
 							if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)
 								|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)) {
@@ -390,7 +390,7 @@ void Game::MainLoop() {
 								looted = true;
 								break;
 							}
-							else if (!Functions::enemyClose(ListUnits[i].position, false)) {
+							else if (!Functions::enemyClose(ListUnits[i].position)) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::MoveTo(ListUnits[i].position, 4);
 								});
@@ -398,7 +398,7 @@ void Game::MainLoop() {
 								break;
 							}
 						}
-						else if (skinnable && skinningLevel > 0 && (ListUnits[i].level <= 20 && ((ListUnits[i].level-10)*10 <= skinningLevel && !Functions::enemyClose(ListUnits[i].position, false))
+						else if (skinnable && skinningLevel > 0 && (ListUnits[i].level <= 20 && ((ListUnits[i].level-10)*10 <= skinningLevel && !Functions::enemyClose(ListUnits[i].position))
 							|| (ListUnits[i].level > 20 && (ListUnits[i].level*5 <= skinningLevel)))) {
 							if (localPlayer->speed == 0.0f && ListUnits[i].position.DistanceTo(localPlayer->position) < 4.0f) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
@@ -408,7 +408,7 @@ void Game::MainLoop() {
 								looted = true;
 								break;
 							}
-							else if (!Functions::enemyClose(ListUnits[i].position, false)) {
+							else if (!Functions::enemyClose(ListUnits[i].position)) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::MoveTo(ListUnits[i].position, 4);
 								});

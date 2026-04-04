@@ -87,6 +87,7 @@ void Functions::EnumerateVisibleObjects(int filter) {
 	}
 	ListUnits.clear();
 	ListGameObjects.clear();
+	ListEquipments.clear();
 	if (localPlayer != NULL) {
 		delete(localPlayer);
 		localPlayer = NULL;
@@ -105,7 +106,12 @@ void Functions::EnumerateVisibleObjects(int filter) {
 		ListUnits[i].unitReaction = localPlayer->getUnitReaction(ListUnits[i].Pointer);
 		ListUnits[i].attackable = localPlayer->canAttack(ListUnits[i].Pointer);
 	}
-	if (localPlayer != NULL) localPlayer->className = FunctionsLua::UnitClass("player");
+	if (localPlayer != NULL) {
+		localPlayer->className = FunctionsLua::UnitClass("player");
+		for (unsigned int i = 0; i < ListEquipments.size(); i++) {
+			localPlayer->bonusHealing += ListEquipments[i].bonusHealing;
+		}
+	}
 	Leader = Functions::GetLeader();
 	positionCircle = GetPositionCircle();
 }
@@ -119,11 +125,19 @@ uintptr_t Functions::GetObjectPtr(unsigned long long guid) {
 
 int Functions::Callback(unsigned long long guid, int filter) {
 	uintptr_t pointer = Functions::GetObjectPtr(guid);
-	if (pointer != 0) {
+	if (pointer != NULL) {
 		ObjectType objectType = (*(ObjectType*)(pointer + OBJECT_TYPE_OFFSET));
 		if (objectType == GameObject) {
 			WoWGameObject gameObject = WoWGameObject(pointer, guid, objectType);
-			ListGameObjects.push_back(gameObject);
+			if (gameObject.gatherType > 0) {
+				ListGameObjects.push_back(gameObject);
+			}
+		}
+		else if (objectType == Item) {
+			WoWItem item = WoWItem(pointer, guid, objectType);
+			if (item.equipSlot > 0) {
+				ListEquipments.push_back(item);
+			}
 		}
 		else if (objectType == Unit || objectType == Player) {
 			WoWUnit unit = WoWUnit(pointer, guid, objectType);
@@ -209,15 +223,12 @@ void Functions::InteractObject(uintptr_t object_ptr, int autoloot) {
 }
 
 void Functions::MoveTo(Position target_pos, int MoveType, bool checkEnemyClose, bool targetSwim) {
-	if ((localPlayer->movement_flags & MOVEFLAG_SWIMMING) || targetSwim) {
+	if ((localPlayer->movement_flags & MOVEFLAG_SWIMMING)) {
 		if (!Functions::Intersect(localPlayer->position, target_pos)) {
 			localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
 			Moving = MoveType;
 		}
-		else if (!(localPlayer->movement_flags & MOVEFLAG_SWIMMING) && Functions::MoveObstacle(target_pos, checkEnemyClose)) {
-			Moving = MoveType;
-		}
-		else if ((localPlayer->movement_flags & MOVEFLAG_SWIMMING) && Functions::MoveObstacleSwim(target_pos, checkEnemyClose)) {
+		else if (Functions::MoveObstacleSwim(target_pos, checkEnemyClose)) {
 			Moving = MoveType;
 		}
 		else Moving = 0;
@@ -236,7 +247,7 @@ void Functions::MoveTo(Position target_pos, int MoveType, bool checkEnemyClose, 
 }
 
 void Functions::MoveToLoS(Position target_pos, int MoveType) {
-	if ((localPlayer->movement_flags & MOVEFLAG_SWIMMING) || (targetUnit != NULL && targetUnit->movement_flags & MOVEFLAG_SWIMMING)) {
+	if ((localPlayer->movement_flags & MOVEFLAG_SWIMMING)) {
 		if (Functions::MoveLoSSwim(target_pos)) {
 			Moving = MoveType;
 		}
@@ -685,31 +696,16 @@ std::tuple<int, int, int, int> Functions::countEnemies() {
 	return std::make_tuple(nbr, nbrClose, nbrCloseFacing, nbrEnemyPlayer);
 }
 
-bool Functions::enemyClose(Position pos, bool inThread) {
+bool Functions::enemyClose(Position pos) {
 	//Check if there are any enemy close to position
-	if (!inThread) {
-		for (unsigned int i = 0; i < ListUnits.size(); i++) {
-			int level_difference = ListUnits[i].level - localPlayer->level;
-			if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
-				&& !(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
-				&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead
-				&& (ListUnits[i].position.DistanceTo2D(pos) < (20.0f + (level_difference * 1.0f)))
-				&& (abs(ListUnits[i].position.Z - pos.Z) < 5.0f)) {
-				return true;
-			}
-		}
-	}
-	else {
-		for (unsigned int i = 0; i < ListUnits.size(); i++) {
-			int level_difference = ListUnits[i].level - localPlayer->level;
-			if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
-				&& !(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
-				&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead
-				&& (ListUnits[i].position.DistanceTo2D(pos) < (20.0f + (level_difference * 1.0f)))
-				&& (abs(ListUnits[i].position.Z - pos.Z) < 5.0f)
-				&& (!Functions::Intersect(pos, ListUnits[i].position))) {
-				return true;
-			}
+	for (unsigned int i = 0; i < ListUnits.size(); i++) {
+		int level_difference = ListUnits[i].level - localPlayer->level;
+		if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
+			&& !(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
+			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead
+			&& (ListUnits[i].position.DistanceTo2D(pos) < (20.0f + (level_difference * 1.0f)))
+			&& (abs(ListUnits[i].position.Z - pos.Z) < 5.0f)) {
+			return true;
 		}
 	}
 	return false;

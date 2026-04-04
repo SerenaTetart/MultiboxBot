@@ -320,13 +320,6 @@ void FunctionsLua::DropItemOnUnit(std::string target) {
 	Functions::LuaCall(command.c_str());
 }
 
-void FunctionsLua::PlaceItem(int slot, int item_id) {
-	//Place l'objet dans le slot indiqu�
-	PickupItem(item_id);
-	std::string command = "PlaceAction(" + std::to_string(slot) + ")";
-	Functions::LuaCall((command + " ClearCursor()").c_str());
-}
-
 void FunctionsLua::UseItem(int item_id) {
 	//Use the indicated item
 	for (const auto& item : virtualInventory) {
@@ -353,7 +346,7 @@ int FunctionsLua::HasMeat() {
 	int CookedlistID[47] = { 117, 724, 1017, 2287, 2679, 2680, 2681, 2684, 2685, 2687, 2888, 3220, 3662, 3664, 3726, 3727, 3728, 3770, 3771, 4457, 4599, 5472, 5474, 5477, 5478, 5479, 7097, 8952, 11444, 12209, 12210, 12211, 12213, 12215, 12216, 12224, 13851, 17119, 17222, 17407, 17408, 18045, 19224, 19304, 19305, 20074, 21023 };
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < 47; i++) {
-			if (get<2>(item) == CookedlistID[i]) return CookedlistID[i];
+			if (get<2>(item) == CookedlistID[i]) return get<2>(item);
 		}
 	}
 	return 0;

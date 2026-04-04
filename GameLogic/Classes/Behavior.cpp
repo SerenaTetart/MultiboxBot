@@ -7,6 +7,7 @@ static int getCreaturePriority(WoWUnit* unit) {
 	else if (unit->rank == 0 || unit->rank == 4) return 1; //Normal
 	else if (unit->rank == 1 || unit->rank == 2) return 2; //Elite
 	else if (unit->rank == 3) return 3; //Boss
+	else return -1;
 }
 
 static bool isPrioritary(WoWUnit* unit1, WoWUnit* unit2) {

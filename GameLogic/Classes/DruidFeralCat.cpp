@@ -117,7 +117,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 	int RegrowthIDs[9] = { 8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858 };
 	bool RegrowthBuff = ListUnits[indexP].hasBuff(RegrowthIDs, 9);
 	int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
-	if (CatFormBuff && (HpRatio < 60.0f) && (localPlayer->prctMana > 50.0f)) {
+	if (CatFormBuff && (HpRatio < 70.0f) && (localPlayer->prctMana > 50.0f)) {
 		//Disable Cat Form
 		FunctionsLua::CastSpellByName("Cat Form");
 		return 0;
@@ -167,7 +167,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if (!CatFormBuff && (HpRatio < 85) && (distAlly < 40.0f) && !RejuvenationBuff && FunctionsLua::IsSpellReady("Rejuvenation")) {
+	else if (!CatFormBuff && (HpRatio < 90) && (distAlly < 40.0f) && !RejuvenationBuff && FunctionsLua::IsSpellReady("Rejuvenation")) {
 		//Rejuvenation
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Rejuvenation");

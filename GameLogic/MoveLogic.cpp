@@ -8,8 +8,6 @@
 
 #include <iostream>
 
-static bool movingForward = false;
-
 void MoveToMap(Position targetpos) {
 	Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, targetpos);
 	if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
@@ -59,6 +57,10 @@ void Game::CorpseRun() {
 			//Gnomeregan
 			if (localPlayer->position.Z < 280.0f) MoveToMap(Position(-5162.885254f, 928.664246f, 257.180511f));
 			else MoveToMap(Position(-5163.476563f, 659.317871f, 348.278412f));
+		}
+		else if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(2892.239990f, -811.263977f, 199.328125f)) < 5.0f) {
+			//Scarlet Monastery
+			MoveToMap(Position(2903.302002f, -805.908508f, 160.331848f));
 		}
 		else {
 			std::cout << localPlayer->corpse_position.ToString() << "\n";

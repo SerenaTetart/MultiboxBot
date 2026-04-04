@@ -7,6 +7,7 @@
 
 std::vector<WoWUnit> ListUnits;
 std::vector<WoWGameObject> ListGameObjects;
+std::vector<WoWItem> ListEquipments;
 LocalPlayer* localPlayer = NULL;
 
 Position::Position() {
@@ -338,4 +339,70 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
     else if (displayID == 4632) { level = 285; gatherType = 2; }
     else if (displayID == 4634) { level = 290; gatherType = 2; }
     else if (displayID == 4636) { level = 300; gatherType = 2; }
+}
+
+/* === Items === */
+
+int GetSpellModifierFromSpellId(int spellId) {
+    static const std::unordered_map<int, int> ModifierBySpell = {
+        // Healing + Damage mod
+        {9342, 13}, {9343, 14}, {9344, 15},
+        {9395, 5},  {9396, 6},  {9397, 7},
+        {9415, 9},  {9416, 11}, {9417, 12},
+        {9346, 18}, {14047, 23}, {14054, 27},
+        {14248, 21}, {14254, 19}, {14798, 30},
+        {14799, 20}, {15714, 22}, {17367, 32},
+        {18049, 26}, {18052, 34}, {18054, 37},
+        {18056, 40}, {26395, 72}, {28141, 150},
+        {28693, 95}, {26142, 53}, {28360, 49},
+        {28841, 113}, {17280, 43}, {23728, 84},
+        {30777, 23}, {9398, 8}, {14127, 28},
+        {17493, 44}, {18057, 41}, {24196, 47},
+        {26460, 76}, {28687, 85}, {28767, 51},
+        {9345, 16}, {9393, 2}, {9394, 4}, {13881, 29},
+        {15715, 25}, {18050, 33}, {23730, 64}, {25111, 24},
+        // Healing mod
+        {9318, 33}, {17371, 44}, {18036, 55}, {7681, 15},
+        {7676, 4}, {18039, 62}, {7678, 9}, {18032, 42},
+        {18035, 51}, {9314, 24}, {9408, 22}, {18045, 75},
+        {23593, 92}, {22748, 55}, {29369, 134}, {15696, 53},
+        {18048, 81}, {9315, 26}, {18030, 37}, {18043, 70},
+        {18046, 77}, {26814, 187}, {28151, 280}, {7679, 11},
+        {9316, 29}, {18029, 35}, {18037, 57}, {18041, 66},
+        {23264, 106}, {25067, 30}, {26154, 90}, {26461, 143},
+        {28805, 238}, {7675, 2}, {9406, 18}, {17320, 84},
+        {18038, 59}, {18042, 68}, {18044, 73}, {7680, 13},
+        {9317, 31}, {18033, 46}, {18034, 48}, {18047, 79}, {23796, 24}
+    };
+
+    auto it = ModifierBySpell.find(spellId);
+    return it != ModifierBySpell.end() ? it->second : 0;
+}
+
+WoWItem::WoWItem(uintptr_t pointer, unsigned long long guid, ObjectType objType) : WoWObject(pointer, guid, objType) {
+    itemID = *(int*)(pointer + 0x354);
+
+    typedef uintptr_t(__thiscall* func)(uintptr_t ptr, int itemID, uintptr_t unknown, int unused1, int unused2, char unused3);
+    func GetItemCacheEntry= (func)0x0055BA30;
+    uintptr_t cacheEntryPTR = GetItemCacheEntry((uintptr_t)0x00C0E2A0, itemID, (uintptr_t)0x0, 0, 0, (char)0);
+
+    if (cacheEntryPTR != NULL) {
+        name = (char*)(*(uintptr_t*)(cacheEntryPTR + 0x8));
+
+        equipSlot = *(int*)(cacheEntryPTR + 0x2C);
+        if (equipSlot > 0) {
+            int intellect = *(int*)(cacheEntryPTR + 0x90);
+            int spirit = *(int*)(cacheEntryPTR + 0x94);
+            int stamina = *(int*)(cacheEntryPTR + 0x98);
+            int strength = *(int*)(cacheEntryPTR + 0x9c);
+            int armor = *(int*)(cacheEntryPTR + 0xf4);
+            int frostRes = *(int*)(cacheEntryPTR + 0x104);
+            int shadowRes = *(int*)(cacheEntryPTR + 0x108);
+            int bonusSpell[3] = { *(int*)(cacheEntryPTR + 0x11c), *(int*)(cacheEntryPTR + 0x120), *(int*)(cacheEntryPTR + 0x124) };
+
+            for (int i = 0; i < 3; i++) {
+                bonusHealing += GetSpellModifierFromSpellId(bonusSpell[i]);
+            }
+        }
+    }
 }

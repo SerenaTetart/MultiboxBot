@@ -13,6 +13,28 @@ enum ObjectType {
     Corpse
 };
 
+enum EquipSlot {
+    Head = 1,
+    Neck = 2,
+    Shoulders = 3,
+    Shirt = 4,
+    Chest = 5,
+    Waist = 6,
+    Legs = 7,
+    Feet = 8,
+    Wrist = 9,
+    Hands = 10,
+    Finger1 = 11,
+    Finger2 = 12,
+    Trinket1 = 13,
+    Trinket2 = 14,
+    Back = 15,
+    MainHand = 16,
+    OffHand = 17,
+    Ranged = 18,
+    Tabard = 19
+};
+
 enum ClickType {
     FaceTarget = 0x1,
     Face = 0x2,
@@ -175,7 +197,7 @@ class WoWUnit : public WoWObject {
 class LocalPlayer : public WoWUnit {
     public:
         std::string className;
-        int castInfo, zoneID;
+        int castInfo, zoneID, bonusHealing = 0;
         Position corpse_position;
 
         LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
@@ -189,10 +211,19 @@ class LocalPlayer : public WoWUnit {
 
 class WoWGameObject : public WoWObject {
     public:
-        int displayID, level, gatherType;
+        int displayID = 0, level = 0, gatherType = 0;
         Position position; float facing;
 
         WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
+};
+
+class WoWItem : public WoWObject {
+    public:
+        char* name = NULL;
+        int itemID = 0, bag = 0, slot = 0, equipSlot = 0,
+            bonusHealing = 0;
+
+        WoWItem(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
 };
 
 const uintptr_t TARGET_GUID_OFFSET = 0x40;
@@ -238,4 +269,5 @@ const uintptr_t ZONE_ID_OFFSET = 0x00B4E314;
 
 extern std::vector<WoWUnit> ListUnits;
 extern std::vector<WoWGameObject> ListGameObjects;
+extern std::vector<WoWItem> ListEquipments;
 extern LocalPlayer* localPlayer;
