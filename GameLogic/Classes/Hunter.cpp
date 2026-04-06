@@ -35,7 +35,7 @@ void ListAI::HunterDps() {
 			else if (!Combat && !FeedingBuff && FunctionsLua::HasPetUI() && (FunctionsLua::GetPetHappiness() < 3) && !FunctionsLua::UnitIsDeadOrGhost("pet") && FunctionsLua::HasMeat()) {
 				//Feed Pet
 				FunctionsLua::CastSpellByName("Feed Pet");
-				FunctionsLua::PlaceItem(120, FunctionsLua::HasMeat()); FunctionsLua::UseAction(120);
+				FunctionsLua::UseItem(FunctionsLua::HasMeat());
 			}
 			else if (!TrueshotAuraBuff && FunctionsLua::IsSpellReady("Trueshot Aura")) {
 				//Trueshot Aura

@@ -3,10 +3,11 @@
 #include <iostream>
 
 static int getCreaturePriority(WoWUnit* unit) {
-	if (unit->creatureType == Totem || (unit->createdBy > 0)) return 0; //Guardian
+	if (unit->creatureType == Totem) return 0; //Guardian
 	else if (unit->rank == 0 || unit->rank == 4) return 1; //Normal
 	else if (unit->rank == 1 || unit->rank == 2) return 2; //Elite
 	else if (unit->rank == 3) return 3; //Boss
+	else return -1;
 }
 
 static bool isPrioritary(WoWUnit* unit1, WoWUnit* unit2) {
@@ -44,7 +45,7 @@ void ListAI::DPSTargeting() {
 		WoWUnit* target = NULL;
 		for (unsigned int i = 0; i < ListUnits.size(); i++) {
 			if (
-				((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) || ListUnits[i].creatureType == Totem || (ListUnits[i].createdBy > 0))
+				((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) || ListUnits[i].creatureType == Totem)
 				&& ListUnits[i].attackable
 				&& (inInstance || (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME))
 				&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
@@ -60,7 +61,7 @@ void ListAI::DPSTargeting() {
 			localPlayer->SetTarget(target->Guid);
 			return;
 		}
-		else if (targetUnit == NULL) {
+		else if (targetUnit == NULL || !targetUnit->attackable) {
 			for (int i = NumGroupMembers; i >= 0; i--) { //Tank also
 				if (HasAggro[i].size() > 0) {
 					localPlayer->SetTarget(HasAggro[i][0]->Guid);

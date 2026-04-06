@@ -20,7 +20,7 @@ static void GetSpellBonusHealing() {
 	int SpiritualHealingRank = FunctionsLua::GetTalentInfo(2, 15);
 	int spirit = FunctionsLua::UnitStat("player", 5);
 	int SpiritualGuidance = FunctionsLua::GetTalentInfo(2, 14);
-	float bonusHealing = spirit * 0.05f * SpiritualGuidance;
+	float bonusHealing = (spirit * 0.05f * SpiritualGuidance)+localPlayer->bonusHealing;
 	std::tie(std::ignore, LesserHealRank) = FunctionsLua::GetSpellID("Lesser Heal");
 	std::tie(std::ignore, RenewRank) = FunctionsLua::GetSpellID("Renew");
 	std::tie(std::ignore, HealRank) = FunctionsLua::GetSpellID("Heal");
@@ -29,14 +29,15 @@ static void GetSpellBonusHealing() {
 	//====================================================//
 	float SubLevel20PENALTY = 1.0f;
 	if (RenewLevel[RenewRank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RenewLevel[RenewRank]) * 0.0375f;
-	RenewValue[RenewRank] = (RenewValue[RenewRank] + bonusHealing * SubLevel20PENALTY) * (1.0f + (0.05f * RenewTalentRank)) * (1.0f + (0.02f * SpiritualHealingRank));
+	RenewValue[RenewRank] = (RenewValue[RenewRank] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank)) * (1.0f + (0.05f * RenewTalentRank));
+
 	SubLevel20PENALTY = 1.0f - (20.0f - LesserHealLevel[LesserHealRank]) * 0.0375f;
-	LesserHealValue[LesserHealRank] = (LesserHealValue[LesserHealRank] + bonusHealing * (2.5f / 3.5f) * SubLevel20PENALTY) * (1.0f + (0.02f * SpiritualHealingRank));
+	LesserHealValue[LesserHealRank] = (LesserHealValue[LesserHealRank] + (bonusHealing * (2.5f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
 	SubLevel20PENALTY = 1.0f;
 	if (HealLevel[HealRank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - HealLevel[HealRank]) * 0.0375f;
-	HealValue[HealRank] = (HealValue[HealRank] + bonusHealing * (3.0f / 3.5f) * SubLevel20PENALTY) * (1.0f + (0.02f * SpiritualHealingRank));
-	GreaterHealValue[GreaterHealRank] = (GreaterHealValue[GreaterHealRank] + bonusHealing * (3.0f / 3.5f)) * (1.0f + (0.02f * SpiritualHealingRank));
-	FlashHealValue[FlashHealRank] = (FlashHealValue[FlashHealRank] + bonusHealing * (1.5f / 3.5f)) * (1.0f + (0.02f * SpiritualHealingRank));
+	HealValue[HealRank] = (HealValue[HealRank] + (bonusHealing * (3.0f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
+	GreaterHealValue[GreaterHealRank] = (GreaterHealValue[GreaterHealRank] + (bonusHealing * (3.0f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
+	FlashHealValue[FlashHealRank] = (FlashHealValue[FlashHealRank] + (bonusHealing * (1.5f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
 }
 
 static void PriestAttack() {
@@ -138,6 +139,14 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
+	else if ((HpRatio < 90) && !RenewBuff && (distAlly < 40.0f) && FunctionsLua::IsSpellReady("Renew")) {
+		//Renew
+		localPlayer->SetTarget(healGuid);
+		FunctionsLua::CastSpellByName("Renew");
+		LastTarget = indexP;
+		if (!los_heal) Moving = 5;
+		return 0;
+	}
 	else if ((HpLost > GreaterHealValue[GreaterHealRank]) && (distAlly < 40.0f) && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Greater Heal")) {
 		//Greater Heal
 		localPlayer->SetTarget(healGuid);
@@ -158,14 +167,6 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Lesser Heal
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Lesser Heal");
-		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
-		return 0;
-	}
-	else if ((HpLost > RenewValue[RenewRank]) && !RenewBuff && (distAlly < 40.0f) && FunctionsLua::IsSpellReady("Renew")) {
-		//Renew
-		localPlayer->SetTarget(healGuid);
-		FunctionsLua::CastSpellByName("Renew");
 		LastTarget = indexP;
 		if (!los_heal) Moving = 5;
 		return 0;

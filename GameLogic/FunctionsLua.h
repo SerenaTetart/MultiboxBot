@@ -32,7 +32,6 @@ class FunctionsLua {
 	static void PickupItem(int x, int y);
 	static void MakeVirtualInventory(std::vector<std::tuple<int, int, int, std::string>> *listItems);
 	static void DropItemOnUnit(std::string target);
-	static void PlaceItem(int slot, int item_info);
 	static void UseItem(int item_id);
 	static void UseHPotion();
 	static void UseMPotion();

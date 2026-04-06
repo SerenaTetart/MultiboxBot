@@ -16,36 +16,22 @@ static bool TradeShow = false, TradePendingSelf = false;
 
 void Game::MainLoop() {
 	while (Client::client_running == true) {
-
 		ThreadSynchronizer::RunOnMainThread(
 			[]() {
 				playerGuid = Functions::GetPlayerGuid();
-				if (playerGuid > 0) {
-					NumGroupMembers = FunctionsLua::GetNumGroupMembers();
-					tarType = "party";
-					if (NumGroupMembers > 5) {
-					        IsInGroup = 2;
-					        tarType = "raid";
-					}
-					else if (NumGroupMembers > 0) IsInGroup = 1;
-					else IsInGroup = 0;
+				if (playerGuid > 0 && playerGuid != pastPlayerGuid) {
+					Functions::EnumerateVisibleObjects(0);
 
-					if (playerGuid != pastPlayerGuid) {
-						
-						Functions::EnumerateVisibleObjects(0);
-
+					if (localPlayer != NULL) {
 						pastPlayerGuid = playerGuid;
+						std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
+						Client::sendMessage(msg);
 
-						if (localPlayer != NULL) {
-							std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
-							Client::sendMessage(msg);
-
-							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
-							int skills[] = { 0, 0 };
-							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
-							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
-							Client::sendMessage(msg);
-						}
+						std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
+						int skills[] = { 0, 0 };
+						std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
+						msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
+						Client::sendMessage(msg);
 					}
 				}
 			}
@@ -66,18 +52,28 @@ void Game::MainLoop() {
 					if (playerGuid > 0) {
 						NumGroupMembers = FunctionsLua::GetNumGroupMembers();
 						tarType = "party";
-					        if (NumGroupMembers > 5) {
-					                IsInGroup = 2;
-					                tarType = "raid";
-					        }
-					        else if (NumGroupMembers > 0) IsInGroup = 1;
-					        else IsInGroup = 0;
+						if (NumGroupMembers > 5) {
+							IsInGroup = 2;
+							tarType = "raid";
+						}
+						else if (NumGroupMembers > 0) IsInGroup = 1;
+						else IsInGroup = 0;
 						mapID = Functions::GetMapID();
 
 						Functions::EnumerateVisibleObjects(0);
 
-						pastPlayerGuid = playerGuid;
-						
+						if (playerGuid != pastPlayerGuid && localPlayer != NULL) {
+							pastPlayerGuid = playerGuid;
+							std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
+							Client::sendMessage(msg);
+
+							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
+							int skills[] = { 0, 0 };
+							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
+							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
+							Client::sendMessage(msg);
+						}
+
 						if (localPlayer != NULL) {
 							targetUnit = localPlayer->getTarget();
 
@@ -93,18 +89,6 @@ void Game::MainLoop() {
 							else if (keybindTrigger == 2) {
 								//FunctionsLua::UseItem("Bridle");
 								keybindTrigger = 0;
-							}
-
-							if (playerGuid != pastPlayerGuid) {
-								pastPlayerGuid = playerGuid;
-								std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
-								Client::sendMessage(msg);
-								
-								std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
-							        int skills[] = { 0, 0 };
-							        std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
-							        msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
-							        Client::sendMessage(msg);
 							}
 
 							skinningLevel = FunctionsLua::GetTradingSkill("Skinning");
@@ -162,8 +146,8 @@ void Game::MainLoop() {
 			Combat = (localPlayer->flags & UNIT_FLAG_IN_COMBAT) == UNIT_FLAG_IN_COMBAT;
 
 			IsFacing = false; distTarget = 0; hasTargetAggro = false;
-			if(targetUnit != NULL) {
-				if(targetUnit->attackable) IsFacing = localPlayer->isFacing(targetUnit->position, 0.3f);
+			if (targetUnit != NULL) {
+				if (targetUnit->attackable) IsFacing = localPlayer->isFacing(targetUnit->position, 0.3f);
 				distTarget = localPlayer->position.DistanceTo(targetUnit->position) - targetUnit->combatReach;
 				for (unsigned int i = 0; i < HasAggro[0].size(); i++) {
 					if (targetUnit->Guid == HasAggro[0][i]->Guid) {
@@ -176,14 +160,14 @@ void Game::MainLoop() {
 			/*auto end = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double, std::milli> float_ms = end - start;
 			std::cout << "Initialisation: elapsed time is " << float_ms.count() << " milliseconds" << std::endl;*/
-				
+
 			// ========================================== //
 			// ==============   Movements   ============= //
 			// ========================================== //
 
 			//start = std::chrono::high_resolution_clock::now();
 
-			int RaptorStrikeIDs[8] = { 2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266 };
+			int RaptorStrikeIDs[8] = {2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266};
 			int HeroicStrikeIDs[9] = { 78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286 };
 			int CleaveIDs[5] = { 845, 7369, 11608, 11609, 20569 };
 			if (localPlayer != NULL && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
@@ -196,7 +180,7 @@ void Game::MainLoop() {
 							Functions::LuaCall("ClearTarget()");
 					}
 				});
-					//Reset Loot History after 20 sec
+				//Reset Loot History after 20 sec
 				unsigned int ind = 0;
 				while (ind < LootHistory.size()) {
 					if (float(time(0) - get<1>(LootHistory[ind])) >= 20.0f) LootHistory.erase(LootHistory.begin() + ind);
@@ -207,7 +191,7 @@ void Game::MainLoop() {
 					//Logic actions
 					CorpseRun();
 				}
-				else if (IsSitting && ((localPlayer->prctMana > 85) || Combat || !localPlayer->hasBuff(drinkingIDs, 15) || (localPlayer->speed > 0))) {
+				else if (IsSitting && ((localPlayer->prctMana > 85) || Combat || !localPlayer->hasBuff(drinkingIDs, 15))) {
 					//Stop sitting
 					IsSitting = false;
 					ThreadSynchronizer::pressKey(0x28);
@@ -244,7 +228,7 @@ void Game::MainLoop() {
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
-							});
+								});
 						}
 						else if (Moving == 6 && los_target) {
 							//Looking for LoS, found it => stop
@@ -253,7 +237,7 @@ void Game::MainLoop() {
 							Moving = 0;
 						}
 						else if (Moving == 3 && (distTarget > 12.0f || ((!(targetUnit->flags & UNIT_FLAG_STUNNED) && !(targetUnit->movement_flags & MOVEFLAG_ROOT))
-								&& ((!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && hasTargetAggro) || ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed > 4.5))))) {
+							&& ((!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && hasTargetAggro) || ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed > 4.5))))) {
 							//Walking backward and (target > 12 yard || Creature aggro || target running)
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
@@ -261,8 +245,8 @@ void Game::MainLoop() {
 						}
 						else if ((Moving == 0 || Moving == 3) && distTarget < 12.0f
 							&& ((targetUnit->flags & UNIT_FLAG_STUNNED) || (targetUnit->movement_flags & MOVEFLAG_ROOT)
-							|| (!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !hasTargetAggro)
-							|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0))) {
+								|| (!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !hasTargetAggro)
+								|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0))) {
 							//(Creature not aggro || Player slowed) && < 12 yard => Walk backward
 							ThreadSynchronizer::RunOnMainThread([]() {
 								if (Functions::StepBack(targetUnit, 3) == false) {
@@ -281,7 +265,7 @@ void Game::MainLoop() {
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
-							});
+								});
 						}
 						else if (Moving == 0 && !IsFacing) ThreadSynchronizer::RunOnMainThread([]() { localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position); });
 						else if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
@@ -296,7 +280,7 @@ void Game::MainLoop() {
 					//Find LoS (ally)
 					ThreadSynchronizer::RunOnMainThread([=]() {
 						Functions::MoveToLoS(targetUnit->position, 5);
-					});
+						});
 				}
 				else if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving != 5 && Moving != 4 && Moving != 0) {
 					ThreadSynchronizer::pressKey(0x28);
@@ -326,7 +310,7 @@ void Game::MainLoop() {
 							if (ListGameObjects[i].gatherType == 0) continue;
 							else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
 								continue;
-							else if (Functions::enemyClose(ListGameObjects[i].position, false)) continue;
+							else if (Functions::enemyClose(ListGameObjects[i].position)) continue;
 							int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
 							if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)
 								|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)) {
@@ -338,14 +322,14 @@ void Game::MainLoop() {
 									}
 									ThreadSynchronizer::RunOnMainThread([=]() {
 										Functions::InteractObject(ListGameObjects[i].Pointer, 1);
-									});
+										});
 									gatheringCD = time(0);
 									if (ListGameObjects[i].gatherType == 1) gatheringCD -= (time_t)1.5f;
 								}
 								else if (!localPlayer->isMoving) {
 									ThreadSynchronizer::RunOnMainThread([=]() {
 										Functions::MoveTo(ListGameObjects[i].position, 4);
-									});
+										});
 								}
 								looted = true;
 								break;
@@ -385,33 +369,33 @@ void Game::MainLoop() {
 							else if (localPlayer->speed == 0.0f && ListUnits[i].position.DistanceTo(localPlayer->position) < 4.0f) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::LootUnit(ListUnits[i].Pointer, 1);
-								});
+									});
 								LootHistory.push_back(std::tuple<unsigned long long, time_t>(ListUnits[i].Guid, time(0)));
 								looted = true;
 								break;
 							}
-							else if (!Functions::enemyClose(ListUnits[i].position, false)) {
+							else if (!Functions::enemyClose(ListUnits[i].position)) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::MoveTo(ListUnits[i].position, 4);
-								});
+									});
 								looted = true;
 								break;
 							}
 						}
-						else if (skinnable && skinningLevel > 0 && (ListUnits[i].level <= 20 && ((ListUnits[i].level-10)*10 <= skinningLevel && !Functions::enemyClose(ListUnits[i].position, false))
-							|| (ListUnits[i].level > 20 && (ListUnits[i].level*5 <= skinningLevel)))) {
+						else if (skinnable && skinningLevel > 0 && (ListUnits[i].level <= 20 && ((ListUnits[i].level - 10) * 10 <= skinningLevel && !Functions::enemyClose(ListUnits[i].position))
+							|| (ListUnits[i].level > 20 && (ListUnits[i].level * 5 <= skinningLevel)))) {
 							if (localPlayer->speed == 0.0f && ListUnits[i].position.DistanceTo(localPlayer->position) < 4.0f) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::LootUnit(ListUnits[i].Pointer, 1);
-								});
+									});
 								LootHistory.push_back(std::tuple<unsigned long long, time_t>(ListUnits[i].Guid, time(0)));
 								looted = true;
 								break;
 							}
-							else if (!Functions::enemyClose(ListUnits[i].position, false)) {
+							else if (!Functions::enemyClose(ListUnits[i].position)) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::MoveTo(ListUnits[i].position, 4);
-								});
+									});
 								looted = true;
 								break;
 							}
@@ -484,7 +468,7 @@ void Game::MainLoop() {
 									break;
 								}
 							}
-						});
+							});
 					}
 					if (!looted && Moving != 8 && Leader != NULL && Leader->Guid != localPlayer->Guid && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
 						//Follow
@@ -501,7 +485,7 @@ void Game::MainLoop() {
 			/*end = std::chrono::high_resolution_clock::now();
 			float_ms = end - start;
 			std::cout << "Movement: elapsed time is " << float_ms.count() << " milliseconds" << std::endl;*/
-				
+
 			// ========================================== //
 			// ===============   Actions   ============== //
 			// ========================================== //

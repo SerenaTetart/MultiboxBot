@@ -13,6 +13,28 @@ enum ObjectType {
     Corpse
 };
 
+enum EquipSlot {
+    Head = 1,
+    Neck = 2,
+    Shoulders = 3,
+    Shirt = 4,
+    Chest = 5,
+    Waist = 6,
+    Legs = 7,
+    Feet = 8,
+    Wrist = 9,
+    Hands = 10,
+    Finger1 = 11,
+    Finger2 = 12,
+    Trinket1 = 13,
+    Trinket2 = 14,
+    Back = 15,
+    MainHand = 16,
+    OffHand = 17,
+    Ranged = 18,
+    Tabard = 19
+};
+
 enum ClickType {
     FaceTarget = 0x1,
     Face = 0x2,
@@ -150,16 +172,16 @@ class WoWObject {
         ObjectType objectType;
 
         WoWObject(uintptr_t pointer, unsigned long long guid, ObjectType objType);
-        uintptr_t GetDescriptorPtr();
+        uintptr_t GetDescriptorPtr(uintptr_t pointer);
 };
 
 class WoWUnit : public WoWObject {
     public:
-        Position position; CreatureType creatureType; UnitReaction unitReaction;
+        Position position; CreatureType creatureType = Null; UnitReaction unitReaction = Neutral;
         UnitFlags flags; MovementFlags movement_flags; DynamicFlags dynamic_flags;
-        int buff[30]; int debuff[16]; float prctHP, prctMana, facing, speed, combatReach;
-        unsigned long long targetGuid; char* name; bool attackable, isdead, isMoving, isFromGroup;
-        int rage, energy, level, channelInfo, hpLost, factionTemplateID, indexGroup, role, health, createdBy, entryID, rank;
+        int buff[30] = { 0 }; int debuff[16] = {0}; float prctHP = 0.0f, prctMana = 0.0f, facing = 0.0f, speed = 0.0f, combatReach = 0.0f;
+        unsigned long long targetGuid = 0; char* name; bool attackable = false, isdead = false, isMoving = false, isFromGroup = false;
+        int rage = 0, energy = 0, level = 0, channelInfo = 0, hpLost = 0, factionTemplateID = 0, indexGroup = -1, role = -1, health = 0, createdBy = 0, entryID = 0, rank = 0;
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);
         bool hasBuff(int* IDs, int size);
@@ -175,7 +197,7 @@ class WoWUnit : public WoWObject {
 class LocalPlayer : public WoWUnit {
     public:
         std::string className;
-        int castInfo, zoneID;
+        int castInfo, zoneID, bonusHealing = 0;
         Position corpse_position;
 
         LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
@@ -189,10 +211,15 @@ class LocalPlayer : public WoWUnit {
 
 class WoWGameObject : public WoWObject {
     public:
-        int displayID, level, gatherType;
+        int displayID = 0, level = 0, gatherType = 0;
         Position position; float facing;
 
         WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
+};
+
+class WoWItem : public WoWObject {
+    public:
+        WoWItem(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
 };
 
 const uintptr_t TARGET_GUID_OFFSET = 0x40;
