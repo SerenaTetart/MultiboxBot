@@ -3,7 +3,7 @@
 #include "Client.h"
 #include "MemoryManager.h"
 #include "ListAI.h"
-
+#include "BossAI.h"
 #include "Navigation.h"
 
 #include <iostream>
@@ -106,6 +106,7 @@ void Game::MainLoop() {
 									eventFrame:RegisterEvent("TRADE_SHOW")
 									eventFrame:RegisterEvent("TRADE_CLOSED")
 									eventFrame:RegisterEvent("TRADE_ACCEPT_UPDATE")
+									eventFrame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
 									eventFrame:SetScript("OnEvent", function()
 										if event == "TRADE_SHOW" then
 											Multibox_TradeShow = 1
@@ -118,6 +119,8 @@ void Game::MainLoop() {
 											elseif arg2 == 0 then Multibox_TradePending = 0 end
 											if arg1 == 1 then Multibox_TradePending2 = 1
 											elseif arg1 == 0 then Multibox_TradePending2 = 0 end
+										elseif event == "CHAT_MSG_MONSTER_YELL" then
+											last_yell_monster = arg1
 										end
 									end)
 								)");
@@ -170,7 +173,8 @@ void Game::MainLoop() {
 			int RaptorStrikeIDs[8] = {2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266};
 			int HeroicStrikeIDs[9] = { 78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286 };
 			int CleaveIDs[5] = { 845, 7369, 11608, 11609, 20569 };
-			if (localPlayer != NULL && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
+			if (localPlayer != NULL && Combat && BossAI::BossAIAction()) { }
+			else if (localPlayer != NULL && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
 				ThreadSynchronizer::RunOnMainThread([=]() {
 					los_target = true;
 					if (targetUnit != NULL) {
@@ -265,7 +269,7 @@ void Game::MainLoop() {
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
-								});
+							});
 						}
 						else if (Moving == 0 && !IsFacing) ThreadSynchronizer::RunOnMainThread([]() { localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position); });
 						else if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {

@@ -157,6 +157,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BossAI.h" />
     <ClInclude Include="Client.h" />
     <ClInclude Include="FactionTemplate.h" />
     <ClInclude Include="FunctionsLua.h" />
@@ -169,6 +170,7 @@
     <ClInclude Include="WoWObject.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BossAI.cpp" />
     <ClCompile Include="Classes\Behavior.cpp" />
     <ClCompile Include="Classes\DruidBalance.cpp" />
     <ClCompile Include="Classes\DruidFeralCat.cpp" />
