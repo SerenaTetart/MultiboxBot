@@ -107,6 +107,8 @@ void Game::MainLoop() {
 									eventFrame:RegisterEvent("TRADE_CLOSED")
 									eventFrame:RegisterEvent("TRADE_ACCEPT_UPDATE")
 									eventFrame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
+									eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
+									eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_MISSES")
 									eventFrame:SetScript("OnEvent", function()
 										if event == "TRADE_SHOW" then
 											Multibox_TradeShow = 1
@@ -121,7 +123,14 @@ void Game::MainLoop() {
 											elseif arg1 == 0 then Multibox_TradePending2 = 0 end
 										elseif event == "CHAT_MSG_MONSTER_YELL" then
 											last_yell_monster = arg1
+										elseif(event == "CHAT_MSG_COMBAT_SELF_HITS" or event == "CHAT_MSG_COMBAT_SELF_MISSES") then
+											AATimer = UnitAttackSpeed("player")
 										end
+									end)
+									eventFrame:SetScript("OnUpdate", function()
+										elapsed = (1/GetFramerate())
+										AATimer = AATimer - elapsed
+										if(AATimer < 0) then AATimer = 0 end
 									end)
 								)");
 							}
@@ -132,6 +141,7 @@ void Game::MainLoop() {
 								bool TradePending = tradePendingText && std::strcmp(tradePendingText, "1") == 0;
 								TradePendingSelf = tradePendingText2 && std::strcmp(tradePendingText2, "1") == 0;
 								if (TradeShow && TradePending) { Functions::LuaCall("AcceptTrade()"); }
+								autoAttackTimer = GetFloatFromChar((char*)Functions::GetText("AATimer"));
 							}
 						}
 					}
@@ -538,7 +548,7 @@ los_target = false, passiveGroup = false, inInstance = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
 unsigned int LastTarget = 0;
-float distTarget = 0;
+float distTarget = 0, autoAttackTimer = 0;
 std::string tarType = "party";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;

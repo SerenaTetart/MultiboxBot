@@ -15,7 +15,7 @@ private:
 
 //Global Variables
 extern bool Combat, IsSitting, IsFacing, hasTargetAggro, MCNoAuto, MCAutoMove, los_target, passiveGroup, inInstance;
-extern float distTarget;
+extern float distTarget, autoAttackTimer;
 extern std::vector<WoWUnit*> HasAggro[40];
 extern std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 extern std::vector<int> HealTargetArray;
