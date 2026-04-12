@@ -2,12 +2,13 @@
 #include "../MemoryManager.h"
 #include <iostream>
 
+static time_t SliceDiceTimer = time(0);
 static float SliceDiceDuration = 0; //Depends on talent and combo points
 
 void ListAI::RogueDps() {
-	float SliceDiceTimer = SliceDiceDuration - (time(0) - current_time);
-	if (SliceDiceTimer < 0) SliceDiceTimer = 0;
 	if (localPlayer->castInfo == 0 && localPlayer->channelInfo == 0 && !localPlayer->isdead && !passiveGroup) {
+		time_t SliceDiceDurationLeft = SliceDiceDuration - (time(0) - SliceDiceTimer);
+		if (SliceDiceTimer < 0) SliceDiceTimer = 0;
 		ThreadSynchronizer::RunOnMainThread([=]() {
 			int nbrAggro = HasAggro[0].size();
 			bool IsStunned = localPlayer->flags & UNIT_FLAG_STUNNED;
@@ -64,22 +65,22 @@ void ListAI::RogueDps() {
 					//Adrenaline Rush
 					FunctionsLua::CastSpellByName("Adrenaline Rush");
 				}
-				else if (Combat && !StealthBuff && ((nbrCloseEnemyFacing >= 2) || targetPlayer) && (SliceDiceTimer >= 15) && FunctionsLua::IsSpellReady("Blade Flurry")) {
+				else if (Combat && !StealthBuff && ((nbrCloseEnemyFacing >= 2) || targetPlayer) && (SliceDiceDurationLeft >= 15) && FunctionsLua::IsSpellReady("Blade Flurry")) {
 					//Blade Flurry
 					FunctionsLua::CastSpellByName("Blade Flurry");
 				}
-				else if (!StealthBuff && (((ComboPoints >= 3) && !SliceDiceBuff) || (SliceDiceTimer < 8 && (ComboPoints >= 5))) && FunctionsLua::IsSpellReady("Slice and Dice")) {
+				else if (!StealthBuff && (((ComboPoints >= 3) && !SliceDiceBuff) || (SliceDiceDurationLeft < 8 && (ComboPoints >= 5))) && FunctionsLua::IsSpellReady("Slice and Dice")) {
 					//Slice and Dice
 					int SliceDiceTalent = FunctionsLua::GetTalentInfo(1, 6);
 					SliceDiceDuration = (6 + (3 * ComboPoints)) * (1 + (0.15f * SliceDiceTalent));
-					current_time = time(0);
+					SliceDiceTimer = time(0);
 					FunctionsLua::CastSpellByName("Slice and Dice");
 				}
 				else if (IsFacing && !targetStunned && !StealthBuff && (ComboPoints >= 3) && targetPlayer && FunctionsLua::IsSpellReady("Kidney Shot")) {
 					//Kidney Shot
 					FunctionsLua::CastSpellByName("Kidney Shot");
 				}
-				else if (IsFacing && !StealthBuff && (ComboPoints >= 5) && (SliceDiceTimer >= 8) && FunctionsLua::IsSpellReady("Eviscerate")) {
+				else if (IsFacing && !StealthBuff && (ComboPoints >= 5) && (SliceDiceDurationLeft >= 8) && FunctionsLua::IsSpellReady("Eviscerate")) {
 					//Eviscerate
 					FunctionsLua::CastSpellByName("Eviscerate");
 				}

@@ -2,19 +2,18 @@
 #include "../MemoryManager.h"
 #include <iostream>
 
+static time_t EntanglingRootsTimer = time(0);
+
 static void DruidAttack() {
 	int MoonkinFormIDs[1] = { 24858 }; bool MoonkinFormBuff = localPlayer->hasBuff(MoonkinFormIDs, 1);
 	ListAI::DPSTargeting();
 	if (targetUnit != NULL && targetUnit->attackable && !targetUnit->isdead) {
-		time_t EntanglingRootsTimer = 15 - (time(0) - current_time);
-		if (EntanglingRootsTimer < 0) EntanglingRootsTimer = 0;
 		//Specific for Hurricane cast:
 		Position cluster_center = Position(0, 0, 0); int cluster_unit;
 		std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
 		int MoonkinFormIDs[1] = { 24858 }; bool MoonkinFormBuff = localPlayer->hasBuff(MoonkinFormIDs, 1);
 		int MoonfireIDs[10] = { 8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835 };
 		bool MoonfireDebuff = targetUnit->hasDebuff(MoonfireIDs, 10);
-		bool targetPlayer = targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED;
 		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
 		if (!MoonkinFormBuff && FunctionsLua::IsSpellReady("Moonkin Form")) {
 			//Moonkin Form
@@ -29,10 +28,10 @@ static void DruidAttack() {
 			//Moonfire
 			FunctionsLua::CastSpellByName("Moonfire");
 		}
-		else if (!localPlayer->isMoving && targetPlayer && (EntanglingRootsTimer == 0) && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Entangling Roots")) {
+		else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && FunctionsLua::IsSpellReady("Entangling Roots")) {
 			//Entangling Roots (PvP)
 			FunctionsLua::CastSpellByName("Entangling Roots");
-			if (localPlayer->isCasting()) current_time = time(0);
+			if (localPlayer->isCasting()) EntanglingRootsTimer = time(0);
 		}
 		else if (IsFacing && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Wrath") && ((localPlayer->prctMana > 50.0f) || (MoonkinFormBuff))) {
 			//Wrath

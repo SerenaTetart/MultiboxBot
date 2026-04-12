@@ -23,11 +23,11 @@ static void PaladinAttack() {
 			//Seal of Righteousness
 			FunctionsLua::CastSpellByName("Seal of Righteousness");
 		}
-		else if ((localPlayer->prctMana > 33) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Consecration")) {
+		else if (!localPlayer->isMoving && (localPlayer->prctMana > 33) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Consecration")) {
 			//Consecration
 			FunctionsLua::CastSpellByName("Consecration");
 		}
-		else if (SealBuff && (localPlayer->prctMana > 50) && (distTarget < 10) && FunctionsLua::IsSpellReady("Judgement")) {
+		else if (SealBuff && (localPlayer->prctMana > 50) && (distTarget < 10) && autoAttackTimer > 1.0f && FunctionsLua::IsSpellReady("Judgement")) {
 			//Judgement
 			FunctionsLua::CastSpellByName("Judgement");
 		}

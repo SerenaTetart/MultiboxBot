@@ -2,6 +2,8 @@
 #include "../MemoryManager.h"
 #include <iostream>
 
+static time_t FearTimer = time(0);
+
 static std::string GetSpellRank(std::string txt) {
 	std::string list[5] = { "Major", "Greater", "", "Lesser", "Minor" };
 	for (int i = 0; i < 5; i++) {
@@ -81,8 +83,6 @@ void ListAI::WarlockDps() {
 				bool targetPlayer = targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED;
 				bool targetFear = targetUnit->flags & UNIT_FLAG_FLEEING;
 				int nbrSoulShard = FunctionsLua::GetItemCount(6265);
-				time_t FearTimer = 15 - (time(0) - current_time);
-				if (FearTimer < 0) FearTimer = 0;
 				int nbrAggro = HasAggro[0].size();
 				int CoTonguesIDs[2] = { 1714, 11719 }; bool CoTonguesDebuff = targetUnit->hasDebuff(CoTonguesIDs, 2);
 				int CoShadowIDs[2] = { 17862, 17937 }; bool CoShadowDebuff = targetUnit->hasDebuff(CoShadowIDs, 2);
@@ -108,10 +108,10 @@ void ListAI::WarlockDps() {
 					//Curse of Tongues (PvP -> Caster)
 					FunctionsLua::CastSpellByName("Curse of Tongues");
 				}
-				else if (!localPlayer->isMoving && targetPlayer && !targetFear && (FearTimer == 0) && FunctionsLua::IsSpellReady("Fear")) {
+				else if (!localPlayer->isMoving && targetPlayer && !targetFear && (time(0) - FearTimer) >= 15.0f && FunctionsLua::IsSpellReady("Fear")) {
 					//Fear (PvP)
 					FunctionsLua::CastSpellByName("Fear");
-					if (localPlayer->isCasting()) current_time = time(0);
+					if (localPlayer->isCasting()) FearTimer = time(0);
 				}
 				else if (!localPlayer->isMoving && targetPlayer && (targetUnit->level >= localPlayer->level-10) && FunctionsLua::IsSpellReady("Inferno")) {
 					//Inferno (PvP)

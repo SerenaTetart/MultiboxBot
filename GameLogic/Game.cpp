@@ -98,15 +98,18 @@ void Game::MainLoop() {
 							if (FunctionsLua::SpellIsTargeting()) FunctionsLua::SpellStopTargeting();
 
 							inInstance = FunctionsLua::IsInInstance();
-
-							const char* tradeShowText = (const char*)Functions::GetText("Multibox_TradeShow");
-							if (std::strcmp(tradeShowText, "") == 0) {
+							const char* autoAttackTimer_char = (const char*)Functions::GetText("AATimer");
+							autoAttackTimer = GetFloatFromChar(autoAttackTimer_char);
+							if (std::strcmp(autoAttackTimer_char, "") == 0) {
 								Functions::LuaCall(R"(
+									AATimer = 0
 									eventFrame = CreateFrame("Frame")
 									eventFrame:RegisterEvent("TRADE_SHOW")
 									eventFrame:RegisterEvent("TRADE_CLOSED")
 									eventFrame:RegisterEvent("TRADE_ACCEPT_UPDATE")
 									eventFrame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
+									eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
+									eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_MISSES")
 									eventFrame:SetScript("OnEvent", function()
 										if event == "TRADE_SHOW" then
 											Multibox_TradeShow = 1
@@ -121,11 +124,19 @@ void Game::MainLoop() {
 											elseif arg1 == 0 then Multibox_TradePending2 = 0 end
 										elseif event == "CHAT_MSG_MONSTER_YELL" then
 											last_yell_monster = arg1
+										elseif(event == "CHAT_MSG_COMBAT_SELF_HITS" or event == "CHAT_MSG_COMBAT_SELF_MISSES") then
+											AATimer = UnitAttackSpeed("player")
 										end
+									end)
+									eventFrame:SetScript("OnUpdate", function()
+										elapsed = (1/GetFramerate())
+										AATimer = AATimer - elapsed
+										if(AATimer < 0) then AATimer = 0 end
 									end)
 								)");
 							}
 							else {
+								const char* tradeShowText = (const char*)Functions::GetText("Multibox_TradeShow");
 								const char* tradePendingText = (const char*)Functions::GetText("Multibox_TradePending");
 								const char* tradePendingText2 = (const char*)Functions::GetText("Multibox_TradePending2");
 								TradeShow = tradeShowText && std::strcmp(tradeShowText, "1") == 0;
@@ -151,7 +162,7 @@ void Game::MainLoop() {
 			IsFacing = false; distTarget = 0; hasTargetAggro = false;
 			if (targetUnit != NULL) {
 				if (targetUnit->attackable) IsFacing = localPlayer->isFacing(targetUnit->position, 0.3f);
-				distTarget = localPlayer->position.DistanceTo(targetUnit->position) - targetUnit->combatReach;
+				distTarget = localPlayer->position.DistanceTo(targetUnit->position) - localPlayer->combatReach - targetUnit->combatReach;
 				for (unsigned int i = 0; i < HasAggro[0].size(); i++) {
 					if (targetUnit->Guid == HasAggro[0][i]->Guid) {
 						hasTargetAggro = true;
@@ -240,14 +251,14 @@ void Game::MainLoop() {
 							ThreadSynchronizer::releaseKey(0x28);
 							Moving = 0;
 						}
-						else if (Moving == 3 && (distTarget > 12.0f || ((!(targetUnit->flags & UNIT_FLAG_STUNNED) && !(targetUnit->movement_flags & MOVEFLAG_ROOT))
+						else if (Moving == 3 && (distTarget > 15.0f || ((!(targetUnit->flags & UNIT_FLAG_STUNNED) && !(targetUnit->movement_flags & MOVEFLAG_ROOT))
 							&& ((!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && hasTargetAggro) || ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed > 4.5))))) {
 							//Walking backward and (target > 12 yard || Creature aggro || target running)
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
 							Moving = 0;
 						}
-						else if ((Moving == 0 || Moving == 3) && distTarget < 12.0f
+						else if ((Moving == 0 || Moving == 3) && distTarget < 15.0f
 							&& ((targetUnit->flags & UNIT_FLAG_STUNNED) || (targetUnit->movement_flags & MOVEFLAG_ROOT)
 								|| (!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !hasTargetAggro)
 								|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0))) {
@@ -264,8 +275,8 @@ void Game::MainLoop() {
 						}
 					}
 					else {
-						if (distTarget > 3.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
-							//Target > 3 yard => Run to it
+						if (distTarget > 2.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
+							//Target > 2 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
@@ -538,7 +549,7 @@ los_target = false, passiveGroup = false, inInstance = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
 unsigned int LastTarget = 0;
-float distTarget = 0;
+float distTarget = 0, autoAttackTimer = 0;
 std::string tarType = "party";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;

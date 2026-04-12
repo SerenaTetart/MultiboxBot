@@ -264,7 +264,7 @@ void Functions::FollowMultibox(int placement) {
 		, (sin(Leader->facing + (halfPI * 2) + cst) * range) + Leader->position.Y, Leader->position.Z);
 	bool targetSwim = false; if (Leader->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 	ThreadSynchronizer::RunOnMainThread([=]() {
-		if (Functions::GetDepth(target_pos, 2.0f) > 3.0f) {
+		if (!targetSwim && Functions::GetDepth(target_pos, 2.0f) > 3.0f) {
 			Moving = 0;
 			return;
 		}
@@ -425,7 +425,7 @@ bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
 }
 
 bool Functions::StepBack(WoWUnit* target, int move_type) {
-	float DIST_AWAY = 12.0f;
+	float DIST_AWAY = 15.0f;
 	if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving == move_type) {
 		Moving = move_type;
 		return true;
@@ -454,7 +454,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type) {
 				if (!depthCheck) break;
 			}
 			if (!Functions::Intersect(last_pos, next_pos)) {
-				if ((target->position.DistanceTo(next_pos) - target->combatReach) >= DIST_AWAY && !Functions::Intersect(next_pos, target->position) && !Functions::enemyClose(next_pos)) {
+				if ((target->position.DistanceTo(next_pos) - localPlayer->combatReach - target->combatReach) >= DIST_AWAY && !Functions::Intersect(next_pos, target->position) && !Functions::enemyClose(next_pos)) {
 					list_pos.push_back(next_pos);
 					break;
 				}
@@ -473,7 +473,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type) {
 		}
 	}
 	if (min_dist_index > -1 && min_dist > 2.0f) {
-		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f, target->position, (DIST_AWAY+target->combatReach));
+		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f, target->position, (DIST_AWAY+localPlayer->combatReach+target->combatReach));
 		localPlayer->ClickToMove(Move, target->Guid, candidate);
 		Moving = move_type;
 		return true;

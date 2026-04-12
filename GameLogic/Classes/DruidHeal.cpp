@@ -2,6 +2,8 @@
 #include "../MemoryManager.h"
 #include <iostream>
 
+static time_t EntanglingRootsTimer = time(0);
+
 static int RegrowthRank = 0; static float RegrowthValue[9]; static int RegrowthLevel[9] = { 12, 18, 24, 30, 36, 42, 48, 54, 60 };
 static int HealingTouchRank = 0; static float HealingTouchValue[11]; static int HealingTouchLevel[11] = { 1, 8, 14, 20, 26, 32, 38, 44, 50, 56, 60 };
 static int RejuvenationRank = 0; static float RejuvenationValue[11]; static int RejuvenationLevel[11] = { 4, 10, 16, 22, 28, 34, 40, 46, 52, 58, 60 };
@@ -31,14 +33,11 @@ static void GetSpellBonusHealing() {
 static void DruidAttack() {
 	ListAI::DPSTargeting();
 	if (targetUnit != NULL && targetUnit->attackable && !targetUnit->isdead) {
-		time_t EntanglingRootsTimer = 15 - (time(0) - current_time);
-		if (EntanglingRootsTimer < 0) EntanglingRootsTimer = 0;
 		//Specific for Hurricane cast:
 		Position cluster_center = Position(0, 0, 0); int cluster_unit;
 		std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
 		int MoonfireIDs[10] = { 8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835 };
 		bool MoonfireDebuff = targetUnit->hasDebuff(MoonfireIDs, 10);
-		bool targetPlayer = targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED;
 		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
 		if (!localPlayer->isMoving && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Hurricane")) {
 			//Hurricane
@@ -49,10 +48,10 @@ static void DruidAttack() {
 			//Moonfire
 			FunctionsLua::CastSpellByName("Moonfire");
 		}
-		else if (!localPlayer->isMoving && targetPlayer && (EntanglingRootsTimer == 0) && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Entangling Roots")) {
+		else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && FunctionsLua::IsSpellReady("Entangling Roots")) {
 			//Entangling Roots (PvP)
 			FunctionsLua::CastSpellByName("Entangling Roots");
-			if (localPlayer->isCasting()) current_time = time(0);
+			if (localPlayer->isCasting()) EntanglingRootsTimer = time(0);
 		}
 		else if (IsFacing && !localPlayer->isMoving && !IsInGroup && FunctionsLua::IsSpellReady("Wrath")) {
 			//Wrath

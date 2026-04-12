@@ -36,7 +36,7 @@ void Start_Inject_Client(const char* pathWoW) {
     //std::cout << "pi.dwProcessId: " << pi.dwProcessId << "\n";
     //std::cout << "processHandle: " << pi.hProcess << "\n";
 
-    Sleep(500);
+    Sleep(1000);
 
     std::string pathTMP = getCurrentDir() + "\\GameLogic.dll";
     LPCSTR loaderPath = pathTMP.c_str();
@@ -50,7 +50,7 @@ void Start_Inject_Client(const char* pathWoW) {
         PAGE_EXECUTE_READWRITE);
     //std::cout << "loaderPathPtr: " << loaderPathPtr << "\n";
 
-    Sleep(500);
+    Sleep(250);
 
     DWORD loaderPathsize = sizeof(loaderPath);
     if (!WriteProcessMemory(pi.hProcess, loaderPathPtr, loaderPath, strlen(loaderPath) + 1, 0))
@@ -69,11 +69,11 @@ void Start_Inject_Client(const char* pathWoW) {
     FARPROC loaderDllPointer = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
     //std::cout << "loaderDllPointer: " << loaderDllPointer << "\n";
 
-    Sleep(500);
+    Sleep(250);
 
     CreateRemoteThread(pi.hProcess, 0, 0, (LPTHREAD_START_ROUTINE)loaderDllPointer, loaderPathPtr, 0, 0);
 
-    Sleep(500);
+    Sleep(250);
 
     VirtualFreeEx(pi.hProcess, loaderPathPtr, 0, MEM_RELEASE);
 }

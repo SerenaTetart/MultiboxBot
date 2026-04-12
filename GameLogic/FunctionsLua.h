@@ -1,6 +1,42 @@
 #pragma once
 #include "Functions.h"
 
+static int GetIntFromChar(const char* txt) {
+	//Obtient le !premier! nombre d'un char*
+	int length = strlen(txt);
+	int ret = 0; int y = 0; int lenNbr = 0;
+	for (int i = 0; i < length; i++) {
+		if ((int)txt[i] >= '0' && (int)txt[i] <= '9') lenNbr++;
+		else if (lenNbr > 0) break;
+	}
+	for (int i = 0; i < length; i++) {
+		if ((int)txt[i] >= '0' && (int)txt[i] <= '9') {
+			ret = ret + int(powf(10, lenNbr - y - 1) * ((int)txt[i] - '0'));
+			y++;
+		}
+		else if (y > 0) break;
+	}
+	return ret;
+}
+
+static float GetFloatFromChar(const char* txt) {
+	int length = strlen(txt); int y = 0;
+	float ret = 0; int indDecimal = 0;
+	for (int i = 0; i < length; i++) {
+		if (txt[i] == ',' || txt[i] == '.') indDecimal = i;
+	}
+	for (int i = 0; i < length; i++) {
+		if ((int)txt[i] >= '0' && (int)txt[i] <= '9') {
+			if(indDecimal > 0)
+				ret = ret + (powf(10, length - (length - indDecimal) - y - 1) * (float)((int)txt[i] - '0'));
+			else
+				ret = ret + (powf(10, length - y - 1) * (float)((int)txt[i] - '0'));
+			y++;
+		}
+	}
+	return ret;
+}
+
 class FunctionsLua {
     public:
         // === Group Functions === //

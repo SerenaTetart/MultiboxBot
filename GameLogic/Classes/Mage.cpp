@@ -2,6 +2,8 @@
 #include "../MemoryManager.h"
 #include <iostream>
 
+static time_t PolymorphTimer = time(0);
+
 static std::string GetSpellRank(std::string txt) {
 	std::string list[4] = { "Ruby", "Citrine", "Jade", "Agate" };
 	for (int i = 0; i < 4; i++) {
@@ -33,8 +35,6 @@ float GetManaStoneCD() {
 }
 
 void ListAI::MageDps() {
-	time_t PolymorphTimer = 15 - (time(0) - current_time);
-	if (PolymorphTimer < 0) PolymorphTimer = 0;
 	int EvocationIDs[1] = { 12051 };
 	if (localPlayer->isChanneling(EvocationIDs, 1) && (localPlayer->prctMana > 80)) {
 		ThreadSynchronizer::pressKey(0x28);
@@ -166,12 +166,12 @@ void ListAI::MageDps() {
 					//Counter Spell
 					FunctionsLua::CastSpellByName("Counterspell");
 				}
-				else if ((ccTarget != NULL) && (PolymorphTimer == 0) && ccTarget->getNbrDebuff() < 16 && !(ccTarget->flags & UNIT_FLAG_CONFUSED) && FunctionsLua::IsSpellReady("Polymorph")) {
+				else if ((ccTarget != NULL) && (time(0) - PolymorphTimer) > 15.0f && ccTarget->getNbrDebuff() < 16 && !(ccTarget->flags & UNIT_FLAG_CONFUSED) && FunctionsLua::IsSpellReady("Polymorph")) {
 					//Polymorph (second target)
 					WoWUnit* firstTarget = targetUnit;
 					localPlayer->SetTarget(ccTarget->Guid);
 					FunctionsLua::CastSpellByName("Polymorph");
-					if(localPlayer->isCasting()) current_time = time(0);
+					if(localPlayer->isCasting()) PolymorphTimer = time(0);
 					localPlayer->SetTarget(firstTarget->Guid);
 				}
 				else if (!localPlayer->isMoving && (cluster_unit >= 4) && (playerSpec == 1 || localPlayer->level < 20) && FunctionsLua::IsSpellReady("Flamestrike")) {

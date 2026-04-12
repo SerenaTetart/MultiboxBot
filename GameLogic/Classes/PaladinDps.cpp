@@ -33,11 +33,11 @@ static void PaladinAttack() {
 			//Seal of Righteousness
 			FunctionsLua::CastSpellByName("Seal of Righteousness");
 		}
-		else if ((localPlayer->prctMana > 50) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Consecration")) {
+		else if (!localPlayer->isMoving && (localPlayer->prctMana > 50) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Consecration")) {
 			//Consecration
 			FunctionsLua::CastSpellByName("Consecration");
 		}
-		else if (SealBuff && (distTarget < 10) && (localPlayer->prctMana > 33) && FunctionsLua::IsSpellReady("Judgement")) {
+		else if (SealBuff && (distTarget < 10) && (localPlayer->prctMana > 33) && autoAttackTimer > 1.0f && FunctionsLua::IsSpellReady("Judgement")) {
 			//Judgement
 			FunctionsLua::CastSpellByName("Judgement");
 		}
@@ -132,8 +132,8 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpRatio < 85) && (distAlly < 40.0f) && localPlayer->prctMana > 33 && (DivineProtectionBuff || !Combat) && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Flash of Light")) {
-		//Flash of Light (in bubble only)
+	else if ((HpRatio < 85) && (distAlly < 40.0f) && localPlayer->prctMana > 33 && (DivineProtectionBuff || !Combat || autoAttackTimer > 1.5f) && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Flash of Light")) {
+		//Flash of Light (in bubble or between attacks)
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Flash of Light");
 		LastTarget = indexP;

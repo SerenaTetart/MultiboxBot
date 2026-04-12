@@ -2,6 +2,8 @@
 #include "../MemoryManager.h"
 #include <iostream>
 
+static time_t transformCD = time(0), EntanglingRootsTimer = time(0);
+
 static void DruidAttack() {
 	int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
 	ListAI::DPSTargeting();
@@ -22,7 +24,7 @@ static void DruidAttack() {
 				// Prowl -> Not in PvE raids
 				FunctionsLua::CastSpellByName("Prowl");
 			}
-			else if (Combat && (distTarget > 12) && (localPlayer->speed < 7) && FunctionsLua::IsSpellReady("Dash")) {
+			else if (Combat && (distTarget > 20) && (localPlayer->speed < 7) && (targetUnit->speed > 0) && FunctionsLua::IsSpellReady("Dash")) {
 				// Dash
 				FunctionsLua::CastSpellByName("Dash");
 			}
@@ -69,8 +71,6 @@ static void DruidAttack() {
 		}
 		else {
 			// Human Logic
-			time_t EntanglingRootsTimer = 15 - (time(0) - current_time);
-			if (EntanglingRootsTimer < 0) EntanglingRootsTimer = 0;
 			//Specific for Hurricane cast:
 			Position cluster_center = Position(0, 0, 0); int cluster_unit;
 			std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
@@ -86,10 +86,10 @@ static void DruidAttack() {
 				//Moonfire
 				FunctionsLua::CastSpellByName("Moonfire");
 			}
-			else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && (EntanglingRootsTimer == 0) && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Entangling Roots")) {
+			else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && FunctionsLua::IsSpellReady("Entangling Roots")) {
 				//Entangling Roots (PvP)
 				FunctionsLua::CastSpellByName("Entangling Roots");
-				if (localPlayer->isCasting()) current_time = time(0);
+				if (localPlayer->isCasting()) EntanglingRootsTimer = time(0);
 			}
 			else if (IsFacing && !localPlayer->isMoving && !IsInGroup && FunctionsLua::IsSpellReady("Wrath")) {
 				//Wrath
@@ -117,9 +117,10 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 	int RegrowthIDs[9] = { 8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858 };
 	bool RegrowthBuff = ListUnits[indexP].hasBuff(RegrowthIDs, 9);
 	int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
-	if (CatFormBuff && (HpRatio < 70.0f) && (localPlayer->prctMana > 50.0f)) {
+	if (CatFormBuff && (HpRatio < 70.0f) && (localPlayer->prctMana > 50.0f) && (localPlayer->energy < 20.0f) && (time(0) - transformCD) > 10.0f) {
 		//Disable Cat Form
 		FunctionsLua::CastSpellByName("Cat Form");
+		transformCD = time(0);
 		return 0;
 	}
 	else if (!CatFormBuff && isPlayer && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
@@ -280,10 +281,10 @@ void ListAI::DruidFeralCat() {
 						break;
 					}
 				}
-				unsigned int index = index_start; unsigned int n = HealTargetArray.size();
+				unsigned int index = index_start - 1; unsigned int n = HealTargetArray.size();
 				do {
-					tmp = HealGroup(HealTargetArray[index]);
 					index = (index + 1) % n;
+					tmp = HealGroup(HealTargetArray[index]);
 				} while (tmp == 1 && index != (index_start - 1) % n);
 				if (tmp == 1 && !passiveGroup) DruidAttack();
 			}

@@ -27,11 +27,11 @@ static void PaladinAttack(int index_paladin) {
 			//Holy Wrath
 			FunctionsLua::CastSpellByName("Holy Wrath");
 		}
-		else if ((nbrCloseEnemy >= 2) && FunctionsLua::IsSpellReady("Consecration")) {
+		else if (!localPlayer->isMoving && (nbrCloseEnemy >= 2) && FunctionsLua::IsSpellReady("Consecration")) {
 			//Consecration
 			FunctionsLua::CastSpellByName("Consecration");
 		}
-		else if (SealBuff && (distTarget < 10) && ((localPlayer->prctMana > 20) || (SoWBuff && !SoWDebuff && FunctionsLua::UnitIsElite("target"))) && FunctionsLua::IsSpellReady("Judgement")) {
+		else if (SealBuff && (distTarget < 10) && autoAttackTimer > 1.0f && ((localPlayer->prctMana > 20) || (SoWBuff && !SoWDebuff && FunctionsLua::UnitIsElite("target"))) && FunctionsLua::IsSpellReady("Judgement")) {
 			//Judgement
 			FunctionsLua::CastSpellByName("Judgement");
 		}
