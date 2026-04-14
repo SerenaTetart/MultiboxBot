@@ -32,23 +32,23 @@ float GetSoulstoneCD() {
 }
 
 void ListAI::WarlockDps() {
-	if (localPlayer->castInfo == 0 && localPlayer->channelInfo == 0 && !localPlayer->isdead && !passiveGroup) {
-		ThreadSynchronizer::RunOnMainThread([=]() {
+	ThreadSynchronizer::RunOnMainThread([=]() {
+		if (Combat && (localPlayer->prctHP < 40.0f) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
+			//Healthstone
+			FunctionsLua::UseHealthstone();
+		}
+		else if (Combat && (localPlayer->prctHP < 35.0f) && (FunctionsLua::GetHPotionCD() < 1.25)) {
+			//Healing Potion
+			FunctionsLua::UseHPotion();
+		}
+		else if (localPlayer->castInfo == 0 && localPlayer->channelInfo == 0 && !localPlayer->isdead && !passiveGroup) {
 			ListAI::DPSTargeting();
 
 			int DemonSkinIDs[7] = { 687, 696, 706, 1086, 11733, 11734, 11735 }; //Demon Armor included
 			bool DemonSkinBuff = localPlayer->hasBuff(DemonSkinIDs, 7);
 			std::string RankCreateHealthstone = GetSpellRank("Create Healthstone");
 			std::string RankCreateSoulstone = GetSpellRank("Create Soulstone");
-			if (Combat && (localPlayer->prctHP < 40.0f) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
-				//Healthstone
-				FunctionsLua::UseHealthstone();
-			}
-			else if (Combat && (localPlayer->prctHP < 35.0f) && (FunctionsLua::GetHPotionCD() < 1.25)) {
-				//Healing Potion
-				FunctionsLua::UseHPotion();
-			}
-			else if (Combat && (localPlayer->prctMana < 10.0f) && (FunctionsLua::GetMPotionCD() < 1.25)) {
+			if (Combat && (localPlayer->prctMana < 10.0f) && (FunctionsLua::GetMPotionCD() < 1.25)) {
 				//Mana Potion
 				FunctionsLua::UseMPotion();
 			}
@@ -179,6 +179,6 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Shoot");
 				}
 			}
-		});
-	}
+		}
+	});
 }

@@ -41,7 +41,7 @@ bool BossAI::BossAIAction() {
 								maxDist = dist;
 							}
 						}
-						// Run to the furthest point from Herod
+						// Run to the point furthest from Herod
 						ThreadSynchronizer::RunOnMainThread([listAwayPoints, pointIndex]() {
 							Functions::MoveTo(listAwayPoints[pointIndex], 10, false, false);
 						});

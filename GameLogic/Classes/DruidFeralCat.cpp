@@ -123,16 +123,6 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		transformCD = time(0);
 		return 0;
 	}
-	else if (!CatFormBuff && isPlayer && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
-		//Healthstone
-		FunctionsLua::UseHealthstone();
-		return 0;
-	}
-	else if (!CatFormBuff && isPlayer && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
-		//Healing Potion
-		FunctionsLua::UseHPotion();
-		return 0;
-	}
 	else if (!CatFormBuff && isPlayer && Combat && (HasAggro[0].size() > 0) && (localPlayer->prctHP < 70) && FunctionsLua::IsSpellReady("Barkskin")) {
 		//Barkskin
 		FunctionsLua::CastSpellByName("Barkskin");
@@ -168,7 +158,15 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if (!CatFormBuff && (HpRatio < 90) && (distAlly < 40.0f) && !RejuvenationBuff && FunctionsLua::IsSpellReady("Rejuvenation")) {
+	else if (!CatFormBuff && Combat && (ListUnits[indexP].prctMana < 10) && FunctionsLua::IsSpellReady("Innervate")) {
+		//Innervate
+		localPlayer->SetTarget(healGuid);
+		FunctionsLua::CastSpellByName("Innervate");
+		LastTarget = indexP;
+		if (!los_heal) Moving = 5;
+		return 0;
+	}
+	else if (!CatFormBuff && (HpRatio < 90) && (localPlayer->prctMana > 33) && (distAlly < 40.0f) && !RejuvenationBuff && FunctionsLua::IsSpellReady("Rejuvenation")) {
 		//Rejuvenation
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Rejuvenation");
@@ -187,8 +185,19 @@ void ListAI::DruidFeralCat() {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
-	else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
-		ThreadSynchronizer::RunOnMainThread([=]() {
+	ThreadSynchronizer::RunOnMainThread([=]() {
+		int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
+		if (!CatFormBuff && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
+			//Healthstone
+			FunctionsLua::UseHealthstone();
+			return 0;
+		}
+		else if (!CatFormBuff && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
+			//Healing Potion
+			FunctionsLua::UseHPotion();
+			return 0;
+		}
+		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 			int MotWIDs[9] = { 1126, 5232, 6756, 5234, 8907, 9884, 9885, 21849, 21850 }; //GotW included
 			bool MotWBuff = localPlayer->hasBuff(MotWIDs, 9);
 			WoWUnit* MotWPlayer = Functions::GetMissingBuff(MotWIDs, 9);
@@ -232,11 +241,6 @@ void ListAI::DruidFeralCat() {
 				//Thorns (Group)
 				localPlayer->SetTarget(ThornsTarget->Guid);
 				FunctionsLua::CastSpellByName("Thorns");
-			}
-			else if (!CatFormBuff && Combat && (localPlayer->prctMana < 10) && FunctionsLua::IsSpellReady("Innervate")) {
-				//Innervate
-				localPlayer->SetTarget(localPlayer->Guid);
-				FunctionsLua::CastSpellByName("Innervate");
 			}
 			else if (!CatFormBuff && Combat && (localPlayer->prctMana < 10) && (FunctionsLua::GetMPotionCD() < 1.25)) {
 				//Mana Potion
@@ -288,6 +292,6 @@ void ListAI::DruidFeralCat() {
 				} while (tmp == 1 && index != (index_start - 1) % n);
 				if (tmp == 1 && !passiveGroup) DruidAttack();
 			}
-		});
-	}
+		}
+	});
 }

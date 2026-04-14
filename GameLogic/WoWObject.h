@@ -181,7 +181,8 @@ class WoWUnit : public WoWObject {
         UnitFlags flags; MovementFlags movement_flags; DynamicFlags dynamic_flags;
         int buff[30] = { 0 }; int debuff[16] = {0}; float prctHP = 0.0f, prctMana = 0.0f, facing = 0.0f, speed = 0.0f, combatReach = 0.0f;
         unsigned long long targetGuid = 0; char* name; bool attackable = false, isdead = false, isMoving = false, isFromGroup = false;
-        int rage = 0, energy = 0, level = 0, channelInfo = 0, hpLost = 0, factionTemplateID = 0, indexGroup = -1, role = -1, health = 0, createdBy = 0, entryID = 0, rank = 0;
+        int rage = 0, energy = 0, level = 0, channelInfo = 0, hpLost = 0, factionTemplateID = 0, indexGroup = -1, role = -1, health = 0,
+        createdBy = 0, entryID = 0, rank = 0, mountModelID = 0;
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);
         bool hasBuff(int* IDs, int size);
@@ -230,29 +231,30 @@ const uintptr_t ENERGY_OFFSET = 0x68;
 const uintptr_t MAX_HEALTH_OFFSET = 0x70;
 const uintptr_t MAXMANA_OFFSET = 0x74;
 const uintptr_t LEVEL_OFFSET = 0x88;
-const uintptr_t FACTION_TEMPLATE_ID_OFFSET = 0x8c;
+const uintptr_t FACTION_TEMPLATE_ID_OFFSET = 0x8C;
 const uintptr_t UNIT_FLAG_OFFSET = 0xB8;
-const uintptr_t CREATED_BY_SPELL_OFFSET = 0x248;
-const uintptr_t MOVEMENT_FLAG_OFFSET = 0x9E8;
-const uintptr_t DYNAMIC_FLAG_OFFSET = 0x23C;
 const uintptr_t BUFF_BASE_OFFSET = 0xBC;
+const uintptr_t MOUNT_MODEL_ID_OFFSET = 0xF8;
 const uintptr_t DEBUFF_BASE_OFFSET = 0x13C;
 const uintptr_t COMBAT_REACH_OFFSET = 0x208;
+const uintptr_t DYNAMIC_FLAG_OFFSET = 0x23C;
 const uintptr_t CHANNEL_OFFSET = 0x240;
+const uintptr_t CREATED_BY_SPELL_OFFSET = 0x248;
 const uintptr_t POS_X_OFFSET = 0x9B8;
 const uintptr_t POS_Y_OFFSET = 0x9BC;
 const uintptr_t POS_Z_OFFSET = 0x9C0;
 const uintptr_t FACING_OFFSET = 0x9C4;
+const uintptr_t MOVEMENT_FLAG_OFFSET = 0x9E8;
 const uintptr_t SPEED_OFFSET = 0xA2C;
 const uintptr_t CREATURE_CACHE_OFFSET = 0xB30;
-const uintptr_t GET_CREATURE_TYPE_FUN_PTR = 0x00605570;
-const uintptr_t GET_UNIT_REACTION_FUN_PTR = 0x006061E0;
-const uintptr_t CAN_ATTACK_UNIT_FUN_PTR = 0x00606980;
     //=== Name ===//
 const uintptr_t NAME_BASE_OFFSET = 0xC0E230;
 const uintptr_t NEXT_NAME_OFFSET = 0xC;
 const uintptr_t PLAYER_NAME_OFFSET = 0x14;
-
+    //=== Functions ===//
+const uintptr_t GET_CREATURE_TYPE_FUN_PTR = 0x00605570;
+const uintptr_t GET_UNIT_REACTION_FUN_PTR = 0x006061E0;
+const uintptr_t CAN_ATTACK_UNIT_FUN_PTR = 0x00606980;
 const uintptr_t SET_TARGET_FUN_PTR = 0x00493540;
 const uintptr_t CLICK_TO_MOVE_FUN_PTR = 0x00611130;
 const uintptr_t LOCKED_TARGET_STATIC_OFFSET = 0x00B4E2D8;

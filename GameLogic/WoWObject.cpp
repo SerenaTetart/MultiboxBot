@@ -124,6 +124,8 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
         channelInfo = *(int*)(descriptor + CHANNEL_OFFSET);
 
         factionTemplateID = *(int*)(descriptor + FACTION_TEMPLATE_ID_OFFSET);
+
+        mountModelID = *(int*)(descriptor + MOUNT_MODEL_ID_OFFSET);
     }
 
     float x = *(float*)(Pointer + POS_X_OFFSET);

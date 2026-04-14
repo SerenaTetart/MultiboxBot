@@ -87,7 +87,7 @@ void Game::MainLoop() {
 								keybindTrigger = 0;
 							}
 							else if (keybindTrigger == 2) {
-								//FunctionsLua::UseItem("Bridle");
+								//if(localPlayer->mountModelID == 0) FunctionsLua::UseItem("Bridle");
 								keybindTrigger = 0;
 							}
 
@@ -201,22 +201,9 @@ void Game::MainLoop() {
 					if (float(time(0) - get<1>(LootHistory[ind])) >= 20.0f) LootHistory.erase(LootHistory.begin() + ind);
 					else ind++;
 				}
-				int drinkingIDs[15] = { 430, 431, 432, 1133, 1135, 1137, 24355, 25696, 26261, 26402, 26473, 26475, 29007, 10250, 22734 };
 				if (localPlayer->isdead && localPlayer->health == 1) {
 					//Logic actions
 					CorpseRun();
-				}
-				else if (IsSitting && ((localPlayer->prctMana > 85) || Combat || !localPlayer->hasBuff(drinkingIDs, 15))) {
-					//Stop sitting
-					IsSitting = false;
-					ThreadSynchronizer::pressKey(0x28);
-					ThreadSynchronizer::releaseKey(0x28);
-					Moving = 0;
-				}
-				else if (!Combat && !IsSitting && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0) && !localPlayer->isMoving && (Moving == 0 || Moving == 4) && (localPlayer->movement_flags == MOVEFLAG_NONE) && (localPlayer->prctMana < 50 && localPlayer->prctMana > 0) && (FunctionsLua::HasDrink() > 0)) {
-					//Drink
-					IsSitting = true;
-					ThreadSynchronizer::RunOnMainThread([]() { FunctionsLua::UseItem(FunctionsLua::HasDrink()); });
 				}
 				else if (!Combat && autoLearnSpells) {
 					// Go learn spells
@@ -507,8 +494,21 @@ void Game::MainLoop() {
 
 			//start = std::chrono::high_resolution_clock::now();
 
-			if (localPlayer != NULL && !IsSitting) {
-				if (localPlayer->className == "Druid") {
+			if (localPlayer != NULL && !IsSitting && localPlayer->mountModelID == 0) {
+				int drinkingIDs[15] = { 430, 431, 432, 1133, 1135, 1137, 24355, 25696, 26261, 26402, 26473, 26475, 29007, 10250, 22734 };
+				if (IsSitting && ((localPlayer->prctMana > 85) || Combat || !localPlayer->hasBuff(drinkingIDs, 15))) {
+					//Stop sitting
+					IsSitting = false;
+					ThreadSynchronizer::pressKey(0x28);
+					ThreadSynchronizer::releaseKey(0x28);
+					Moving = 0;
+				}
+				else if (!Combat && !IsSitting && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0) && !localPlayer->isMoving && (Moving == 0 || Moving == 4) && (localPlayer->movement_flags == MOVEFLAG_NONE) && (localPlayer->prctMana < 50 && localPlayer->prctMana > 0) && (FunctionsLua::HasDrink() > 0)) {
+					//Drink
+					IsSitting = true;
+					ThreadSynchronizer::RunOnMainThread([]() { FunctionsLua::UseItem(FunctionsLua::HasDrink()); });
+				}
+				else if (localPlayer->className == "Druid") {
 					if (playerSpec == 0) ListAI::DruidBalance();
 					else if (playerSpec == 2) ListAI::DruidFeralCat();
 					else if (playerSpec == 3) ListAI::DruidHeal();

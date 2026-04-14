@@ -78,17 +78,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 	bool RejuvenationBuff = ListUnits[indexP].hasBuff(RejuvenationIDs, 11);
 	int RegrowthIDs[9] = { 8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858 };
 	bool RegrowthBuff = ListUnits[indexP].hasBuff(RegrowthIDs, 9);
-	if (isPlayer && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
-		//Healthstone
-		FunctionsLua::UseHealthstone();
-		return 0;
-	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
-		//Healing Potion
-		FunctionsLua::UseHPotion();
-		return 0;
-	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 70) && FunctionsLua::IsSpellReady("Barkskin")) {
+	if (isPlayer && Combat && (localPlayer->prctHP < 70) && (HasAggro[0].size() > 0) && FunctionsLua::IsSpellReady("Barkskin")) {
 		//Barkskin
 		FunctionsLua::CastSpellByName("Barkskin");
 		return 0;
@@ -123,6 +113,14 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
+	else if (Combat && (ListUnits[indexP].prctMana < 10) && FunctionsLua::IsSpellReady("Innervate")) {
+		//Innervate
+		localPlayer->SetTarget(healGuid);
+		FunctionsLua::CastSpellByName("Innervate");
+		LastTarget = indexP;
+		if (!los_heal) Moving = 5;
+		return 0;
+	}
 	else if ((HpRatio < 90) && (distAlly < 40.0f) && !RejuvenationBuff && FunctionsLua::IsSpellReady("Rejuvenation")) {
 		//Rejuvenation
 		localPlayer->SetTarget(healGuid);
@@ -142,8 +140,18 @@ void ListAI::DruidHeal() {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
-	else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
-		ThreadSynchronizer::RunOnMainThread([=]() {
+	ThreadSynchronizer::RunOnMainThread([=]() {
+		if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
+			//Healthstone
+			FunctionsLua::UseHealthstone();
+			return 0;
+		}
+		else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
+			//Healing Potion
+			FunctionsLua::UseHPotion();
+			return 0;
+		}
+		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 			float SpellCalculTimer = 30.0f - (time(0) - current_time);
 			if (SpellCalculTimer <= 0) {
 				GetSpellBonusHealing();
@@ -187,11 +195,6 @@ void ListAI::DruidHeal() {
 				//Thorns (Group)
 				localPlayer->SetTarget(ThornsTarget->Guid);
 				FunctionsLua::CastSpellByName("Thorns");
-			}
-			else if (Combat && (localPlayer->prctMana < 10) && FunctionsLua::IsSpellReady("Innervate")) {
-				//Innervate
-				localPlayer->SetTarget(localPlayer->Guid);
-				FunctionsLua::CastSpellByName("Innervate");
 			}
 			else if (Combat && (localPlayer->prctMana < 10) && (FunctionsLua::GetMPotionCD() < 1.25)) {
 				//Mana Potion
@@ -243,6 +246,6 @@ void ListAI::DruidHeal() {
 				} while (tmp == 1 && index != (index_start - 1) % n);
 				if (tmp == 1 && !passiveGroup) DruidAttack();
 			}
-		});
-	}
+		}
+	});
 }

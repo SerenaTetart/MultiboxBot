@@ -15,7 +15,7 @@ static void PaladinAttack(int index_paladin) {
 		int SoWDebuffIDs[3] = { 20186, 20354, 20355 };
 		bool SoWDebuff = targetUnit->hasDebuff(SoWDebuffIDs, 3);
 		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
-		if ((localPlayer->prctMana < 33) && !SealBuff && FunctionsLua::IsSpellReady("Seal of Wisdom")) {
+		if (((nbrCloseEnemy >= 2) || (localPlayer->prctMana < 33)) && !SealBuff && FunctionsLua::IsSpellReady("Seal of Wisdom")) {
 			//Seal of Wisdom
 			FunctionsLua::CastSpellByName("Seal of Wisdom");
 		}
@@ -27,7 +27,7 @@ static void PaladinAttack(int index_paladin) {
 			//Holy Wrath
 			FunctionsLua::CastSpellByName("Holy Wrath");
 		}
-		else if (!localPlayer->isMoving && (nbrCloseEnemy >= 2) && FunctionsLua::IsSpellReady("Consecration")) {
+		else if ((nbrCloseEnemy >= 2) && FunctionsLua::IsSpellReady("Consecration")) {
 			//Consecration
 			FunctionsLua::CastSpellByName("Consecration");
 		}
@@ -66,27 +66,12 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		}
 	}
 	float distAlly = localPlayer->position.DistanceTo(ListUnits[indexP].position);
-	if (Combat && isParty && (distAlly < 40.0f) && (HpRatio < 20) && FunctionsLua::IsSpellReady("Lay on Hands")) {
+	if (Combat && (distAlly < 40.0f) && (HpRatio < 20) && FunctionsLua::IsSpellReady("Lay on Hands")) {
 		//Lay on Hands
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Lay on Hands");
 		LastTarget = indexP;
 		if (Combat) Functions::LuaCall("TargetLastEnemy()");
-		return 0;
-	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 25) && !ForbearanceDebuff && FunctionsLua::IsSpellReady("Divine Protection")) {
-		//Divine Protection / Divine Shield
-		FunctionsLua::CastSpellByName("Divine Protection"); FunctionsLua::CastSpellByName("Divine Shield");
-		return 0;
-	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
-		//Healthstone
-		FunctionsLua::UseHealthstone();
-		return 0;
-	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
-		//Healing Potion
-		FunctionsLua::UseHPotion();
 		return 0;
 	}
 	else if (Combat && isParty && (distAlly < 30.0f) && (HpRatio < 33) && !ForbearanceDebuff && FunctionsLua::IsSpellReady("Blessing of Protection")) {
@@ -132,8 +117,30 @@ void ListAI::PaladinTank() {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
-	else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
-		ThreadSynchronizer::RunOnMainThread([=]() {
+	ThreadSynchronizer::RunOnMainThread([=]() {
+		int ForbearanceID[1] = { 25771 };
+		bool ForbearanceDebuff = localPlayer->hasDebuff(ForbearanceID, 1);
+		if (Combat && (localPlayer->prctHP < 20) && !ForbearanceDebuff && FunctionsLua::IsSpellReady("Divine Protection")) {
+			//Divine Protection
+			FunctionsLua::CastSpellByName("Divine Protection");
+			return 0;
+		}
+		else if (Combat && (localPlayer->prctHP < 20) && !ForbearanceDebuff && FunctionsLua::IsSpellReady("Divine Shield")) {
+			//Divine Shield
+			FunctionsLua::CastSpellByName("Divine Shield");
+			return 0;
+		}
+		else if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
+			//Healthstone
+			FunctionsLua::UseHealthstone();
+			return 0;
+		}
+		else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
+			//Healing Potion
+			FunctionsLua::UseHPotion();
+			return 0;
+		}
+		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 			bool BoSanctuaryExist = FunctionsLua::IsPlayerSpell("Blessing of Sanctuary");
 			WoWUnit* BoSalvationTarget = NULL; WoWUnit* BoSanctuaryTarget = NULL; bool BoSanctuaryBuff = false;
 			if (BoSanctuaryExist) {
@@ -275,6 +282,6 @@ void ListAI::PaladinTank() {
 				}
 				if (tmp == 1 && !passiveGroup) PaladinAttack(index_paladin);
 			}
-		});
-	}
+		}
+	});
 }

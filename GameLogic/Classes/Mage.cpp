@@ -40,10 +40,22 @@ void ListAI::MageDps() {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
-	else if (localPlayer->castInfo == 0 && localPlayer->channelInfo == 0 && !localPlayer->isdead && !passiveGroup) {
-		ThreadSynchronizer::RunOnMainThread([=]() {
-			bool IsStunned = localPlayer->flags & UNIT_FLAG_STUNNED;
-			bool IsConfused = localPlayer->flags & UNIT_FLAG_CONFUSED;
+	ThreadSynchronizer::RunOnMainThread([=]() {
+		bool IsStunned = localPlayer->flags & UNIT_FLAG_STUNNED;
+		bool IsConfused = localPlayer->flags & UNIT_FLAG_CONFUSED;
+		if ((IsConfused || (localPlayer->prctHP < 20 && (HasAggro[0].size() > 0)) || (HasAggro[0].size() >= 4 && nbrCloseEnemy >= 4) || (IsStunned && nbrEnemyPlayer > 0) || localPlayer->getNbrDebuff() >= 4) && FunctionsLua::IsSpellReady("Ice Block")) {
+			//Ice Block
+			FunctionsLua::CastSpellByName("Ice Block");
+		}
+		else if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
+			//Healthstone
+			FunctionsLua::UseHealthstone();
+		}
+		else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
+			//Healing Potion
+			FunctionsLua::UseHPotion();
+		}
+		else if (localPlayer->castInfo == 0 && localPlayer->channelInfo == 0 && !localPlayer->isdead && !passiveGroup) {
 			int FrostArmorIDs[7] = { 168, 7300, 7301, 7302, 7320, 10219, 10220 };
 			bool FrostArmorBuff = localPlayer->hasBuff(FrostArmorIDs, 7);
 			int MageArmorIDs[3] = { 6117, 22782, 22783 };
@@ -71,10 +83,6 @@ void ListAI::MageDps() {
 			if (IsStunned && FunctionsLua::IsSpellReady("Blink")) {
 				//Blink
 				FunctionsLua::CastSpellByName("Blink");
-			}
-			else if ((IsConfused || (localPlayer->prctHP < 20 && (HasAggro[0].size() > 0)) || (IsStunned && nbrEnemyPlayer > 0) || localPlayer->getNbrDebuff() >= 4) && FunctionsLua::IsSpellReady("Ice Block")) {
-				//Ice Block
-				FunctionsLua::CastSpellByName("Ice Block");
 			}
 			else if (!FrostArmorBuff && (mapID == 489 || mapID == 529 || !FunctionsLua::IsPlayerSpell("Mage Armor")) && FunctionsLua::IsSpellReady("Frost Armor")) {
 				//Frost|Ice Armor (PvP -> BG)
@@ -110,14 +118,6 @@ void ListAI::MageDps() {
 			else if ((localPlayer->prctHP < 25) && (localPlayer->prctMana > 50) && !ManaShieldBuff && FunctionsLua::IsSpellReady("Mana Shield")) {
 				//Mana Shield
 				FunctionsLua::CastSpellByName("Mana Shield");
-			}
-			else if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
-				//Healthstone
-				FunctionsLua::UseHealthstone();
-			}
-			else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
-				//Healing Potion
-				FunctionsLua::UseHPotion();
 			}
 			else if (Combat && (localPlayer->prctMana < 15) && (GetManaStoneCD() < 1.25)) {
 				//Mana Stone
@@ -217,6 +217,6 @@ void ListAI::MageDps() {
 					FunctionsLua::CastSpellByName("Shoot");
 				}
 			}
-		} );
-	}
+		}
+	});
 }

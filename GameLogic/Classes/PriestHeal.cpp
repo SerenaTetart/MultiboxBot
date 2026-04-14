@@ -95,22 +95,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 	bool PWShieldBuff = ListUnits[indexP].hasBuff(PWShieldIDs, 10);
 	int WeakenedSoulID[1] = { 6788 }; bool WeakenedSoulDebuff = ListUnits[indexP].hasDebuff(WeakenedSoulID, 1);
 	float distAlly = localPlayer->position.DistanceTo(ListUnits[indexP].position);
-	if (isPlayer && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
-		//Healthstone
-		FunctionsLua::UseHealthstone();
-		return 0;
-	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
-		//Healing Potion
-		FunctionsLua::UseHPotion();
-		return 0;
-	}
-	else if (isPlayer && Combat && (localPlayer->prctHP < 35) && FunctionsLua::IsSpellReady("Desperate Prayer")) {
-		//Desperate Prayer
-		FunctionsLua::CastSpellByName("Desperate Prayer");
-		return 0;
-	}
-	else if (Combat && (localPlayer->prctHP < 40) && (localPlayer->prctMana < 33) && FunctionsLua::IsSpellReady("Inner Focus")) {
+	if (Combat && (localPlayer->prctHP < 40) && (localPlayer->prctMana < 33) && FunctionsLua::IsSpellReady("Inner Focus")) {
 		//Inner Focus
 		FunctionsLua::CastSpellByName("Inner Focus");
 		return 0;
@@ -184,8 +169,23 @@ void ListAI::PriestHeal() {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
-	else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
-		ThreadSynchronizer::RunOnMainThread([=]() {
+	ThreadSynchronizer::RunOnMainThread([=]() {
+		if (Combat && (localPlayer->prctHP < 35) && FunctionsLua::IsSpellReady("Desperate Prayer")) {
+			//Desperate Prayer
+			FunctionsLua::CastSpellByName("Desperate Prayer");
+			return 0;
+		}
+		else if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
+			//Healthstone
+			FunctionsLua::UseHealthstone();
+			return 0;
+		}
+		else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
+			//Healing Potion
+			FunctionsLua::UseHPotion();
+			return 0;
+		}
+		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 			float SpellCalculTimer = 30.0f - (time(0) - current_time);
 			if (SpellCalculTimer <= 0) {
 				GetSpellBonusHealing();
@@ -289,6 +289,6 @@ void ListAI::PriestHeal() {
 				} while (tmp == 1 && index != (index_start - 1)%n);
 				if (tmp == 1 && !passiveGroup) PriestAttack();
 			}
-		});
-	}
+		}
+	});
 }
