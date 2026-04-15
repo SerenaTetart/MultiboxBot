@@ -523,23 +523,20 @@ bool Functions::MoveLoS(Position target_pos) {
 	return false;
 }
 
-Position meanPos(std::vector<Position> posArr) {
-	Position clusterCenter = Position(0, 0, 0);
-	for (unsigned int i = 0; i < posArr.size(); i++) {
-		clusterCenter.X = clusterCenter.X + posArr[i].X;
-		clusterCenter.Y = clusterCenter.Y + posArr[i].Y;
-		clusterCenter.Z = clusterCenter.Z + posArr[i].Z;
-	}
-	clusterCenter.X = clusterCenter.X / posArr.size();
-	clusterCenter.Y = clusterCenter.Y / posArr.size();
-	clusterCenter.Z = clusterCenter.Z / posArr.size();
-	return clusterCenter;
-}
-
 unsigned int Functions::GetMapID() {
 	typedef int func();
 	func* function = (func*)GETMAPID_FUN_PTR;
 	return function();
+}
+
+void Functions::CancelPlayerBuff(int buffID) {
+	using cancel_selected_buff_fn = void(__fastcall*)(int internalId);
+
+	auto CancelSelectedBuff = reinterpret_cast<cancel_selected_buff_fn>(CANCEL_PLAYER_BUFF_FUN_PTR);
+
+	if (localPlayer->hasBuff(buffID)) {
+		CancelSelectedBuff(buffID);
+	}
 }
 
 //======================================================================//
@@ -598,6 +595,19 @@ void Functions::ClassifyHeal() {
 			}
 		}
 	}
+}
+
+Position meanPos(std::vector<Position> posArr) {
+	Position clusterCenter = Position(0, 0, 0);
+	for (unsigned int i = 0; i < posArr.size(); i++) {
+		clusterCenter.X = clusterCenter.X + posArr[i].X;
+		clusterCenter.Y = clusterCenter.Y + posArr[i].Y;
+		clusterCenter.Z = clusterCenter.Z + posArr[i].Z;
+	}
+	clusterCenter.X = clusterCenter.X / posArr.size();
+	clusterCenter.Y = clusterCenter.Y / posArr.size();
+	clusterCenter.Z = clusterCenter.Z / posArr.size();
+	return clusterCenter;
 }
 
 std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_range) {

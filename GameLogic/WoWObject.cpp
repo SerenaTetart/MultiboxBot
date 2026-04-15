@@ -84,7 +84,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
         isdead = false; if (health <= 1 && !(flags & UNIT_FLAG_FEIGN_DEATH)) isdead = true;
 
         uintptr_t currentBuffOffset = BUFF_BASE_OFFSET;
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < 40; i++) {
             buff[i] = *(int*)(descriptor + currentBuffOffset);
             currentBuffOffset += 4;
         }
@@ -136,22 +136,36 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     entryID = ((uint32_t)((guid >> 24) & 0xFFFF));
 }
 
-bool WoWUnit::hasBuff(int* IDs, int size) {
+int WoWUnit::hasBuff(const int* IDs, int size) {
     for (int i = 0; i < size; i++) {
-        for (int y = 0; y < 30; y++) {
-            if (IDs[i] == buff[y]) return true;
+        for (int y = 0; y < 40; y++) {
+            if (IDs[i] == buff[y]) return IDs[i];
         }
+    }
+    return 0;
+}
+
+bool WoWUnit::hasBuff(int buffID) {
+    for (int y = 0; y < 40; y++) {
+        if (buffID == buff[y]) return true;
     }
     return false;
 }
 
-bool WoWUnit::hasDebuff(int* IDs, int size) {
-    for (int i = 0; i < size; i++) {
-        for (int y = 0; y < 16; y++) {
-            if (IDs[i] == debuff[y]) return true;
-        }
+bool WoWUnit::hasDebuff(int debuffID) {
+    for (int y = 0; y < 16; y++) {
+        if (debuffID == debuff[y]) return true;
     }
     return false;
+}
+
+int WoWUnit::hasDebuff(const int* IDs, int size) {
+    for (int i = 0; i < size; i++) {
+        for (int y = 0; y < 16; y++) {
+            if (IDs[i] == debuff[y]) return IDs[i];
+        }
+    }
+    return 0;
 }
 
 int WoWUnit::getNbrDebuff() {

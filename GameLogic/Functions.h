@@ -24,6 +24,7 @@ class Functions {
 		static void FollowMultibox(int placement = 0);
 		static void MoveTo(Position target_pos, int MoveType, bool checkEnemyClose=true, bool targetSwim=false);
 		static void MoveToLoS(Position target_pos, int MoveType);
+		static void CancelPlayerBuff(int buffID);
 		static unsigned int GetMapID();
 		// === Non-memory Functions === //
 		static void ClassifyHeal();
@@ -38,17 +39,20 @@ class Functions {
 		static WoWUnit* GetMissingBuff(int* IDs, int size, int hasmana=0, int noTank=0);
 
 	private:
-		const static uintptr_t OBJECT_TYPE_OFFSET = 0x14;
-		const static uintptr_t GET_PLAYER_GUID_FUN_PTR = 0x00468550;
-		const static uintptr_t ENUMERATE_VISIBLE_OBJECTS_FUN_PTR = 0x00468380;
 		const static uintptr_t GET_OBJECT_PTR_FUN_PTR = 0x00464870;
-		const static uintptr_t LUA_CALL_FUN_PTR = 0x00704CD0;
-		const static uintptr_t LUA_GET_TEXT_FUN_PTR = 0x00703bf0;
-		const static uintptr_t RIGHT_CLICK_UNIT_FUN_PTR = 0x60BEA0;
-		const static uintptr_t SPELL_C_HANDLETERRAINCLICK_FUN_PTR = 0x006E60F0;
-		const static uintptr_t INTERSECT_FUN_PTR = 0x00672170;
+		const static uintptr_t ENUMERATE_VISIBLE_OBJECTS_FUN_PTR = 0x00468380;
+		const static uintptr_t GET_PLAYER_GUID_FUN_PTR = 0x00468550;
 		const static uintptr_t GETMAPID_FUN_PTR = 0x00468580;
+		const static uintptr_t GET_PLAYER_BUFF_ENTRY_FUN_PTR = 0x004E4430;
 		const static uintptr_t INTERACT_OBJECT_FUN_PTR = 0x005F8660;
+		const static uintptr_t RIGHT_CLICK_UNIT_FUN_PTR = 0x0060BEA0;
+		const static uintptr_t INTERSECT_FUN_PTR = 0x00672170;
+		const static uintptr_t SPELL_C_HANDLETERRAINCLICK_FUN_PTR = 0x006E60F0;
+		const static uintptr_t CANCEL_PLAYER_BUFF_FUN_PTR = 0x006E7040;
+		const static uintptr_t LUA_GET_TEXT_FUN_PTR = 0x00703bf0;
+		const static uintptr_t LUA_CALL_FUN_PTR = 0x00704CD0;
+		// Offset
+		const static uintptr_t OBJECT_TYPE_OFFSET = 0x14;
 
 		static int Callback(unsigned long long guid, int filter);
 };

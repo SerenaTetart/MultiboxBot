@@ -179,14 +179,16 @@ class WoWUnit : public WoWObject {
     public:
         Position position; CreatureType creatureType = Null; UnitReaction unitReaction = Neutral;
         UnitFlags flags; MovementFlags movement_flags; DynamicFlags dynamic_flags;
-        int buff[30] = { 0 }; int debuff[16] = {0}; float prctHP = 0.0f, prctMana = 0.0f, facing = 0.0f, speed = 0.0f, combatReach = 0.0f;
+        int buff[40] = { 0 }; int debuff[16] = {0}; float prctHP = 0.0f, prctMana = 0.0f, facing = 0.0f, speed = 0.0f, combatReach = 0.0f;
         unsigned long long targetGuid = 0; char* name; bool attackable = false, isdead = false, isMoving = false, isFromGroup = false;
         int rage = 0, energy = 0, level = 0, channelInfo = 0, hpLost = 0, factionTemplateID = 0, indexGroup = -1, role = -1, health = 0,
         createdBy = 0, entryID = 0, rank = 0, mountModelID = 0;
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);
-        bool hasBuff(int* IDs, int size);
-        bool hasDebuff(int* IDs, int size);
+        bool hasBuff(int buffID);
+        int hasBuff(const int* IDs, int size);
+        bool hasDebuff(int debuffID);
+        int hasDebuff(const int* IDs, int size);
         int getNbrDebuff();
         bool isFacing(Position, float);
         bool isBehind(WoWUnit* target);
@@ -234,9 +236,9 @@ const uintptr_t LEVEL_OFFSET = 0x88;
 const uintptr_t FACTION_TEMPLATE_ID_OFFSET = 0x8C;
 const uintptr_t UNIT_FLAG_OFFSET = 0xB8;
 const uintptr_t BUFF_BASE_OFFSET = 0xBC;
-const uintptr_t MOUNT_MODEL_ID_OFFSET = 0xF8;
 const uintptr_t DEBUFF_BASE_OFFSET = 0x13C;
 const uintptr_t COMBAT_REACH_OFFSET = 0x208;
+const uintptr_t MOUNT_MODEL_ID_OFFSET = 0x214;
 const uintptr_t DYNAMIC_FLAG_OFFSET = 0x23C;
 const uintptr_t CHANNEL_OFFSET = 0x240;
 const uintptr_t CREATED_BY_SPELL_OFFSET = 0x248;
