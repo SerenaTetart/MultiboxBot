@@ -83,9 +83,11 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
 
         isdead = false; if (health <= 1 && !(flags & UNIT_FLAG_FEIGN_DEATH)) isdead = true;
 
+        bool travelForm = false;
         uintptr_t currentBuffOffset = BUFF_BASE_OFFSET;
         for (int i = 0; i < 40; i++) {
             buff[i] = *(int*)(descriptor + currentBuffOffset);
+            if (buff[i] == 783) travelForm = true;
             currentBuffOffset += 4;
         }
         uintptr_t currentDebuffOffset = DEBUFF_BASE_OFFSET;
@@ -126,6 +128,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
         factionTemplateID = *(int*)(descriptor + FACTION_TEMPLATE_ID_OFFSET);
 
         mountModelID = *(int*)(descriptor + MOUNT_MODEL_ID_OFFSET);
+        isMounted = (travelForm || ((mountModelID != 0) && !(flags & UNIT_FLAG_TAXI_FLIGHT)));
     }
 
     float x = *(float*)(Pointer + POS_X_OFFSET);
@@ -322,6 +325,7 @@ void LocalPlayer::ClickToMove(ClickType clickType, unsigned long long interactGu
     typedef void (__thiscall* func)(uintptr_t, ClickType, unsigned long long*, float*, float);
     func function = (func)CLICK_TO_MOVE_FUN_PTR;
     function(Pointer, clickType, interactGuidPtr, xyz, 0.5f);
+    isMoving = true;
 }
 
 void LocalPlayer::SetTarget(unsigned long long tguid) {

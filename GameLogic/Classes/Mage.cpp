@@ -43,16 +43,20 @@ void ListAI::MageDps() {
 	ThreadSynchronizer::RunOnMainThread([=]() {
 		bool IsStunned = localPlayer->flags & UNIT_FLAG_STUNNED;
 		bool IsConfused = localPlayer->flags & UNIT_FLAG_CONFUSED;
+		if (localPlayer->hasBuff(11958) && localPlayer->prctHP > 80 && nbrCloseEnemy == 0) {
+			// Cancel Ice Block
+			Functions::CancelPlayerBuff(11958);
+		}
 		if ((IsConfused || (localPlayer->prctHP < 20 && (HasAggro[0].size() > 0)) || (HasAggro[0].size() >= 4 && nbrCloseEnemy >= 4) || (IsStunned && nbrEnemyPlayer > 0) || localPlayer->getNbrDebuff() >= 4) && FunctionsLua::IsSpellReady("Ice Block")) {
-			//Ice Block
+			// Ice Block
 			FunctionsLua::CastSpellByName("Ice Block");
 		}
 		else if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
-			//Healthstone
+			// Healthstone
 			FunctionsLua::UseHealthstone();
 		}
 		else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
-			//Healing Potion
+			// Healing Potion
 			FunctionsLua::UseHPotion();
 		}
 		else if (localPlayer->castInfo == 0 && localPlayer->channelInfo == 0 && !localPlayer->isdead && !passiveGroup) {
@@ -71,7 +75,7 @@ void ListAI::MageDps() {
 			if (targetUnit != NULL) PolymorphDebuff = targetUnit->hasDebuff(PolymorphIDs, 6);
 			WoWUnit* ArcaneIntellectTarget = Functions::GetMissingBuff(ArcaneIntellectIDs, 5);
 
-			//Specific for Blizzard cast:
+			// Specific for Blizzard cast:
 			Position cluster_center = Position(0, 0, 0); int cluster_unit;
 			std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
 
@@ -111,7 +115,7 @@ void ListAI::MageDps() {
 				//Conjure Water
 				FunctionsLua::CastSpellByName("Conjure Water");
 			}
-			else if (!IceBarrierBuff && FunctionsLua::IsSpellReady("Ice Barrier")) {
+			else if (Combat && !IceBarrierBuff && FunctionsLua::IsSpellReady("Ice Barrier")) {
 				//Ice Barrier
 				FunctionsLua::CastSpellByName("Ice Barrier");
 			}

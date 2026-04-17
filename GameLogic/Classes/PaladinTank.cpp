@@ -146,13 +146,12 @@ void ListAI::PaladinTank() {
 		}
 		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 			bool BoSanctuaryExist = FunctionsLua::IsPlayerSpell("Blessing of Sanctuary");
-			WoWUnit* BoSalvationTarget = NULL; WoWUnit* BoSanctuaryTarget = NULL; bool BoSanctuaryBuff = false;
+			WoWUnit* BoSalvationTarget = NULL; bool BoSanctuaryBuff = false;
 			if (BoSanctuaryExist) {
 				int BoSalvationIDs[1] = { 1038 };
 				BoSalvationTarget = Functions::GetMissingBuff(BoSalvationIDs, 1, 0, 1);
 				int BoSanctuaryIDs[4] = { 20911, 20912, 20913, 20914 };
 				BoSanctuaryBuff = localPlayer->hasBuff(BoSanctuaryIDs, 4);
-				BoSanctuaryTarget = Functions::GetMissingBuff(BoSanctuaryIDs, 1, 0, 2);
 			}
 
 			bool BoKingsExist = FunctionsLua::IsPlayerSpell("Blessing of Kings");
@@ -220,12 +219,6 @@ void ListAI::PaladinTank() {
 			else if (!BoSanctuaryBuff && BoSanctuaryExist && FunctionsLua::IsSpellReady("Blessing of Sanctuary")) {
 				// Blessing of Sanctuary (self)
 				localPlayer->SetTarget(localPlayer->Guid);
-				FunctionsLua::CastSpellByName("Blessing of Sanctuary");
-				if (Combat) Functions::LuaCall("TargetLastEnemy()");
-			}
-			else if ((BoSanctuaryTarget != NULL) && BoSanctuaryExist && FunctionsLua::IsSpellReady("Blessing of Sanctuary")) {
-				// Blessing of Sanctuary (Groupe)
-				localPlayer->SetTarget(BoSalvationTarget->Guid);
 				FunctionsLua::CastSpellByName("Blessing of Sanctuary");
 				if (Combat) Functions::LuaCall("TargetLastEnemy()");
 			}

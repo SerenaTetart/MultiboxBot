@@ -128,5 +128,8 @@
     <ClCompile Include="BossAI.cpp">
       <Filter>Source Files\BossAI</Filter>
     </ClCompile>
+    <ClCompile Include="Mount.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

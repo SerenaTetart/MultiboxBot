@@ -64,18 +64,12 @@ unsigned long Functions::GetPlayerGuid() {
 int Functions::GetPositionCircle() {
 	int tmp_pos = 1;
 	if (localPlayer == NULL || Leader == NULL) return 1;
-	for (unsigned int i = 0; i < leaderInfos.size(); i++) {
-		if (Leader->name != get<0>(leaderInfos[i])) { //not Leader
-			for (unsigned int z = 0; z < ListUnits.size(); z++) {
-				if (ListUnits[z].name == get<0>(leaderInfos[i])) {
-					if (get<0>(leaderInfos[i]) == localPlayer->name) return tmp_pos;
-					tmp_pos++;
-					break;
-				}
-			}
+	for (int i = 1; i <= NumGroupMembers; i++) {
+		if (GroupMember[i] != NULL && localPlayer->indexGroup > GroupMember[i]->indexGroup && GroupMember[i]->Guid != Leader->Guid) {
+			tmp_pos++;
 		}
 	}
-	return 1;
+	return tmp_pos;
 }
 
 void Functions::EnumerateVisibleObjects(int filter) {
@@ -257,8 +251,16 @@ void Functions::FollowMultibox(int placement) {
 	float range = 2.0f; float cst = 0.30f;
 	if (placement == 1) cst = 0.30f;
 	else if (placement == 2) cst = -0.30f;
-	else if (placement == 3) { range = 4.0f; cst = 0.15f; }
-	else if (placement == 4) { range = 4.0f; cst = -0.15f; }
+	else if (placement == 3) {
+		range = 4.0f;
+		if (localPlayer->isMounted) cst = 0.30f;
+		else cst = 0.15f;
+	}
+	else if (placement == 4) {
+		range = 4.0f;
+		if (localPlayer->isMounted) cst = -0.30f;
+		else cst = -0.15f;
+	}
 	float halfPI = acosf(0);
 	Position target_pos = Position((cos(Leader->facing + (halfPI * 2) + cst) * range) + Leader->position.X
 		, (sin(Leader->facing + (halfPI * 2) + cst) * range) + Leader->position.Y, Leader->position.Z);
@@ -269,7 +271,7 @@ void Functions::FollowMultibox(int placement) {
 			return;
 		}
 		Functions::MoveTo(target_pos, 4, true, targetSwim);
-	});
+		});
 }
 
 bool MoveObstacleSwim_tmp(const Position& target_pos, const Position& start_pos) {
@@ -291,35 +293,6 @@ bool MoveObstacleSwim_tmp(const Position& target_pos, const Position& start_pos)
 		if (stepPos.DistanceTo(last) < 1e-3f) return false;
 
 		last = stepPos;
-		if (last.DistanceTo(target_pos) <= STEP) return true;
-		++i;
-	}
-	return false;
-}
-
-bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
-	constexpr float STEP = 1.0f;
-	constexpr int   MAX_STEPS = 30;
-
-	float dx = target_pos.X - start_pos.X;
-	float dy = target_pos.Y - start_pos.Y;
-	float base = std::atan2(dy, dx); // radians
-
-	Position last = start_pos;
-
-	int i = 0;
-	while (i < MAX_STEPS) {
-		Position stepPos(last.X + std::cos(base) * STEP, last.Y + std::sin(base) * STEP, last.Z);
-		Position next = Functions::ProjectPos(stepPos);
-
-		// Reject if snap is too big or the segment hits something
-		if (next.DistanceTo(stepPos) > 1.0f) return false;
-		if (Functions::Intersect(last, next)) return false;
-
-		// Progress guard (avoid potential stalls on weird projections)
-		if (next.DistanceTo(last) < 1e-3f) return false;
-
-		last = next;
 		if (last.DistanceTo(target_pos) <= STEP) return true;
 		++i;
 	}
@@ -392,9 +365,38 @@ bool Functions::MoveLoSSwim(Position target_pos) {
 	return false;
 }
 
+bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
+	constexpr float STEP = 1.5f;
+	constexpr int   MAX_STEPS = 20;
+
+	float dx = target_pos.X - start_pos.X;
+	float dy = target_pos.Y - start_pos.Y;
+	float base = std::atan2(dy, dx); // radians
+
+	Position last = start_pos;
+
+	int i = 0;
+	while (i < MAX_STEPS) {
+		Position stepPos(last.X + std::cos(base) * STEP, last.Y + std::sin(base) * STEP, last.Z);
+		Position next = Functions::ProjectPos(stepPos);
+
+		// Reject if snap is too big or the segment hits something
+		if (next.DistanceTo(stepPos) > 1.0f) return false;
+		if (Functions::Intersect(last, next)) return false;
+
+		// Progress guard (avoid potential stalls on weird projections)
+		if (next.DistanceTo(last) < 1e-3f) return false;
+
+		last = next;
+		if (last.DistanceTo(target_pos) <= STEP) return true;
+		++i;
+	}
+	return false;
+}
+
 bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
-	constexpr float STEP = 1.0f;
-	constexpr int   MAX_STEPS = 30;
+	constexpr float STEP = 1.5f;
+	constexpr int   MAX_STEPS = 20;
 	constexpr float ANGLE_STEP = 3.14159265358979323846f / 8.0f;
 	constexpr std::array<int, 13> OFFSETS = { 0, +1, -1, +2, -2, +3, -3, +4, -4, +5, -5, +6, -6 };
 
@@ -782,13 +784,10 @@ WoWUnit* Functions::GetMissingBuff(int* IDs, int size, int hasmana, int noTank) 
 			&& (hasmana == 0 || (hasmana == 1 && GroupMember[i]->prctMana > 0) || (hasmana == 2 && GroupMember[i]->prctMana < 0))
 			&& !GroupMember[i]->isdead && (localPlayer->position.DistanceTo(GroupMember[i]->position) < 40.0f)
 			&& !GroupMember[i]->hasBuff(IDs, size) && !Functions::Intersect(localPlayer->position, GroupMember[i]->position)) {
-			if (noTank > 0) {
-				for (unsigned int y = 0; y < leaderInfos.size(); y++) {
-					if (GroupMember[i]->name == get<0>(leaderInfos[y])) {
-						if ((noTank == 2 && get<1>(leaderInfos[i]) > 0) || (noTank == 1 && get<1>(leaderInfos[i]) == 0)) return NULL;
-						else return GroupMember[i];
-					}
-				}
+			if (noTank == 1 && GroupMember[i]->role == 0) {
+				return NULL;
+			}
+			else if (noTank == 2 && GroupMember[i]->role > 0) {
 				return NULL;
 			}
 			return GroupMember[i];

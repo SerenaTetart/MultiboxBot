@@ -184,8 +184,10 @@ void FunctionsLua::MakeVirtualInventory(std::vector<std::tuple<int, int, int, st
 	for (int i = 0; i <= 4; i++) {
 		for (int y = 1; y <= GetContainerNumSlots(i); y++) {
 			std::string item_link = GetContainerItemLink(i, y);
-			if (item_link.size() == 0) continue;
-			int link_nbr = GetIntFromChar(item_link.c_str());
+			if (item_link.empty()) continue;
+			if (item_link.size() <= 11) continue;
+
+			int link_nbr = GetIntFromChar(item_link.c_str() + 11);
 			listItems->push_back(std::make_tuple(i, y, link_nbr, item_link));
 		}
 	}

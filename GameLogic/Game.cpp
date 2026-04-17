@@ -87,7 +87,7 @@ void Game::MainLoop() {
 								keybindTrigger = 0;
 							}
 							else if (keybindTrigger == 2) {
-								//if(localPlayer->mountModelID == 0) FunctionsLua::UseItem("Bridle");
+								UseMount();
 								keybindTrigger = 0;
 							}
 
@@ -143,6 +143,10 @@ void Game::MainLoop() {
 								bool TradePending = tradePendingText && std::strcmp(tradePendingText, "1") == 0;
 								TradePendingSelf = tradePendingText2 && std::strcmp(tradePendingText2, "1") == 0;
 								if (TradeShow && TradePending) { Functions::LuaCall("AcceptTrade()"); }
+							}
+
+							if (localPlayer->isMounted && (Combat || (Leader != NULL && !Leader->isMounted))) {
+								Dismount();
 							}
 						}
 					}
@@ -202,7 +206,7 @@ void Game::MainLoop() {
 					else ind++;
 				}
 				if (localPlayer->isdead && localPlayer->health == 1) {
-					//Logic actions
+					// Logic actions
 					CorpseRun();
 				}
 				else if (!Combat && autoLearnSpells) {
@@ -214,33 +218,33 @@ void Game::MainLoop() {
 						float maxRange = 30.0f;
 						if (localPlayer->className == "Hunter") maxRange = 35.0f;
 						if ((Moving == 4 || Moving == 2 || Moving == 5) && distTarget < maxRange) {
-							//Running and (target < 30 yard) => stop
+							// Running and (target < 30 yard) => stop
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
 							Moving = 0;
 						}
-						else if ((Moving == 0 || (Moving == 6 && localPlayer->speed == 0)) && !los_target) {
-							//!LoS => Find LoS
+						else if ((Moving == 0 || (Moving == 6 && localPlayer->isMoving)) && !los_target) {
+							// !LoS => Find LoS
 							ThreadSynchronizer::RunOnMainThread([]() {
 								Functions::MoveToLoS(targetUnit->position, 6);
 							});
 						}
 						else if (distTarget > maxRange && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
-							//Target > 30 yard => Run to it
+							// Target > 30 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
-								});
+							});
 						}
 						else if (Moving == 6 && los_target) {
-							//Looking for LoS, found it => stop
+							// Looking for LoS, found it => stop
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
 							Moving = 0;
 						}
 						else if (Moving == 3 && (distTarget > 15.0f || ((!(targetUnit->flags & UNIT_FLAG_STUNNED) && !(targetUnit->movement_flags & MOVEFLAG_ROOT))
 							&& ((!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && hasTargetAggro) || ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed > 4.5))))) {
-							//Walking backward and (target > 12 yard || Creature aggro || target running)
+							// Walking backward and (target > 12 yard || Creature aggro || target running)
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
 							Moving = 0;
@@ -249,7 +253,7 @@ void Game::MainLoop() {
 							&& ((targetUnit->flags & UNIT_FLAG_STUNNED) || (targetUnit->movement_flags & MOVEFLAG_ROOT)
 								|| (!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !hasTargetAggro)
 								|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0))) {
-							//(Creature not aggro || Player slowed) && < 12 yard => Walk backward
+							// (Creature not aggro || Player slowed) && < 12 yard => Walk backward
 							ThreadSynchronizer::RunOnMainThread([]() {
 								if (Functions::StepBack(targetUnit, 3) == false) {
 									localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
@@ -257,32 +261,48 @@ void Game::MainLoop() {
 							});
 						}
 						else if ((Moving == 0) && !IsFacing) {
-							//Nothing to do => face target
-							ThreadSynchronizer::RunOnMainThread([]() { localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position); });
+							// Nothing to do => face target
+							ThreadSynchronizer::RunOnMainThread([]() {
+								if (localPlayer->isMounted) Dismount();
+								localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
+							});
+						}
+						else if (localPlayer->isMounted) {
+							ThreadSynchronizer::RunOnMainThread([]() {
+								Dismount();
+							});
 						}
 					}
 					else {
 						if (distTarget > 2.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
-							//Target > 2 yard => Run to it
+							// Target > 2 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
 							});
 						}
-						else if (Moving == 0 && !IsFacing) ThreadSynchronizer::RunOnMainThread([]() { localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position); });
+						else if (Moving == 0 && !IsFacing) ThreadSynchronizer::RunOnMainThread([]() {
+							if (localPlayer->isMounted) Dismount();
+							localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
+						});
 						else if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
 							Moving = 0;
 						}
+						else if (localPlayer->isMounted) {
+							ThreadSynchronizer::RunOnMainThread([]() {
+								Dismount();
+							});
+						}
 						else Moving = 0;
 					}
 				}
 				else if (Moving == 5 && !localPlayer->isMoving && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
-					//Find LoS (ally)
+					// Find LoS (ally)
 					ThreadSynchronizer::RunOnMainThread([=]() {
 						Functions::MoveToLoS(targetUnit->position, 5);
-						});
+					});
 				}
 				else if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving != 5 && Moving != 4 && Moving != 0) {
 					ThreadSynchronizer::pressKey(0x28);
@@ -305,7 +325,7 @@ void Game::MainLoop() {
 				}
 				else if (!Combat && (Moving == 0 || Moving == 4) && !localPlayer->isdead && !IsSitting && (float(time(0) - gatheringCD) > 5.5f) && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
 					(Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove) && (targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead || passiveGroup)) {
-					//Loot
+					// Loot
 					bool looted = false;
 					if (herbalismLevel > 0 || miningLevel > 0) {
 						for (unsigned int i = 0; i < ListGameObjects.size(); i++) {
@@ -314,8 +334,8 @@ void Game::MainLoop() {
 								continue;
 							else if (Functions::enemyClose(ListGameObjects[i].position)) continue;
 							int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
-							if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)
-								|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)) {
+							if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 100)
+								|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 100)) {
 								if (ListGameObjects[i].position.DistanceTo(localPlayer->position) < 5.0f) {
 									if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
 										ThreadSynchronizer::pressKey(0x28);
@@ -323,15 +343,16 @@ void Game::MainLoop() {
 										Moving = 0;
 									}
 									ThreadSynchronizer::RunOnMainThread([=]() {
+										if (localPlayer->isMounted) Dismount();
 										Functions::InteractObject(ListGameObjects[i].Pointer, 1);
-										});
+									});
 									gatheringCD = time(0);
 									if (ListGameObjects[i].gatherType == 1) gatheringCD -= (time_t)1.5f;
 								}
 								else if (!localPlayer->isMoving) {
 									ThreadSynchronizer::RunOnMainThread([=]() {
 										Functions::MoveTo(ListGameObjects[i].position, 4);
-										});
+									});
 								}
 								looted = true;
 								break;
@@ -370,8 +391,9 @@ void Game::MainLoop() {
 							if (player_close != 0) continue;
 							else if (localPlayer->speed == 0.0f && ListUnits[i].position.DistanceTo(localPlayer->position) < 4.0f) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
+									if (localPlayer->isMounted) Dismount();
 									Functions::LootUnit(ListUnits[i].Pointer, 1);
-									});
+								});
 								LootHistory.push_back(std::tuple<unsigned long long, time_t>(ListUnits[i].Guid, time(0)));
 								looted = true;
 								break;
@@ -379,7 +401,7 @@ void Game::MainLoop() {
 							else if (!Functions::enemyClose(ListUnits[i].position)) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
 									Functions::MoveTo(ListUnits[i].position, 4);
-									});
+								});
 								looted = true;
 								break;
 							}
@@ -388,8 +410,9 @@ void Game::MainLoop() {
 							|| (ListUnits[i].level > 20 && (ListUnits[i].level * 5 <= skinningLevel)))) {
 							if (localPlayer->speed == 0.0f && ListUnits[i].position.DistanceTo(localPlayer->position) < 4.0f) {
 								ThreadSynchronizer::RunOnMainThread([=]() {
+									if (localPlayer->isMounted) Dismount();
 									Functions::LootUnit(ListUnits[i].Pointer, 1);
-									});
+								});
 								LootHistory.push_back(std::tuple<unsigned long long, time_t>(ListUnits[i].Guid, time(0)));
 								looted = true;
 								break;
@@ -404,14 +427,14 @@ void Game::MainLoop() {
 						}
 					}
 					if (!looted && localPlayer->speed == 0 && !Combat) {
-						//Trade
+						// Trade
 						ThreadSynchronizer::RunOnMainThread([=]() {
 							bool traded = false;
 							for (int y = 1; y <= NumGroupMembers; y++) {
 								for (unsigned int i = 0; i < leaderInfos.size(); i++) {
 									if (GroupMember[y] != NULL && GroupMember[y]->position.DistanceTo(localPlayer->position) < 8.0f && GroupMember[y]->name == get<0>(leaderInfos[i])) {
 										if (!traded && (get<2>(leaderInfos[i]) == 4 || get<3>(leaderInfos[i]) == 4)) {
-											//Tailoring
+											// Tailoring
 											int listID[] = { 2589, 2592, 3182, 4306, 4337, 4338, 10285, 14047, 14227, 14256 };
 											for (const auto& item : virtualInventory) {
 												for (unsigned int z = 0; z < 10; z++) {
@@ -424,7 +447,7 @@ void Game::MainLoop() {
 											}
 										}
 										if (!traded && (get<2>(leaderInfos[i]) == 5 || get<3>(leaderInfos[i]) == 5)) {
-											//Leatherworking
+											// Leatherworking
 											int listID[] = { 783, 2318, 2319, 2934, 4232, 4234, 4235, 4304, 7392, 7428, 8154, 8165, 8167, 8368, 8169 };
 											for (const auto& item : virtualInventory) {
 												for (unsigned int z = 0; z < 15; z++) {
@@ -437,7 +460,7 @@ void Game::MainLoop() {
 											}
 										}
 										if (!traded && (get<2>(leaderInfos[i]) == 6 || get<3>(leaderInfos[i]) == 6)) {
-											//Blacksmithing
+											// Blacksmithing
 											int listID[] = { 2770, 2771, 2772, 2775, 2776, 2835, 2836, 2838, 3858, 7912, 10620, 11370 };
 											for (const auto& item : virtualInventory) {
 												for (unsigned int z = 0; z < 12; z++) {
@@ -450,7 +473,7 @@ void Game::MainLoop() {
 											}
 										}
 										if (!traded && (get<2>(leaderInfos[i]) == 8 || get<3>(leaderInfos[i]) == 8)) {
-											//Alchemy
+											// Alchemy
 											int listID[] = { 765, 785, 2447, 2449, 2450, 2452, 2453, 3355, 3356, 3357, 3358, 3369, 3818, 3819, 3820, 3821, 4625, 8831, 8836, 8838, 8839, 8845 };
 											for (const auto& item : virtualInventory) {
 												for (unsigned int z = 0; z < 22; z++) {
@@ -472,14 +495,21 @@ void Game::MainLoop() {
 							}
 							});
 					}
-					if (!looted && Moving != 8 && Leader != NULL && Leader->Guid != localPlayer->Guid && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
-						//Follow
+					if (!Combat && !localPlayer->isMounted && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && Leader != NULL && Leader->isMounted) {
+						// Mount up !
+						ThreadSynchronizer::RunOnMainThread([]() {
+							UseMount();
+						});
+						continue;
+					}
+					else if (!looted && Moving != 8 && Leader != NULL && Leader->Guid != localPlayer->Guid && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
+						// Follow
 						Functions::FollowMultibox(positionCircle);
 						Moving = 4;
 					}
 				}
 				if (localPlayer->speed > 0 && Moving > 0 && (Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove) && (playerLastPos.DistanceTo(localPlayer->position) < 0.5f)) {
-					//Jump
+					// Jump
 					ThreadSynchronizer::pressKey(0x20); //Jump
 					ThreadSynchronizer::releaseKey(0x20);
 				}
@@ -494,17 +524,17 @@ void Game::MainLoop() {
 
 			//start = std::chrono::high_resolution_clock::now();
 
-			if (localPlayer != NULL && !IsSitting && localPlayer->mountModelID == 0) {
-				int drinkingIDs[15] = { 430, 431, 432, 1133, 1135, 1137, 24355, 25696, 26261, 26402, 26473, 26475, 29007, 10250, 22734 };
-				if (IsSitting && ((localPlayer->prctMana > 85) || Combat || !localPlayer->hasBuff(drinkingIDs, 15))) {
-					//Stop sitting
-					IsSitting = false;
-					ThreadSynchronizer::pressKey(0x28);
-					ThreadSynchronizer::releaseKey(0x28);
-					Moving = 0;
-				}
-				else if (!Combat && !IsSitting && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0) && !localPlayer->isMoving && (Moving == 0 || Moving == 4) && (localPlayer->movement_flags == MOVEFLAG_NONE) && (localPlayer->prctMana < 50 && localPlayer->prctMana > 0) && (FunctionsLua::HasDrink() > 0)) {
-					//Drink
+			int drinkingIDs[15] = { 430, 431, 432, 1133, 1135, 1137, 24355, 25696, 26261, 26402, 26473, 26475, 29007, 10250, 22734 };
+			if (IsSitting && (Combat || (localPlayer != NULL && (localPlayer->prctMana > 85)) || !localPlayer->hasBuff(drinkingIDs, 15))) {
+				// Stop sitting
+				IsSitting = false;
+				ThreadSynchronizer::pressKey(0x28);
+				ThreadSynchronizer::releaseKey(0x28);
+				Moving = 0;
+			}
+			else if (localPlayer != NULL && !IsSitting && !localPlayer->isMounted) {
+				if (!Combat && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0) && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && (localPlayer->prctMana < 50 && localPlayer->prctMana > 0) && (FunctionsLua::HasDrink() > 0)) {
+					// Drink
 					IsSitting = true;
 					ThreadSynchronizer::RunOnMainThread([]() { FunctionsLua::UseItem(FunctionsLua::HasDrink()); });
 				}

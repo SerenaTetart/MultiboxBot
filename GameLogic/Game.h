@@ -8,6 +8,8 @@
 class Game {
 public:
 	static void MainLoop();
+	static void UseMount();
+	static void Dismount();
 private:
 	static void CorpseRun();
 	static void TrainSpellRun();
