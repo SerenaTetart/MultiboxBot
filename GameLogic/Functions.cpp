@@ -253,12 +253,12 @@ void Functions::FollowMultibox(int placement) {
 	else if (placement == 2) cst = -0.30f;
 	else if (placement == 3) {
 		range = 4.0f;
-		if (localPlayer->isMounted) cst = 0.30f;
+		if (localPlayer->isMounted) cst = 0.45f;
 		else cst = 0.15f;
 	}
 	else if (placement == 4) {
 		range = 4.0f;
-		if (localPlayer->isMounted) cst = -0.30f;
+		if (localPlayer->isMounted) cst = -0.45f;
 		else cst = -0.15f;
 	}
 	float halfPI = acosf(0);
@@ -381,8 +381,8 @@ bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
 		Position next = Functions::ProjectPos(stepPos);
 
 		// Reject if snap is too big or the segment hits something
-		if (next.DistanceTo(stepPos) > 1.0f) return false;
-		if (Functions::Intersect(last, next)) return false;
+		if (next.DistanceTo(stepPos) > 1.25f) return false;
+		if (Functions::Intersect(last, next, 1.0f)) return false;
 
 		// Progress guard (avoid potential stalls on weird projections)
 		if (next.DistanceTo(last) < 1e-3f) return false;
@@ -411,7 +411,7 @@ bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
 			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
 			Position next = Functions::ProjectPos(stepPos);
 
-			if ((next.DistanceTo(stepPos) < 1.0f) && !Functions::Intersect(last, next, 1.25f) && (!checkEnemyClose || !Functions::enemyClose(next))) {
+			if ((next.DistanceTo(stepPos) < 1.25f) && !Functions::Intersect(last, next, 1.0f) && (!checkEnemyClose || !Functions::enemyClose(next))) {
 				if (MoveObstacle_tmp(target_pos, next)) {
 					if (off == 0) localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
 					else localPlayer->ClickToMove(Move, localPlayer->Guid, next);
@@ -674,7 +674,9 @@ std::tuple<int, int, int, int> Functions::countEnemies() {
 	}
 	int nbr = 0, nbrClose = 0, nbrCloseFacing = 0, nbrEnemyPlayer = 0;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].flags & UNIT_FLAG_POSSESSED) || ListUnits[i].isFromGroup || ListUnits[i].unitReaction > Neutral || (!(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
+		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].flags & UNIT_FLAG_POSSESSED)
+			|| ListUnits[i].isFromGroup || ListUnits[i].unitReaction > Neutral || (ListUnits[i].creatureType == Totem)
+			|| (!(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
 			continue;
 		else if (ListUnits[i].unitReaction == Neutral && ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
@@ -706,7 +708,7 @@ bool Functions::enemyClose(Position pos) {
 			&& !(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
 			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead
 			&& (ListUnits[i].position.DistanceTo2D(pos) < (20.0f + (level_difference * 1.0f)))
-			&& (abs(ListUnits[i].position.Z - pos.Z) < 5.0f)) {
+			&& (abs(ListUnits[i].position.Z - pos.Z) < 2.0f)) {
 			return true;
 		}
 	}

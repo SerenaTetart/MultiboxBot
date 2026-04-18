@@ -63,6 +63,8 @@ uintptr_t WoWObject::GetDescriptorPtr(uintptr_t pointer) {
 WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType) : WoWObject(pointer, guid, objType) {
     uintptr_t descriptor = WoWObject::GetDescriptorPtr(pointer);
     movement_flags = *(MovementFlags*)(Pointer + MOVEMENT_FLAG_OFFSET);
+    speed = *(float*)(Pointer + SPEED_OFFSET);
+    isMoving = ((speed > 0) || (movement_flags & MOVEFLAG_FORWARD) || (movement_flags & MOVEFLAG_BACKWARD));
     if (descriptor != NULL) {
         health = *(int*)(descriptor + HEALTH_OFFSET);
         int max_health = *(int*)(descriptor + MAX_HEALTH_OFFSET);
@@ -100,8 +102,6 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
         func* getCreatureType = (func*)GET_CREATURE_TYPE_FUN_PTR;
         creatureType = getCreatureType(Pointer);
 
-        speed = *(float*)(Pointer + SPEED_OFFSET);
-        isMoving = ((speed > 0) || (movement_flags & MOVEFLAG_FORWARD) || (movement_flags & MOVEFLAG_BACKWARD));
         targetGuid = *(unsigned long long*)(descriptor + TARGET_GUID_OFFSET);
         facing = *(float*)(Pointer + FACING_OFFSET);
         level = *(int*)(descriptor + LEVEL_OFFSET);
@@ -325,7 +325,7 @@ void LocalPlayer::ClickToMove(ClickType clickType, unsigned long long interactGu
     typedef void (__thiscall* func)(uintptr_t, ClickType, unsigned long long*, float*, float);
     func function = (func)CLICK_TO_MOVE_FUN_PTR;
     function(Pointer, clickType, interactGuidPtr, xyz, 0.5f);
-    isMoving = true;
+    if (clickType == Move) isMoving = true;
 }
 
 void LocalPlayer::SetTarget(unsigned long long tguid) {

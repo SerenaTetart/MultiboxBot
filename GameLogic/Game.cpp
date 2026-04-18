@@ -274,8 +274,8 @@ void Game::MainLoop() {
 						}
 					}
 					else {
-						if (distTarget > 2.0f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
-							// Target > 2 yard => Run to it
+						if (distTarget > 1.5f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
+							// Target > 1.5 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
 								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);

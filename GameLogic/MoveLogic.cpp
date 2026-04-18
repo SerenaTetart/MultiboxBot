@@ -19,11 +19,11 @@ void MoveToMap(Position targetpos) {
 }
 
 void Game::CorpseRun() {
-	//Handle all the specific choices of the Leader/Characters
+	// Handle all the specific choices of the Leader/Characters
 	if (localPlayer->isdead) {
-		//Run to the instance
+		// Run to the instance
 		if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(-11207.799805f, 1681.150024f, 60.143227f)) < 5.0f) {
-		    //Deadmines
+		    // Deadmines
 			if (localPlayer->zoneID == 1581) {
 				// Inside Hideout
 				if (localPlayer->position.Z > 37) {
@@ -38,11 +38,11 @@ void Game::CorpseRun() {
 			}
 		}
 		else if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(-230.988998f, 1571.569946f, 97.390625f)) < 5.0f) {
-		    //Shadowfang
+		    // Shadowfang
 		    MoveToMap(Position(-231.766205f, 1570.990845f, 76.892220f));
 		}
 		else if (mapID == 1 && localPlayer->corpse_position.DistanceTo(Position(4249.12f, 748.387f, 147.263f)) < 5.0f) {
-			//Blackfathom Deeps
+			// Blackfathom Deeps
 			if (localPlayer->zoneID == 719) {
 			    MoveToMap(Position(4247.740234f, 745.879028f, -24.296673f));
 			}
@@ -54,13 +54,17 @@ void Game::CorpseRun() {
 			}
 		}
 		else if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(-5162.66f, 931.599f, 408.975f)) < 5.0f) {
-			//Gnomeregan
+			// Gnomeregan
 			if (localPlayer->position.Z < 280.0f) MoveToMap(Position(-5162.885254f, 928.664246f, 257.180511f));
 			else MoveToMap(Position(-5163.476563f, 659.317871f, 348.278412f));
 		}
 		else if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(2892.239990f, -811.263977f, 199.328125f)) < 5.0f) {
-			//Scarlet Monastery
+			// Scarlet Monastery
 			MoveToMap(Position(2903.302002f, -805.908508f, 160.331848f));
+		}
+		else if (mapID == 0 && localPlayer->corpse_position.DistanceTo(Position(-6060.180176f, -2955.0f, 434.562317f)) < 5.0f) {
+			// Uldaman
+			MoveToMap(Position(-6063.834961f, -2954.836035f, 209.769699f));
 		}
 		else {
 			std::cout << localPlayer->corpse_position.ToString() << "\n";

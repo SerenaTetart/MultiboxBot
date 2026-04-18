@@ -15,7 +15,7 @@ static void PaladinAttack(int index_paladin) {
 		int SoWDebuffIDs[3] = { 20186, 20354, 20355 };
 		bool SoWDebuff = targetUnit->hasDebuff(SoWDebuffIDs, 3);
 		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
-		if (((nbrCloseEnemy >= 2) || (localPlayer->prctMana < 33)) && !SealBuff && FunctionsLua::IsSpellReady("Seal of Wisdom")) {
+		if (((nbrCloseEnemy >= 2) || (localPlayer->prctMana < 33)) && !SealBuff && !SoWDebuff && FunctionsLua::IsSpellReady("Seal of Wisdom")) {
 			// Seal of Wisdom
 			FunctionsLua::CastSpellByName("Seal of Wisdom");
 		}
@@ -31,7 +31,7 @@ static void PaladinAttack(int index_paladin) {
 			// Consecration
 			FunctionsLua::CastSpellByName("Consecration");
 		}
-		else if (SealBuff && (distTarget < 10) && autoAttackTimer > 1.0f && ((localPlayer->prctMana > 20) || (SoWBuff && !SoWDebuff && FunctionsLua::UnitIsElite("target"))) && FunctionsLua::IsSpellReady("Judgement")) {
+		else if (SealBuff && (distTarget < 10) && autoAttackTimer > 1.0f && ((SoWBuff && !SoWDebuff && targetUnit->rank > 0) || !SoWBuff) && FunctionsLua::IsSpellReady("Judgement")) {
 			// Judgement
 			FunctionsLua::CastSpellByName("Judgement");
 		}

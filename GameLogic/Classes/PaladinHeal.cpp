@@ -27,7 +27,7 @@ static void PaladinAttack() {
 			//Consecration
 			FunctionsLua::CastSpellByName("Consecration");
 		}
-		else if (SealBuff && (localPlayer->prctMana > 50) && (distTarget < 10) && autoAttackTimer > 1.0f && FunctionsLua::IsSpellReady("Judgement")) {
+		else if (SealBuff && (localPlayer->prctMana > 50) && (distTarget < 10) && autoAttackTimer > 1.0f && ((SoLBuff && !SoLDebuff && targetUnit->rank > 0) || !SoLBuff) && FunctionsLua::IsSpellReady("Judgement")) {
 			//Judgement
 			FunctionsLua::CastSpellByName("Judgement");
 		}
