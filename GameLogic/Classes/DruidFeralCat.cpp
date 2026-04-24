@@ -158,7 +158,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if (!CatFormBuff && Combat && (ListUnits[indexP].prctMana < 20) && ListUnits[indexP].role == 2 && FunctionsLua::IsSpellReady("Innervate")) {
+	else if (!CatFormBuff && Combat && (ListUnits[indexP].prctMana < 20) && ListUnits[indexP].role == 3 && FunctionsLua::IsSpellReady("Innervate")) {
 		//Innervate
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Innervate");

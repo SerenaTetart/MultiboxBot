@@ -52,6 +52,37 @@ bool FactionTemplateDBC::isNeutral(uint32_t ID) {
     else return false;
 }
 
+bool FactionTemplateDBC::IsAlliance(uint32_t factionTemplateId)
+{
+    if (const FactionTemplateEntry* e = FactionTemplate.Get(factionTemplateId))
+        return (e->FactionGroup & 0x0002) != 0;
+    return false;
+}
+
+bool FactionTemplateDBC::IsHorde(uint32_t factionTemplateId)
+{
+    if (const FactionTemplateEntry* e = FactionTemplate.Get(factionTemplateId))
+        return (e->FactionGroup & 0x0004) != 0;
+    return false;
+}
+
+bool FactionTemplateDBC::AreSameFaction(uint32_t id1, uint32_t id2)
+{
+    const FactionTemplateEntry* a = Get(id1);
+    const FactionTemplateEntry* b = Get(id2);
+
+    if (!a || !b)
+        return false;
+
+    const bool aAlliance = (a->FactionGroup & 0x0002) != 0;
+    const bool aHorde = (a->FactionGroup & 0x0004) != 0;
+
+    const bool bAlliance = (b->FactionGroup & 0x0002) != 0;
+    const bool bHorde = (b->FactionGroup & 0x0004) != 0;
+
+    return (aAlliance && bAlliance) || (aHorde && bHorde);
+}
+
 uint32_t FactionTemplateDBC::readU32(const char* p) {
     // DBC = little-endian; si ta plateforme est little, on peut memcpy direct
     uint32_t v;

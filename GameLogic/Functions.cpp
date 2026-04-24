@@ -131,7 +131,6 @@ int Functions::Callback(unsigned long long guid, int filter) {
 					if (unit.name == get<0>(leaderInfos[y])) {
 						ListUnits.back().role = get<1>(leaderInfos[y]);
 						ListUnits.back().indexGroup = y;
-						ListUnits.back().isFromGroup = true;
 						break;
 					}
 				}
@@ -619,7 +618,11 @@ std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_r
 	std::vector<Position> clusters_center;
 	//1- Chaque position est un cluster
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && ListUnits[i].attackable && !(ListUnits[i].flags & UNIT_FLAG_POSSESSED) && (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)) && ListUnits[i].speed <= 4.5f && !(ListUnits[i].flags & UNIT_FLAG_CONFUSED)) {
+		if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)
+			&& ListUnits[i].attackable && !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
+			&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
+			&& ListUnits[i].speed <= 4.5f && !(ListUnits[i].flags & UNIT_FLAG_CONFUSED)
+			&& ListUnits[i].creatureType != Totem) {
 			std::vector<Position> cluster;
 			cluster.push_back(ListUnits[i].position);
 			clustersArr.push_back(cluster);
@@ -761,14 +764,15 @@ WoWUnit* Functions::GetLeader() {
 	if (localPlayer == NULL || leaderInfos.size() <= 1) return NULL;
 	for (unsigned int z = 0; z < ListUnits.size(); z++) {
 		if (ListUnits[z].name == get<0>(leaderInfos[0])) {
-			return &(ListUnits[z]);
+			if (FactionTemplate.AreSameFaction(ListUnits[z].factionTemplateID, localPlayer->factionTemplateID)) return &(ListUnits[z]);
+			else break;
 		}
 	}
-	for (unsigned int y = 0; y < 3; y++) {
+	for (unsigned int y = 0; y <= 3; y++) {
 		for (unsigned int i = 1; i < leaderInfos.size(); i++) {
 			if (get<1>(leaderInfos[i]) == y) {
 				for (unsigned int z = 0; z < ListUnits.size(); z++) {
-					if (!ListUnits[z].attackable && (ListUnits[z].unitReaction >= Neutral) && ListUnits[z].name == get<0>(leaderInfos[i])) {
+					if (FactionTemplate.AreSameFaction(ListUnits[z].factionTemplateID, localPlayer->factionTemplateID) && ListUnits[z].name == get<0>(leaderInfos[i])) {
 						return &(ListUnits[z]);
 					}
 				}

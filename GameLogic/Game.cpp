@@ -5,6 +5,7 @@
 #include "ListAI.h"
 #include "BossAI.h"
 #include "Navigation.h"
+#include "FactionTemplate.h"
 
 #include <iostream>
 #include <fstream>
@@ -24,7 +25,10 @@ void Game::MainLoop() {
 
 					if (localPlayer != NULL) {
 						pastPlayerGuid = playerGuid;
-						std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
+						std::string msg =
+							"Name " + FunctionsLua::UnitName("player") +
+							" Class " + localPlayer->className +
+							" Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0");
 						Client::sendMessage(msg);
 
 						std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
@@ -64,7 +68,10 @@ void Game::MainLoop() {
 
 						if (playerGuid != pastPlayerGuid && localPlayer != NULL) {
 							pastPlayerGuid = playerGuid;
-							std::string msg = ("Name " + FunctionsLua::UnitName("player") + " Class " + localPlayer->className);
+							std::string msg =
+								"Name " + FunctionsLua::UnitName("player") +
+								" Class " + localPlayer->className +
+								" Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0");
 							Client::sendMessage(msg);
 
 							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };

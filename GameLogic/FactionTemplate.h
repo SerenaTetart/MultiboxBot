@@ -30,6 +30,9 @@ public:
     explicit FactionTemplateDBC(const std::string& path) { load(path); }
     const FactionTemplateEntry* Get(uint32_t id) const;
     bool isNeutral(uint32_t ID);
+    bool IsAlliance(uint32_t factionTemplateId);
+    bool IsHorde(uint32_t factionTemplateId);
+    bool AreSameFaction(uint32_t id1, uint32_t id2);
 private:
     std::unordered_map<uint32_t, FactionTemplateEntry> byId;
     const std::unordered_map<uint32_t, FactionTemplateEntry>& All() const { return byId; }

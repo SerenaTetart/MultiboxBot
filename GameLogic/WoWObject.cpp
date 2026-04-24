@@ -235,6 +235,17 @@ bool WoWUnit::canAttack(uintptr_t unitPtr2) {
     return function(Pointer, unitPtr2);
 }
 
+bool WoWUnit::isCrowdControlled() {
+    // Fear, stun, confusion...
+    if ((flags & UNIT_FLAG_FLEEING) || (flags & UNIT_FLAG_CONFUSED) || (flags & UNIT_FLAG_STUNNED)) return true;
+    else return false;
+}
+
+bool WoWUnit::isElite() {
+    if (rank >= 1 && rank <= 3) return true;
+    else return false;
+}
+
 /* === Local Player === */
 
 int GetSpellModifierFromSpellId(int spellId) {

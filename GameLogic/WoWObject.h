@@ -195,6 +195,8 @@ class WoWUnit : public WoWObject {
         bool isChanneling(int* IDs, int size);
         UnitReaction getUnitReaction(uintptr_t);
         bool canAttack(uintptr_t);
+        bool isCrowdControlled();
+        bool isElite();
 };
 
 class LocalPlayer : public WoWUnit {

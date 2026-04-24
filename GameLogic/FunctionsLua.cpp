@@ -527,7 +527,7 @@ bool FunctionsLua::IsPlayerSpell(std::string spell_name) {
 
 bool FunctionsLua::IsSpellReady(std::string spell_name) {
 	//Execution: ~2.2ms
-	if (((localPlayer->flags & UNIT_FLAG_SILENCED) != UNIT_FLAG_SILENCED)) {
+	if (!(localPlayer->flags & UNIT_FLAG_SILENCED)) {
 		int slot = GetSlot(spell_name);
 		if (slot > 0) {
 			if (IsUsableAction(slot) && (GetActionCooldownDuration(slot) < 1.25f)) {

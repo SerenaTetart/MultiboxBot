@@ -22,6 +22,10 @@ import win32job
 import parser
 
 
+FACTION_ALLIANCE = 0
+FACTION_HORDE = 1
+
+
 def rgb_hack(rgb):
     return "#%02x%02x%02x" % rgb
 
@@ -58,12 +62,28 @@ class Interface(tk.Tk):
 
         self.iconWoW = None
         self.iconKeybind = None
+        self.iconAlliance = None
+        self.iconHorde = None
+
         try:
             self.iconWoW = tk.PhotoImage(file="assets/iconWoW.png")
         except Exception:
             pass
+
         try:
             self.iconKeybind = tk.PhotoImage(file="assets/iconKeybind.png")
+        except Exception:
+            pass
+
+        try:
+            alliance_img = Image.open("assets/alliance.jpg").resize((16, 16))
+            self.iconAlliance = ImageTk.PhotoImage(alliance_img)
+        except Exception:
+            pass
+
+        try:
+            horde_img = Image.open("assets/horde.jpg").resize((16, 16))
+            self.iconHorde = ImageTk.PhotoImage(horde_img)
         except Exception:
             pass
 
@@ -92,6 +112,17 @@ class Interface(tk.Tk):
         self.keybind_Entry = []
         self.listener = None
 
+        self.Group_Label = None
+        self.Players_Container = None
+        self.FactionBlocks = {}
+        self.PlayerFaction = [-1 for _ in range(25)]
+        self.Player_Row = []
+        self.Name_Label = []
+        self.Class_Label = []
+        self.SpecialisationList = []
+        self.Specialisation_Menu = []
+        self.OptionList = []
+
         self.serverthread = server_thread()
         self.serverthread.start()
 
@@ -104,7 +135,14 @@ class Interface(tk.Tk):
         tabControl = ttk.Notebook(self)
         self.tab1 = ttk.Frame(tabControl)
         self.tab2 = ttk.Frame(tabControl)
-        
+
+        self.tab1.grid_columnconfigure(0, weight=1)
+        self.tab1.grid_columnconfigure(1, weight=1)
+        self.tab1.grid_columnconfigure(2, weight=1)
+        self.tab1.grid_columnconfigure(3, weight=1)
+        self.tab1.grid_columnconfigure(4, weight=1)
+        self.tab1.grid_columnconfigure(5, weight=1)
+
         self.tab2.grid_columnconfigure(0, weight=0)
         self.tab2.grid_columnconfigure(1, weight=1)
         self.tab2.grid_columnconfigure(2, weight=1)
@@ -112,7 +150,7 @@ class Interface(tk.Tk):
         self.tab2.grid_columnconfigure(4, weight=1)
         self.tab2.grid_columnconfigure(5, weight=1)
         self.tab2.grid_columnconfigure(6, weight=1)
-        
+
         tabControl.pack(expand=1, fill="both")
         tabControl.add(self.tab1, text="Menu")
         tabControl.add(self.tab2, text="Options")
@@ -192,22 +230,23 @@ class Interface(tk.Tk):
         )
 
         self.Group_Label = tk.Label(self.tab1, text="Players detected:")
-        self.Name_Label = []
-        self.Class_Label = []
-        self.SpecialisationList = []
-        self.Specialisation_Menu = []
-        self.OptionList = []
+        self.Players_Container = tk.Frame(self.tab1)
+        self.Players_Container.grid_columnconfigure(0, weight=1)
 
-        for i in range(25):
-            self.Name_Label.append(tk.Label(self.tab1, text="Null", foreground="grey"))
-            self.Class_Label.append(tk.Label(self.tab1, text="Null", foreground="grey"))
-            self.SpecialisationList.append(tk.StringVar(self))
-            self.OptionList.append(["Null"])
-            self.SpecialisationList[i].set("Null")
+        self.FactionBlocks = {
+            FACTION_ALLIANCE: self._create_faction_block(
+                self.Players_Container,
+                "Alliance",
+                self.iconAlliance,
+            ),
+            FACTION_HORDE: self._create_faction_block(
+                self.Players_Container,
+                "Horde",
+                self.iconHorde,
+            ),
+        }
 
-            menu = tk.OptionMenu(self.tab1, self.SpecialisationList[i], *self.OptionList[i])
-            menu.config(width=11)
-            self.Specialisation_Menu.append(menu)
+        self._create_player_rows()
 
         self.WoWDirButton.grid(row=0, column=0, sticky="w", padx=2, pady=10)
         self.WoWDirEntry.grid(row=0, column=1, columnspan=6, sticky="ew", padx=2)
@@ -224,22 +263,116 @@ class Interface(tk.Tk):
         self.MCNoAuto_Radio.grid(row=2, column=2, columnspan=2, padx=2, pady=2)
         self.MCAutoMove_Radio.grid(row=2, column=4, columnspan=2, padx=2, pady=2)
 
+    def _create_faction_block(self, parent, faction_name, faction_icon):
+        frame = tk.Frame(parent, bd=2, relief=tk.GROOVE, padx=6, pady=4)
+        frame.grid_columnconfigure(0, weight=1)
+
+        rows = tk.Frame(frame)
+
+        if faction_icon is not None:
+            title = tk.Label(
+                frame,
+                image=faction_icon,
+                text=f" {faction_name}",
+                compound=tk.LEFT,
+                font=("TkDefaultFont", 8, "bold"),
+                anchor="w",
+            )
+        else:
+            title = tk.Label(
+                frame,
+                text=faction_name,
+                font=("TkDefaultFont", 8, "bold"),
+                anchor="w",
+            )
+
+        title.grid(row=0, column=0, sticky="w", pady=(0, 3))
+        rows.grid(row=1, column=0, sticky="w")
+
+        return {
+            "frame": frame,
+            "rows": rows,
+        }
+
+    def _create_player_rows(self):
+        self.Name_Label = []
+        self.Class_Label = []
+        self.SpecialisationList = []
+        self.Specialisation_Menu = []
+        self.OptionList = []
+        self.Player_Row = []
+
+        for i in range(25):
+            row_frame = tk.Frame(self.Players_Container)
+
+            name_label = tk.Label(row_frame, text="Null", foreground="grey", width=7, anchor="center")
+            class_label = tk.Label(row_frame, text="Null", foreground="grey", width=6, anchor="center")
+
+            spec_var = tk.StringVar(self)
+            spec_var.set("Null")
+
+            options = ["Null"]
+            menu = tk.OptionMenu(row_frame, spec_var, *options)
+            menu.config(width=10)
+
+            name_label.grid(row=0, column=0, sticky="w")
+            class_label.grid(row=0, column=1, sticky="w")
+            menu.grid(row=0, column=2, sticky="w")
+
+            self.Player_Row.append(row_frame)
+            self.Name_Label.append(name_label)
+            self.Class_Label.append(class_label)
+            self.SpecialisationList.append(spec_var)
+            self.Specialisation_Menu.append(menu)
+            self.OptionList.append(options)
+
     def show_infoAccounts(self, nbr):
-        y = 0
-        self.Group_Label.grid(row=3, column=2, columnspan=3, pady=10)
+        self.Group_Label.grid(row=3, column=0, columnspan=6, pady=(10, 2))
+        self.Players_Container.grid(row=4, column=0, columnspan=6, sticky="ew", padx=4)
 
-        for i in range(nbr):
-            if i % 2 == 0:
-                self.Name_Label[i].grid(row=4 + y, column=0)
-                self.Class_Label[i].grid(row=4 + y, column=1)
-                self.Specialisation_Menu[i].grid(row=4 + y, column=2)
-            else:
-                self.Name_Label[i].grid(row=4 + y, column=3)
-                self.Class_Label[i].grid(row=4 + y, column=4)
-                self.Specialisation_Menu[i].grid(row=4 + y, column=5)
-                y += 1
-
+        self.refresh_player_blocks()
         self.WoWDirEntry.configure(width=60)
+
+    def refresh_player_blocks(self):
+        if self.Players_Container is None or not self.FactionBlocks:
+            return
+
+        for row in self.Player_Row:
+            row.grid_forget()
+
+        visible_block_row = 0
+
+        for faction in (FACTION_ALLIANCE, FACTION_HORDE):
+            block = self.FactionBlocks[faction]
+
+            members = [
+                i
+                for i in range(min(self.NBR_ACCOUNT, len(self.PlayerFaction)))
+                if self.PlayerFaction[i] == faction
+                and self.Name_Label[i].cget("text") not in ("", "Null")
+            ]
+
+            if not members:
+                block["frame"].grid_forget()
+                continue
+
+            block["frame"].grid(
+                row=visible_block_row,
+                column=0,
+                sticky="ew",
+                padx=4,
+                pady=(0, 8),
+            )
+
+            for pos, player_index in enumerate(members):
+                self.Player_Row[player_index].grid(
+                    in_=block["rows"],
+                    row=pos // 2,
+                    column=pos % 2,
+                    sticky="w",
+                )
+
+            visible_block_row += 1
 
     # =========================
     # Réseau / protocole
@@ -450,10 +583,97 @@ class Interface(tk.Tk):
     # =========================
     # Placement fenêtres
     # =========================
+    def _row_distribution_horizontal_first(self, count):
+        """
+        Répartit les clients en lignes en privilégiant l'horizontal.
+
+        Exemples :
+        1  -> [1]
+        2  -> [2]
+        3  -> [3]
+        4  -> [2, 2]
+        5  -> [3, 2]
+        6  -> [3, 3]
+        7  -> [4, 3]
+        8  -> [4, 4]
+        9  -> [3, 3, 3]
+        10 -> [4, 3, 3]
+        25 -> [5, 5, 5, 5, 5]
+        """
+        if count <= 0:
+            return []
+
+        rows_count = max(1, int(count ** 0.5))
+
+        base = count // rows_count
+        extra = count % rows_count
+
+        return [
+            base + (1 if row < extra else 0)
+            for row in range(rows_count)
+        ]
+
+    def _coords_for_monitor(
+        self,
+        monitor,
+        client_indices,
+        x_gap=8,
+        width_increase=18,
+        height_increase=23,
+    ):
+        """
+        Génère les coordonnées d'une liste de clients sur un écran.
+
+        La règle générale privilégie l'étirement horizontal :
+        - 2 clients sur un écran => côte à côte
+        - 5 clients sur un écran => 3 en haut, 2 en bas
+        - 7 clients sur un écran => 4 en haut, 3 en bas
+        """
+        coords = {}
+
+        if not client_indices:
+            return coords
+
+        monitor_x0, monitor_y0, monitor_x1, monitor_y1 = monitor
+        monitor_width = monitor_x1 - monitor_x0
+        monitor_height = monitor_y1 - monitor_y0
+
+        rows = self._row_distribution_horizontal_first(len(client_indices))
+        rows_count = len(rows)
+
+        client_pos = 0
+
+        for row_index, clients_in_row in enumerate(rows):
+            row_y0 = monitor_y0 + (monitor_height * row_index) // rows_count
+            row_y1 = monitor_y0 + (monitor_height * (row_index + 1)) // rows_count
+
+            row_height = row_y1 - row_y0
+
+            y = row_y0
+            if row_index > 0:
+                y -= height_increase - 10
+
+            for col_index in range(clients_in_row):
+                client_index = client_indices[client_pos]
+
+                col_x0 = monitor_x0 + (monitor_width * col_index) // clients_in_row
+                col_x1 = monitor_x0 + (monitor_width * (col_index + 1)) // clients_in_row
+
+                width = (col_x1 - col_x0) + width_increase
+                height = row_height + height_increase
+                x = col_x0 - x_gap
+
+                coords[client_index] = (x, y, width, height)
+
+                client_pos += 1
+
+        return coords
+
     def adapt_listCoord(self):
         self.listCoord = []
 
         monitors = win32api.EnumDisplayMonitors()
+
         idx_primary = next(
             i
             for i, m in enumerate(monitors)
@@ -464,100 +684,82 @@ class Interface(tk.Tk):
         width_increase = 18
         height_increase = 23
 
+        coords_by_index = {}
+
         if len(monitors) == 1:
             monitor = monitors[0][2]
-            monitor_x0, monitor_y0, monitor_x1, monitor_y1 = monitor
-            monitor_width = monitor_x1 - monitor_x0
-            monitor_height = monitor_y1 - monitor_y0
+            client_indices = list(range(self.NBR_ACCOUNT))
 
-            nbr_bottom = self.NBR_ACCOUNT // 2
-            nbr_top = self.NBR_ACCOUNT - nbr_bottom
-            top_nbr = 0
-            bottom_nbr = 0
-            on_top_row = True
-
-            for _ in range(self.NBR_ACCOUNT):
-                if on_top_row:
-                    x = monitor_x0 + ((monitor_width // max(1, nbr_top)) * top_nbr) - x_gap
-                    width = (monitor_width // max(1, nbr_top)) + width_increase
-                    height = monitor_height if nbr_bottom == 0 else (monitor_height // 2)
-                    self.listCoord.append((x, monitor_y0, width, height + height_increase))
-                    top_nbr += 1
-                    on_top_row = False
-                else:
-                    x = monitor_x0 + ((monitor_width // max(1, nbr_bottom)) * bottom_nbr) - x_gap
-                    y = monitor_y0 + (monitor_height // 2 if self.NBR_ACCOUNT > 1 else 0)
-                    width = (monitor_width // max(1, nbr_bottom)) + width_increase
-                    height = monitor_height // 2
-                    self.listCoord.append((x, y - 15, width, height + height_increase))
-                    bottom_nbr += 1
-                    on_top_row = True
+            coords_by_index.update(
+                self._coords_for_monitor(
+                    monitor,
+                    client_indices,
+                    x_gap,
+                    width_increase,
+                    height_increase,
+                )
+            )
 
         else:
             main_monitor = idx_primary
             other_monitors = [i for i in range(len(monitors)) if i != main_monitor]
+
             if not other_monitors:
                 return
 
-            # Choisit l'écran le plus à droite
+            # Même comportement que ton code d'origine :
+            # écran secondaire = écran le plus à droite.
             second_monitor = max(other_monitors, key=lambda i: monitors[i][2][0])
 
             m1 = monitors[main_monitor][2]
             m2 = monitors[second_monitor][2]
 
-            monitor1_x0, monitor1_y0, monitor1_x1, monitor1_y1 = m1
-            monitor2_x0, monitor2_y0, monitor2_x1, monitor2_y1 = m2
+            # Clients principaux :
+            # 0, 5, 10, 15, 20...
+            #
+            # Exemple avec 7 clients :
+            # écran principal => clients 0 et 5.
+            main_clients = [
+                i
+                for i in range(self.NBR_ACCOUNT)
+                if i % 5 == 0
+            ]
 
-            monitor1_width = monitor1_x1 - monitor1_x0
-            monitor1_height = monitor1_y1 - monitor1_y0
-            monitor2_width = monitor2_x1 - monitor2_x0
-            monitor2_height = monitor2_y1 - monitor2_y0
+            # Tous les autres vont sur l'écran secondaire.
+            #
+            # Exemple avec 7 clients :
+            # écran secondaire => clients 1, 2, 3, 4, 6.
+            second_clients = [
+                i
+                for i in range(self.NBR_ACCOUNT)
+                if i % 5 != 0
+            ]
 
-            nbr_principal = ((self.NBR_ACCOUNT - 1) // 5) + 1
-            nbr_second = self.NBR_ACCOUNT - nbr_principal
+            coords_by_index.update(
+                self._coords_for_monitor(
+                    m1,
+                    main_clients,
+                    x_gap,
+                    width_increase,
+                    height_increase,
+                )
+            )
 
-            nbr_bottom = [nbr_principal // 2, nbr_second // 2]
-            nbr_top = [nbr_principal - nbr_bottom[0], nbr_second - nbr_bottom[1]]
+            coords_by_index.update(
+                self._coords_for_monitor(
+                    m2,
+                    second_clients,
+                    x_gap,
+                    width_increase,
+                    height_increase,
+                )
+            )
 
-            top_nbr = [0, 0]
-            bottom_nbr = [0, 0]
-
-            top_first = True
-            top_second = True
-
-            for i in range(self.NBR_ACCOUNT):
-                if i % 5 == 0:
-                    if top_first:
-                        x = monitor1_x0 + ((monitor1_width // max(1, nbr_top[0])) * top_nbr[0]) - x_gap
-                        width = (monitor1_width // max(1, nbr_top[0])) + width_increase
-                        height = monitor1_height if nbr_bottom[0] == 0 else (monitor1_height // 2)
-                        self.listCoord.append((x, monitor1_y0, width, height + height_increase))
-                        top_nbr[0] += 1
-                        top_first = False
-                    else:
-                        x = monitor1_x0 + ((monitor1_width // max(1, nbr_bottom[0])) * bottom_nbr[0]) - x_gap
-                        y = monitor1_y0 + (monitor1_height // 2 if nbr_principal > 1 else 0)
-                        width = (monitor1_width // max(1, nbr_bottom[0])) + width_increase
-                        height = monitor1_height // 2
-                        self.listCoord.append((x, y - height_increase + 10, width, height + height_increase))
-                        bottom_nbr[0] += 1
-                        top_first = True
-                else:
-                    if top_second:
-                        x = monitor2_x0 + ((monitor2_width // max(1, nbr_top[1])) * top_nbr[1]) - x_gap
-                        width = (monitor2_width // max(1, nbr_top[1])) + width_increase
-                        height = monitor2_height if nbr_bottom[1] == 0 else (monitor2_height // 2)
-                        self.listCoord.append((x, monitor2_y0, width, height + height_increase))
-                        top_nbr[1] += 1
-                        top_second = False
-                    else:
-                        x = monitor2_x0 + ((monitor2_width // max(1, nbr_bottom[1])) * bottom_nbr[1]) - x_gap
-                        y = monitor2_y0 + monitor2_height // 2
-                        width = (monitor2_width // max(1, nbr_bottom[1])) + width_increase
-                        height = monitor2_height // 2
-                        self.listCoord.append((x, y - height_increase + 10, width, height + height_increase))
-                        bottom_nbr[1] += 1
-                        top_second = True
+        # Important :
+        # listCoord[index] doit correspondre au client index.
+        for i in range(self.NBR_ACCOUNT):
+            if i in coords_by_index:
+                self.listCoord.append(coords_by_index[i])
 
     # =========================
     # Launch / repair clients
@@ -638,6 +840,10 @@ class Interface(tk.Tk):
         win32api.SendMessage(hwnd, win32con.WM_KEYUP, win32con.VK_RETURN, 0)
 
     def _place_client_window(self, index, hwnd, nbr_monitor):
+        # Plein écran conservé :
+        # - 1 client
+        # - ou <= 5 clients avec au moins 2 écrans :
+        #   le client principal reste plein écran.
         if index == 0 and ((self.NBR_ACCOUNT <= 5 and nbr_monitor >= 2) or (self.NBR_ACCOUNT == 1)):
             win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
             return
@@ -646,6 +852,8 @@ class Interface(tk.Tk):
             x, y, w, h = self.listCoord[index]
             win32gui.MoveWindow(hwnd, x, y, w, h, True)
 
+        # Plein écran conservé :
+        # cas spécial d'origine avec 2 clients et 2 écrans.
         if index == 1 and self.NBR_ACCOUNT == 2 and nbr_monitor == 2:
             win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
 
@@ -672,20 +880,50 @@ class Interface(tk.Tk):
     # =========================
     # UI update helpers
     # =========================
-    def update_player_class(self, index, name, player_class, options, color):
+    def update_player_class(self, index, name, player_class, options, color, faction):
+        if index >= len(self.PlayerFaction):
+            return
+
+        self.PlayerFaction[index] = faction if faction in (FACTION_ALLIANCE, FACTION_HORDE) else -1
+
         self.Name_Label[index].config(text=name, foreground="black")
         self.Class_Label[index].config(text=player_class, foreground=color)
 
         self.OptionList[index] = options
+
         menu = self.Specialisation_Menu[index]["menu"]
         menu.delete(0, tk.END)
+
         for option in options:
             menu.add_command(
                 label=option,
-                command=tk._setit(self.SpecialisationList[index], option)
+                command=tk._setit(self.SpecialisationList[index], option),
             )
 
         self.SpecialisationList[index].set(options[0] if options else "Null")
+        self.refresh_player_blocks()
+
+    def clear_player(self, index):
+        if index >= len(self.PlayerFaction):
+            return
+
+        self.PlayerFaction[index] = -1
+
+        self.Name_Label[index].config(text="Null", foreground="grey")
+        self.Class_Label[index].config(text="Null", foreground="grey")
+
+        self.OptionList[index] = ["Null"]
+
+        menu = self.Specialisation_Menu[index]["menu"]
+        menu.delete(0, tk.END)
+        menu.add_command(
+            label="Null",
+            command=tk._setit(self.SpecialisationList[index], "Null"),
+        )
+
+        self.SpecialisationList[index].set("Null")
+        self.Player_Row[index].grid_forget()
+        self.refresh_player_blocks()
 
 
 class client_thread(threading.Thread):
@@ -711,6 +949,7 @@ class client_thread(threading.Thread):
         self.currentSpec = "Null"
         self.Name = ""
         self.Class = ""
+        self.Faction = -1
         self.CraftSkill = [0, 0]
 
     def run(self):
@@ -747,12 +986,24 @@ class client_thread(threading.Thread):
         except Exception:
             pass
 
+        interface.after(0, lambda: interface.clear_player(self.index))
+
         print(f"[-] Client disconnected: {self.addr[0]}:{self.addr[1]}")
 
     def _handle_class_message(self, msg):
         ind = msg.find("Class")
-        self.Name = msg[5:ind]
-        self.Class = msg[ind + 6:]
+        ind2 = msg.find("Faction")
+
+        if ind == -1 or ind2 == -1 or ind2 <= ind:
+            return
+
+        self.Name = msg[5:ind - 1]
+        self.Class = msg[ind + 6:ind2 - 1]
+
+        try:
+            self.Faction = int(msg[ind2 + 8:].strip())
+        except ValueError:
+            self.Faction = -1
 
         options, color = self.CLASS_OPTIONS.get(self.Class, (["Null"], "grey"))
         self.currentSpec = "Null"
@@ -760,7 +1011,12 @@ class client_thread(threading.Thread):
         interface.after(
             0,
             lambda: interface.update_player_class(
-                self.index, self.Name, self.Class, options, color
+                self.index,
+                self.Name,
+                self.Class,
+                options,
+                color,
+                self.Faction,
             ),
         )
 
@@ -771,8 +1027,17 @@ class client_thread(threading.Thread):
         except Exception:
             return
 
-        out0 = f"Craft0{str(self.index).zfill(2)}{str(len(self.Name)-1).zfill(2)}{self.CraftSkill[0]}{self.Name}"
-        out1 = f"Craft1{str(self.index).zfill(2)}{str(len(self.Name)-1).zfill(2)}{self.CraftSkill[1]}{self.Name}"
+        # Format envoyé au serveur C++ :
+        # Craft{type}{id:02}{len:02}{skill}{name}
+        #
+        # type = 0 ou 1
+        # id   = index du joueur sur 2 chiffres
+        # len  = longueur complète du nom sur 2 chiffres
+        #
+        # Important :
+        # on n'utilise plus len(self.Name) - 1, sinon le nom est tronqué.
+        out0 = f"Craft0{str(self.index).zfill(2)}{str(len(self.Name)).zfill(2)}{self.CraftSkill[0]}{self.Name}"
+        out1 = f"Craft1{str(self.index).zfill(2)}{str(len(self.Name)).zfill(2)}{self.CraftSkill[1]}{self.Name}"
 
         interface.serverthread.sendAllClients(out0.encode("utf-8"))
         interface.serverthread.sendAllClients(out1.encode("utf-8"))
@@ -792,7 +1057,14 @@ class client_thread(threading.Thread):
                     continue
 
                 role_nbr = getRole(ct.Class, ct.currentSpec)
-                msg = f"Role{role_nbr}_{str(i).zfill(2)}_{str(len(ct.Name)-1).zfill(2)}_{ct.Name}"
+
+                # Format envoyé au serveur C++ :
+                # Role{role}_{id:02}_{len:02}_{name}
+                #
+                # Important :
+                # on n'utilise plus len(ct.Name) - 1, sinon le nom est tronqué.
+                msg = f"Role{role_nbr}_{str(i).zfill(2)}_{str(len(ct.Name)).zfill(2)}_{ct.Name}"
+
                 interface.serverthread.sendAllClients(msg.encode("utf-8"))
 
             for i, option in enumerate(interface.OptionList[self.index]):
@@ -911,8 +1183,14 @@ class server_thread(threading.Thread):
     def _safe_send(self, client_tuple, msg):
         if client_tuple is None:
             return False
+
         try:
-            client_tuple[0].send(msg)
+            # TCP ne conserve pas les frontières entre messages.
+            # On ajoute donc un séparateur clair pour les clients C++.
+            if not msg.endswith(b"\n"):
+                msg += b"\n"
+
+            client_tuple[0].sendall(msg)
             time.sleep(0.01)
             return True
         except Exception:

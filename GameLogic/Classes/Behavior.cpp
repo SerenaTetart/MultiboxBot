@@ -26,7 +26,7 @@ void ListAI::DPSTargeting() {
 			WoWUnit* target = NULL; float minDist = INFINITY;
 			for (unsigned int i = 0; i < ListUnits.size(); i++) {
 				if (
-					((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT && (inInstance || (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME))) || (ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))
+					(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || (ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))
 					&& ListUnits[i].attackable
 					&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
 					&& !ListUnits[i].isdead

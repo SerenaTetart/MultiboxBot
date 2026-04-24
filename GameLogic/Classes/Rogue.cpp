@@ -33,7 +33,6 @@ void ListAI::RogueDps() {
 			}
 			else if (targetUnit != NULL && targetUnit->attackable) {
 				bool targetPlayer = targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED;
-				bool targetStunned = targetUnit->flags & UNIT_FLAG_STUNNED;
 				bool targetConfused = targetUnit->flags & UNIT_FLAG_CONFUSED;
 				int GougeIDs[5] = { 1776, 1777, 8629, 11285, 11286 };
 				bool GougeDebuff = targetUnit->hasDebuff(GougeIDs, 5);
@@ -57,11 +56,12 @@ void ListAI::RogueDps() {
 					//Vanish
 					FunctionsLua::CastSpellByName("Vanish");
 				}
-				else if (Combat && !StealthBuff && targetPlayer && (distTarget > 5) && (FunctionsLua::GetItemCount(5530) > 0) && (localPlayer->speed < 7) && FunctionsLua::IsSpellReady("Blind")) {
+				else if (Combat && !StealthBuff && targetPlayer && !targetUnit->isCrowdControlled() && (FunctionsLua::GetItemCount(5530) > 0) && (localPlayer->speed < 7) && FunctionsLua::IsSpellReady("Blind")) {
 					//Blind
 					FunctionsLua::CastSpellByName("Blind");
+					if(FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack"); // Stop attacking
 				}
-				else if (Combat && !StealthBuff && SliceDiceBuff && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Adrenaline Rush")) {
+				else if (Combat && !StealthBuff && SliceDiceBuff && (targetUnit->isElite() || targetPlayer) && FunctionsLua::IsSpellReady("Adrenaline Rush")) {
 					//Adrenaline Rush
 					FunctionsLua::CastSpellByName("Adrenaline Rush");
 				}
@@ -76,7 +76,7 @@ void ListAI::RogueDps() {
 					SliceDiceTimer = time(0);
 					FunctionsLua::CastSpellByName("Slice and Dice");
 				}
-				else if (IsFacing && !targetStunned && !StealthBuff && (ComboPoints >= 3) && targetPlayer && FunctionsLua::IsSpellReady("Kidney Shot")) {
+				else if (IsFacing && !targetUnit->isCrowdControlled() && !StealthBuff && (ComboPoints >= 3) && targetPlayer && FunctionsLua::IsSpellReady("Kidney Shot")) {
 					//Kidney Shot
 					FunctionsLua::CastSpellByName("Kidney Shot");
 				}
@@ -84,7 +84,7 @@ void ListAI::RogueDps() {
 					//Eviscerate
 					FunctionsLua::CastSpellByName("Eviscerate");
 				}
-				else if (IsFacing && !StealthBuff && !targetStunned && FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Kick")) {
+				else if (IsFacing && !StealthBuff && !targetUnit->isCrowdControlled() && FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Kick")) {
 					//Kick
 					FunctionsLua::CastSpellByName("Kick");
 				}
