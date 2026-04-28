@@ -123,12 +123,12 @@ void ListAI::WarlockDps() {
 					//Howl of Terror
 					FunctionsLua::CastSpellByName("Howl of Terror");
 				}
-				else if (!CoTonguesDebuff && targetPlayer && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 5.0f && FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Curse of Tongues")) {
+				else if (!CoTonguesDebuff && targetPlayer && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Curse of Tongues")) {
 					//Curse of Tongues (PvP -> Caster)
 					FunctionsLua::CastSpellByName("Curse of Tongues");
 					CurseGCD = time(0);
 				}
-				else if (!CoWeaknessDebuff && targetPlayer && (targetUnit->targetGuid == localPlayer->Guid) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 5.0f && !FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Curse of Weakness")) {
+				else if (!CoWeaknessDebuff && targetPlayer && (targetUnit->targetGuid == localPlayer->Guid) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && !FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Curse of Weakness")) {
 					//Curse of Weakness (PvP -> Melee)
 					FunctionsLua::CastSpellByName("Curse of Weakness");
 					CurseGCD = time(0);
@@ -144,7 +144,7 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Inferno");
 					Functions::ClickAOE(targetUnit->position);
 				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 6) && FunctionsLua::IsSpellReady("Inferno")) {
+				else if (!localPlayer->isMoving && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Inferno")) {
 					//Inferno (AoE)
 					if (hasPet) Functions::LuaCall("PetDismiss()");
 					FunctionsLua::CastSpellByName("Inferno");
@@ -159,7 +159,7 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Rain of Fire");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!CoShadowDebuff && (targetUnit->level == -1) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 5.0f && FunctionsLua::IsSpellReady("Curse of Shadow")) {
+				else if (!CoShadowDebuff && (targetUnit->level == -1) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::IsSpellReady("Curse of Shadow")) {
 					//Curse of Shadow (Boss)
 					FunctionsLua::CastSpellByName("Curse of Shadow");
 					CurseGCD = time(0);
@@ -168,7 +168,7 @@ void ListAI::WarlockDps() {
 					//Drain Life
 					FunctionsLua::CastSpellByName("Drain Life");
 				}
-				else if (!CoAgonyDebuff && targetUnit->getNbrDebuff() < 16 && !CoTonguesDebuff && targetPlayer && (time(0) - CurseGCD) >= 5.0f && FunctionsLua::IsSpellReady("Curse of Agony")) {
+				else if (!CoAgonyDebuff && targetUnit->getNbrDebuff() < 16 && !CoTonguesDebuff && targetPlayer && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::IsSpellReady("Curse of Agony")) {
 					//Curse of Agony (PvP)
 					FunctionsLua::CastSpellByName("Curse of Agony");
 					CurseGCD = time(0);

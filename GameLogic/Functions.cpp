@@ -709,7 +709,7 @@ bool Functions::enemyClose(Position pos) {
 		int level_difference = ListUnits[i].level - localPlayer->level;
 		if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
 			&& !(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
-			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead
+			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead && ListUnits[i].creatureType != Totem
 			&& (ListUnits[i].position.DistanceTo2D(pos) < (20.0f + (level_difference * 1.0f)))
 			&& (abs(ListUnits[i].position.Z - pos.Z) < 2.0f)) {
 			return true;

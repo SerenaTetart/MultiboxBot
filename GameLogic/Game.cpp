@@ -220,7 +220,7 @@ void Game::MainLoop() {
 					// Go learn spells
 					TrainSpellRun();
 				}
-				else if (!passiveGroup && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
+				else if (!passiveGroup && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
 					if (Functions::PlayerIsRanged()) {
 						float maxRange = 30.0f;
 						if (localPlayer->className == "Hunter") maxRange = 35.0f;
@@ -285,7 +285,8 @@ void Game::MainLoop() {
 							// Target > 1.5 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
-								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
+								if (Leader != NULL && (Leader->Guid == localPlayer->Guid) && Leader->indexGroup != 0) Functions::MoveTo(targetUnit->position, 2, false, targetSwim);
+								else Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
 							});
 						}
 						else if (Moving == 0 && !IsFacing) ThreadSynchronizer::RunOnMainThread([]() {
@@ -331,7 +332,7 @@ void Game::MainLoop() {
 					Moving = 0;
 				}
 				else if (!Combat && (Moving == 0 || Moving == 4) && !localPlayer->isdead && !IsSitting && (float(time(0) - gatheringCD) > 5.5f) && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
-					(Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove) && (targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead || passiveGroup)) {
+					(Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) && (targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead || passiveGroup)) {
 					// Loot
 					bool looted = false;
 					if (herbalismLevel > 0 || miningLevel > 0) {
@@ -387,7 +388,7 @@ void Game::MainLoop() {
 							if (skip) continue;
 							int player_close = 0;
 							for (int y = 1; y <= NumGroupMembers; y++) {
-								if (GroupMember[y] == NULL || (already_looted[y] == true) || (Leader != NULL && Leader->Guid == GroupMember[y]->Guid && !MCAutoMove)) continue;
+								if (GroupMember[y] == NULL || (already_looted[y] == true) || (Leader != NULL && Leader->Guid == GroupMember[y]->Guid && !MCAutoMove && Leader->indexGroup == 0)) continue;
 								float dist = GroupMember[y]->position.DistanceTo(ListUnits[i].position);
 								if (dist < min_dist) {
 									min_dist = dist;
@@ -515,7 +516,7 @@ void Game::MainLoop() {
 						Moving = 4;
 					}
 				}
-				if (localPlayer->speed > 0 && Moving > 0 && (Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove) && (playerLastPos.DistanceTo(localPlayer->position) < 0.5f)) {
+				if (localPlayer->speed > 0 && Moving > 0 && (Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) && (playerLastPos.DistanceTo(localPlayer->position) < 0.5f)) {
 					// Jump
 					ThreadSynchronizer::pressKey(0x20); //Jump
 					ThreadSynchronizer::releaseKey(0x20);

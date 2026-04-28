@@ -66,6 +66,10 @@ void Game::CorpseRun() {
 			// Uldaman
 			MoveToMap(Position(-6063.834961f, -2954.836035f, 209.769699f));
 		}
+		else if (mapID == 1 && localPlayer->corpse_position.DistanceTo(Position(-6790.580078f, -2891.280029, 29.648438f)) < 5.0f) {
+			// Zul'Farrak
+			MoveToMap(Position(-6793.311035f, -2890.778076f, 8.887129f));
+		}
 		else {
 			std::cout << localPlayer->corpse_position.ToString() << "\n";
 			Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, localPlayer->corpse_position);
