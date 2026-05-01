@@ -200,7 +200,7 @@ class Interface(tk.Tk):
 
         self.MCOff_Radio = tk.Radiobutton(
             self.tab1,
-            text="MC: off",
+            text="MC: default",
             variable=self.mc_mode,
             value=0,
             command=self.send_mc_mode,
@@ -210,7 +210,7 @@ class Interface(tk.Tk):
         )
         self.MCNoAuto_Radio = tk.Radiobutton(
             self.tab1,
-            text="MC: no auto",
+            text="MC: off",
             variable=self.mc_mode,
             value=1,
             command=self.send_mc_mode,

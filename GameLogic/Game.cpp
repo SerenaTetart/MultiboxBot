@@ -220,7 +220,7 @@ void Game::MainLoop() {
 					// Go learn spells
 					TrainSpellRun();
 				}
-				else if (!passiveGroup && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
+				else if (!passiveGroup && !(localPlayer->isCrowdControlled()) && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
 					if (Functions::PlayerIsRanged()) {
 						float maxRange = 30.0f;
 						if (localPlayer->className == "Hunter") maxRange = 35.0f;
@@ -312,6 +312,39 @@ void Game::MainLoop() {
 						Functions::MoveToLoS(targetUnit->position, 5);
 					});
 				}
+				else if (Moving == 5 && (targetUnit == NULL || (targetUnit->unitReaction < Friendly) || ((targetUnit->unitReaction >= Friendly) && los_target))) {
+					if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
+						ThreadSynchronizer::pressKey(0x28);
+						ThreadSynchronizer::releaseKey(0x28);
+					}
+					Moving = 0;
+				}
+				else if (
+					!Combat && !localPlayer->isdead && !IsSitting && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
+					(Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) &&
+					(targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead || passiveGroup)
+				) {
+					if( Loot() ) { }
+					else if (localPlayer->speed == 0 && !Combat && Trade()) {
+						// Trade
+						if (TradeShow && !TradePendingSelf) {
+							ThreadSynchronizer::RunOnMainThread([]() {
+								Functions::LuaCall("AcceptTrade()");
+							});
+						}
+					}
+					else if (!localPlayer->isMounted && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && Leader != NULL && Leader->isMounted) {
+						// Mount up !
+						ThreadSynchronizer::RunOnMainThread([]() {
+							UseMount();
+						});
+					}
+					else if (Moving != 8 && Leader != NULL && Leader->Guid != localPlayer->Guid && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
+						// Follow
+						Functions::FollowMultibox(positionCircle);
+						Moving = 4;
+					}
+				}
 				else if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving != 5 && Moving != 4 && Moving != 0) {
 					ThreadSynchronizer::pressKey(0x28);
 					ThreadSynchronizer::releaseKey(0x28);
@@ -321,204 +354,12 @@ void Game::MainLoop() {
 					ThreadSynchronizer::releaseKey(0x28);
 					Moving = 0;
 				}
-				else if (localPlayer->speed == 0 && Moving != 4 && Moving != 0 && Moving != 5) {
+				else if (!localPlayer->isMoving && Moving != 4 && Moving != 0 && Moving != 5) {
 					Moving = 0;
-				}
-				else if (Moving == 5 && (targetUnit == NULL || (targetUnit->unitReaction < Friendly) || ((targetUnit->unitReaction >= Friendly) && los_target))) {
-					if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
-						ThreadSynchronizer::pressKey(0x28);
-						ThreadSynchronizer::releaseKey(0x28);
-					}
-					Moving = 0;
-				}
-				else if (!Combat && (Moving == 0 || Moving == 4) && !localPlayer->isdead && !IsSitting && (float(time(0) - gatheringCD) > 5.5f) && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
-					(Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) && (targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead || passiveGroup)) {
-					// Loot
-					bool looted = false;
-					if (herbalismLevel > 0 || miningLevel > 0) {
-						for (unsigned int i = 0; i < ListGameObjects.size(); i++) {
-							if (ListGameObjects[i].gatherType == 0) continue;
-							else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
-								continue;
-							else if (Functions::enemyClose(ListGameObjects[i].position)) continue;
-							int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
-							if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 100)
-								|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 100)) {
-								if (ListGameObjects[i].position.DistanceTo(localPlayer->position) < 5.0f) {
-									if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
-										ThreadSynchronizer::pressKey(0x28);
-										ThreadSynchronizer::releaseKey(0x28);
-										Moving = 0;
-									}
-									ThreadSynchronizer::RunOnMainThread([=]() {
-										if (localPlayer->isMounted) Dismount();
-										Functions::InteractObject(ListGameObjects[i].Pointer, 1);
-									});
-									gatheringCD = time(0);
-									if (ListGameObjects[i].gatherType == 1) gatheringCD -= (time_t)1.5f;
-								}
-								else if (!localPlayer->isMoving) {
-									ThreadSynchronizer::RunOnMainThread([=]() {
-										Functions::MoveTo(ListGameObjects[i].position, 4);
-									});
-								}
-								looted = true;
-								break;
-							}
-						}
-					}
-					std::vector<bool> already_looted;
-					for (int y = 0; y <= NumGroupMembers; y++) {
-						already_looted.push_back(false);
-					}
-					for (unsigned int i = 0; i < ListUnits.size(); i++) {
-						if (looted) break;
-						bool lootable = (ListUnits[i].dynamic_flags & DYNAMICFLAG_CANBELOOTED);
-						bool skinnable = (ListUnits[i].flags & UNIT_FLAG_SKINNABLE);
-						float min_dist = localPlayer->position.DistanceTo(ListUnits[i].position);
-						if (min_dist > 40.0f) continue;
-						if (lootable) {
-							bool skip = false;
-							for (unsigned int y = 0; y < LootHistory.size(); y++) {
-								if (get<0>(LootHistory[y]) == ListUnits[i].Guid) {
-									skip = true;
-									break;
-								}
-							}
-							if (skip) continue;
-							int player_close = 0;
-							for (int y = 1; y <= NumGroupMembers; y++) {
-								if (GroupMember[y] == NULL || (already_looted[y] == true) || (Leader != NULL && Leader->Guid == GroupMember[y]->Guid && !MCAutoMove && Leader->indexGroup == 0)) continue;
-								float dist = GroupMember[y]->position.DistanceTo(ListUnits[i].position);
-								if (dist < min_dist) {
-									min_dist = dist;
-									player_close = y;
-								}
-							}
-							already_looted[player_close] = true;
-							if (player_close != 0) continue;
-							else if (localPlayer->speed == 0.0f && ListUnits[i].position.DistanceTo(localPlayer->position) < 4.0f) {
-								ThreadSynchronizer::RunOnMainThread([=]() {
-									if (localPlayer->isMounted) Dismount();
-									Functions::LootUnit(ListUnits[i].Pointer, 1);
-								});
-								LootHistory.push_back(std::tuple<unsigned long long, time_t>(ListUnits[i].Guid, time(0)));
-								looted = true;
-								break;
-							}
-							else if (!Functions::enemyClose(ListUnits[i].position)) {
-								ThreadSynchronizer::RunOnMainThread([=]() {
-									Functions::MoveTo(ListUnits[i].position, 4);
-								});
-								looted = true;
-								break;
-							}
-						}
-						else if (skinnable && skinningLevel > 0 && (ListUnits[i].level <= 20 && ((ListUnits[i].level - 10) * 10 <= skinningLevel && !Functions::enemyClose(ListUnits[i].position))
-							|| (ListUnits[i].level > 20 && (ListUnits[i].level * 5 <= skinningLevel)))) {
-							if (localPlayer->speed == 0.0f && ListUnits[i].position.DistanceTo(localPlayer->position) < 4.0f) {
-								ThreadSynchronizer::RunOnMainThread([=]() {
-									if (localPlayer->isMounted) Dismount();
-									Functions::LootUnit(ListUnits[i].Pointer, 1);
-								});
-								LootHistory.push_back(std::tuple<unsigned long long, time_t>(ListUnits[i].Guid, time(0)));
-								looted = true;
-								break;
-							}
-							else if (!Functions::enemyClose(ListUnits[i].position)) {
-								ThreadSynchronizer::RunOnMainThread([=]() {
-									Functions::MoveTo(ListUnits[i].position, 4);
-									});
-								looted = true;
-								break;
-							}
-						}
-					}
-					if (!looted && localPlayer->speed == 0 && !Combat) {
-						// Trade
-						ThreadSynchronizer::RunOnMainThread([=]() {
-							bool traded = false;
-							for (int y = 1; y <= NumGroupMembers; y++) {
-								for (unsigned int i = 0; i < leaderInfos.size(); i++) {
-									if (GroupMember[y] != NULL && GroupMember[y]->position.DistanceTo(localPlayer->position) < 8.0f && GroupMember[y]->name == get<0>(leaderInfos[i])) {
-										if (!traded && (get<2>(leaderInfos[i]) == 4 || get<3>(leaderInfos[i]) == 4)) {
-											// Tailoring
-											int listID[] = { 2589, 2592, 3182, 4306, 4337, 4338, 10285, 14047, 14227, 14256 };
-											for (const auto& item : virtualInventory) {
-												for (unsigned int z = 0; z < 10; z++) {
-													if (get<2>(item) == listID[z]) {
-														FunctionsLua::PickupItem(get<0>(item), get<1>(item));
-														FunctionsLua::DropItemOnUnit(tarType + std::to_string(y));
-														traded = true;
-													}
-												}
-											}
-										}
-										if (!traded && (get<2>(leaderInfos[i]) == 5 || get<3>(leaderInfos[i]) == 5)) {
-											// Leatherworking
-											int listID[] = { 783, 2318, 2319, 2934, 4232, 4234, 4235, 4304, 7392, 7428, 8154, 8165, 8167, 8368, 8169 };
-											for (const auto& item : virtualInventory) {
-												for (unsigned int z = 0; z < 15; z++) {
-													if (get<2>(item) == listID[z]) {
-														FunctionsLua::PickupItem(get<0>(item), get<1>(item));
-														FunctionsLua::DropItemOnUnit(tarType + std::to_string(y));
-														traded = true;
-													}
-												}
-											}
-										}
-										if (!traded && (get<2>(leaderInfos[i]) == 6 || get<3>(leaderInfos[i]) == 6)) {
-											// Blacksmithing
-											int listID[] = { 2770, 2771, 2772, 2775, 2776, 2835, 2836, 2838, 3858, 7912, 10620, 11370 };
-											for (const auto& item : virtualInventory) {
-												for (unsigned int z = 0; z < 12; z++) {
-													if (get<2>(item) == listID[z]) {
-														FunctionsLua::PickupItem(get<0>(item), get<1>(item));
-														FunctionsLua::DropItemOnUnit(tarType + std::to_string(y));
-														traded = true;
-													}
-												}
-											}
-										}
-										if (!traded && (get<2>(leaderInfos[i]) == 8 || get<3>(leaderInfos[i]) == 8)) {
-											// Alchemy
-											int listID[] = { 765, 785, 2447, 2449, 2450, 2452, 2453, 3355, 3356, 3357, 3358, 3369, 3818, 3819, 3820, 3821, 4625, 8831, 8836, 8838, 8839, 8845 };
-											for (const auto& item : virtualInventory) {
-												for (unsigned int z = 0; z < 22; z++) {
-													if (get<2>(item) == listID[z]) {
-														FunctionsLua::PickupItem(get<0>(item), get<1>(item));
-														FunctionsLua::DropItemOnUnit(tarType + std::to_string(y));
-														traded = true;
-													}
-												}
-											}
-										}
-										if (traded) break;
-									}
-								}
-								if (traded) {
-									if (TradeShow && !TradePendingSelf) { Functions::LuaCall("AcceptTrade()"); }
-									break;
-								}
-							}
-							});
-					}
-					if (!Combat && !localPlayer->isMounted && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && Leader != NULL && Leader->isMounted) {
-						// Mount up !
-						ThreadSynchronizer::RunOnMainThread([]() {
-							UseMount();
-						});
-						continue;
-					}
-					else if (!looted && Moving != 8 && Leader != NULL && Leader->Guid != localPlayer->Guid && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
-						// Follow
-						Functions::FollowMultibox(positionCircle);
-						Moving = 4;
-					}
 				}
 				if (localPlayer->speed > 0 && Moving > 0 && (Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) && (playerLastPos.DistanceTo(localPlayer->position) < 0.5f)) {
 					// Jump
-					ThreadSynchronizer::pressKey(0x20); //Jump
+					ThreadSynchronizer::pressKey(0x20);
 					ThreadSynchronizer::releaseKey(0x20);
 				}
 			}
@@ -541,7 +382,7 @@ void Game::MainLoop() {
 				Moving = 0;
 			}
 			else if (localPlayer != NULL && !IsSitting && !localPlayer->isMounted) {
-				if (!Combat && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0) && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && (localPlayer->prctMana < 50 && localPlayer->prctMana > 0) && (FunctionsLua::HasDrink() > 0)) {
+				if (!Combat && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0) && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && (localPlayer->prctMana < 33 && localPlayer->prctMana > 0) && (FunctionsLua::HasDrink() > 0)) {
 					// Drink
 					IsSitting = true;
 					ThreadSynchronizer::RunOnMainThread([]() { FunctionsLua::UseItem(FunctionsLua::HasDrink()); });
@@ -593,5 +434,5 @@ std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 std::vector<int> HealTargetArray;
 WoWUnit* ccTarget = NULL; WoWUnit* targetUnit = NULL; WoWUnit* GroupMember[40]; WoWUnit* PartyMember[5]; WoWUnit* Leader = NULL;
-time_t current_time = time(0), gatheringCD = time(0);
+time_t current_time = time(0);
 Position playerLastPos = Position(0, 0, 0);

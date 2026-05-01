@@ -291,9 +291,9 @@ LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType 
         typedef uintptr_t(__thiscall* func)(uintptr_t ptr, int itemID, uintptr_t unknown, int unused1, int unused2, char unused3);
         func GetItemCacheEntry = (func)0x0055BA30;
 
-        uintptr_t listOffsetEquipment[] = { 0x410, 0x440, 0x470, 0x4d0, 0x500, 0x530, 0x560, 0x590, 0x5c0, 0x620, 0x650, 0x680, 0x6b0, 0x6e0, 0x710 };
+        uintptr_t listOffsetEquipment[] = { 0x410, 0x440, 0x470, 0x4a0, 0x4d0, 0x500, 0x530, 0x560, 0x590, 0x5c0, 0x5f0, 0x620, 0x650, 0x680, 0x6b0, 0x6e0, 0x710,  0x740};
         bonusHealing = 0;
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < 18; i++) {
             int itemID = *(int*)(descriptor + listOffsetEquipment[i]);
             uintptr_t cacheEntryPTR = GetItemCacheEntry((uintptr_t)0x00C0E2A0, itemID, (uintptr_t)0x0, 0, 0, (char)0);
 

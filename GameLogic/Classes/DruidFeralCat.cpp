@@ -5,7 +5,7 @@
 static time_t transformCD = time(0), EntanglingRootsTimer = time(0);
 
 static void DruidAttack() {
-	int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
+	bool CatFormBuff = localPlayer->hasBuff(768);
 	ListAI::DPSTargeting();
 	if (targetUnit != NULL && targetUnit->attackable && !targetUnit->isdead) {
 		if (CatFormBuff) {
@@ -116,7 +116,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 	bool RejuvenationBuff = ListUnits[indexP].hasBuff(RejuvenationIDs, 11);
 	int RegrowthIDs[9] = { 8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858 };
 	bool RegrowthBuff = ListUnits[indexP].hasBuff(RegrowthIDs, 9);
-	int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
+	bool CatFormBuff = localPlayer->hasBuff(768);
 	if (CatFormBuff && (HpRatio < 70.0f) && (localPlayer->prctMana > 50.0f) && (localPlayer->energy < 20.0f) && (time(0) - transformCD) > 10.0f) {
 		//Disable Cat Form
 		FunctionsLua::CastSpellByName("Cat Form");
@@ -186,7 +186,7 @@ void ListAI::DruidFeralCat() {
 		ThreadSynchronizer::releaseKey(0x28);
 	}
 	ThreadSynchronizer::RunOnMainThread([=]() {
-		int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
+		bool CatFormBuff = localPlayer->hasBuff(768);
 		if (!CatFormBuff && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
 			//Healthstone
 			FunctionsLua::UseHealthstone();

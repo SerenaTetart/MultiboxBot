@@ -19,6 +19,9 @@
     <Filter Include="Source Files\BossAI">
       <UniqueIdentifier>{e4f0477e-b23e-4573-a0df-c90d5fb36f3c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\OutOfCombat">
+      <UniqueIdentifier>{8fc29939-a0d0-4d0b-a842-2e2169cf4823}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h">
@@ -128,8 +131,17 @@
     <ClCompile Include="BossAI.cpp">
       <Filter>Source Files\BossAI</Filter>
     </ClCompile>
+    <ClCompile Include="ScarletMonastery.cpp">
+      <Filter>Source Files\BossAI</Filter>
+    </ClCompile>
+    <ClCompile Include="Maraudon.cpp">
+      <Filter>Source Files\BossAI</Filter>
+    </ClCompile>
+    <ClCompile Include="Loot.cpp">
+      <Filter>Source Files\OutOfCombat</Filter>
+    </ClCompile>
     <ClCompile Include="Mount.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\OutOfCombat</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

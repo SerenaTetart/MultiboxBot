@@ -365,8 +365,8 @@ bool Functions::MoveLoSSwim(Position target_pos) {
 }
 
 bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
-	constexpr float STEP = 1.5f;
-	constexpr int   MAX_STEPS = 20;
+	constexpr float STEP = 2.0f;
+	constexpr int   MAX_STEPS = 15;
 
 	float dx = target_pos.X - start_pos.X;
 	float dy = target_pos.Y - start_pos.Y;
@@ -380,8 +380,8 @@ bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
 		Position next = Functions::ProjectPos(stepPos);
 
 		// Reject if snap is too big or the segment hits something
-		if (next.DistanceTo(stepPos) > 1.25f) return false;
-		if (Functions::Intersect(last, next, 1.0f)) return false;
+		if (next.DistanceTo(stepPos) > 1.5f) return false;
+		if (Functions::Intersect(last, next, 0.5f)) return false;
 
 		// Progress guard (avoid potential stalls on weird projections)
 		if (next.DistanceTo(last) < 1e-3f) return false;
@@ -394,8 +394,10 @@ bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
 }
 
 bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
-	constexpr float STEP = 1.5f;
-	constexpr int   MAX_STEPS = 20;
+	if (localPlayer->position.DistanceTo(target_pos) > 40.0f) return false;
+
+	constexpr float STEP = 2.0f;
+	constexpr int   MAX_STEPS = 15;
 	constexpr float ANGLE_STEP = 3.14159265358979323846f / 8.0f;
 	constexpr std::array<int, 13> OFFSETS = { 0, +1, -1, +2, -2, +3, -3, +4, -4, +5, -5, +6, -6 };
 
@@ -410,7 +412,7 @@ bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
 			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
 			Position next = Functions::ProjectPos(stepPos);
 
-			if ((next.DistanceTo(stepPos) < 1.25f) && !Functions::Intersect(last, next, 1.0f) && (!checkEnemyClose || !Functions::enemyClose(next))) {
+			if ((next.DistanceTo(stepPos) < 1.5f) && !Functions::Intersect(last, next, 0.5f) && (!checkEnemyClose || !Functions::enemyClose(next))) {
 				if (MoveObstacle_tmp(target_pos, next)) {
 					if (off == 0) localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
 					else localPlayer->ClickToMove(Move, localPlayer->Guid, next);
@@ -436,7 +438,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type) {
 	float PI_4 = acosf(0)/2;
 	for (int i = 0; i < 32; i++) {
 		Position last_pos = target->position; //Take into account the difference in altitude at each point
-		for (int w = 0; w < 20; w++) { //Every 2.0 yards up to 40 yard check for LoS point
+		for (int w = 7; w < 20; w++) { //Every 2.0 yards up to 40 yard check for LoS point
 			Position tmp_pos = Position((cos((i * halfPI / 8)) * 2.0f) + last_pos.X, (sin((i * halfPI / 8)) * 2.0f) + last_pos.Y, last_pos.Z);
 			Position next_pos = tmp_pos;
 			if (!(localPlayer->movement_flags & MOVEFLAG_SWIMMING)) {
@@ -455,7 +457,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type) {
 				if (!depthCheck) break;
 			}
 			if (!Functions::Intersect(last_pos, next_pos)) {
-				if ((target->position.DistanceTo(next_pos) - localPlayer->combatReach - target->combatReach) >= DIST_AWAY && !Functions::Intersect(next_pos, target->position) && !Functions::enemyClose(next_pos)) {
+				if ((target->position.DistanceTo(next_pos) - localPlayer->combatReach - target->combatReach) >= DIST_AWAY && !Functions::enemyClose(next_pos) && !Functions::Intersect(next_pos, target->position)) {
 					list_pos.push_back(next_pos);
 					break;
 				}

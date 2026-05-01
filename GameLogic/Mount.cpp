@@ -59,6 +59,11 @@ static const int MountBuffsID[68] = {
 
 void Game::UseMount() {
 	if (localPlayer->isMounted) return;
+	else if (localPlayer->hasBuff(768)) {
+		// Cat Form
+		FunctionsLua::CastSpellByName("Cat Form");
+		return;
+	}
 	for (const auto& item : virtualInventory) {
 		// Fast
 		for (unsigned int z = 0; z < std::size(FastMountItemsID); z++) {

@@ -190,10 +190,13 @@
     <ClCompile Include="Functions.cpp" />
     <ClCompile Include="FunctionsLua.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Loot.cpp" />
+    <ClCompile Include="Maraudon.cpp" />
     <ClCompile Include="Mount.cpp" />
     <ClCompile Include="MoveLogic.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
     <ClCompile Include="Navigation.cpp" />
+    <ClCompile Include="ScarletMonastery.cpp" />
     <ClCompile Include="WoWObject.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

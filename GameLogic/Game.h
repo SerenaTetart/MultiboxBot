@@ -10,6 +10,8 @@ public:
 	static void MainLoop();
 	static void UseMount();
 	static void Dismount();
+	static bool Loot();
+	static bool Trade();
 private:
 	static void CorpseRun();
 	static void TrainSpellRun();
@@ -28,5 +30,5 @@ extern std::string tarType;
 extern std::vector<std::tuple<std::string, int, int, int>> leaderInfos; // Nom, role, trade skill1, trade skill2
 extern std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
 extern WoWUnit* ccTarget; extern WoWUnit* targetUnit; extern WoWUnit* GroupMember[40]; extern WoWUnit* PartyMember[5]; extern WoWUnit* Leader;
-extern time_t current_time, gatheringCD;
+extern time_t current_time;
 extern Position playerLastPos;

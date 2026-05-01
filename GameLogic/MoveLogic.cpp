@@ -70,6 +70,10 @@ void Game::CorpseRun() {
 			// Zul'Farrak
 			MoveToMap(Position(-6793.311035f, -2890.778076f, 8.887129f));
 		}
+		else if (mapID == 1 && localPlayer->corpse_position.DistanceTo(Position(-1432.699951f, 2924.979980f, 178.539062f)) < 5.0f) {
+			// Maraudon
+			MoveToMap(Position(-1475.534912f, 2617.167969f, 75.827087f));
+		}
 		else {
 			std::cout << localPlayer->corpse_position.ToString() << "\n";
 			Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, localPlayer->corpse_position);
