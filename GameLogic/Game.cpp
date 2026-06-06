@@ -11,6 +11,8 @@
 #include <fstream>
 #include <chrono>
 
+static time_t jumpCD = time(0);
+
 static unsigned long long playerGuid = 0;
 static unsigned long long pastPlayerGuid = 0;
 static bool TradeShow = false, TradePendingSelf = false;
@@ -110,6 +112,7 @@ void Game::MainLoop() {
 							if (std::strcmp(autoAttackTimer_char, "") == 0) {
 								Functions::LuaCall(R"(
 									AATimer = 0
+									Multibox_BreathTimer = -1
 									eventFrame = CreateFrame("Frame")
 									eventFrame:RegisterEvent("TRADE_SHOW")
 									eventFrame:RegisterEvent("TRADE_CLOSED")
@@ -117,6 +120,8 @@ void Game::MainLoop() {
 									eventFrame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
 									eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
 									eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_MISSES")
+									eventFrame:RegisterEvent("MIRROR_TIMER_START")
+									eventFrame:RegisterEvent("MIRROR_TIMER_STOP")
 									eventFrame:SetScript("OnEvent", function()
 										if event == "TRADE_SHOW" then
 											Multibox_TradeShow = 1
@@ -133,12 +138,18 @@ void Game::MainLoop() {
 											last_yell_monster = arg1
 										elseif(event == "CHAT_MSG_COMBAT_SELF_HITS" or event == "CHAT_MSG_COMBAT_SELF_MISSES") then
 											AATimer = UnitAttackSpeed("player")
+										elseif(event == "MIRROR_TIMER_START" and arg1 == "BREATH") then
+											Multibox_BreathTimer = (arg2/1000)
+										elseif(event == "MIRROR_TIMER_STOP" and arg1 == "BREATH") then
+											Multibox_BreathTimer = -1
 										end
 									end)
 									eventFrame:SetScript("OnUpdate", function()
 										elapsed = (1/GetFramerate())
 										AATimer = AATimer - elapsed
 										if(AATimer < 0) then AATimer = 0 end
+										Multibox_BreathTimer = Multibox_BreathTimer - elapsed
+										if(Multibox_BreathTimer < 0) then Multibox_BreathTimer = 0 end
 									end)
 								)");
 							}
@@ -150,6 +161,8 @@ void Game::MainLoop() {
 								bool TradePending = tradePendingText && std::strcmp(tradePendingText, "1") == 0;
 								TradePendingSelf = tradePendingText2 && std::strcmp(tradePendingText2, "1") == 0;
 								if (TradeShow && TradePending) { Functions::LuaCall("AcceptTrade()"); }
+								const char* breathTimer_char = (const char*)Functions::GetText("Multibox_BreathTimer");
+								breathTimer = GetFloatFromChar(breathTimer_char);
 							}
 
 							if (localPlayer->isMounted && (Combat || (Leader != NULL && !Leader->isMounted))) {
@@ -195,8 +208,14 @@ void Game::MainLoop() {
 			int RaptorStrikeIDs[8] = {2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266};
 			int HeroicStrikeIDs[9] = { 78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286 };
 			int CleaveIDs[5] = { 845, 7369, 11608, 11609, 20569 };
-			if (localPlayer != NULL && Combat && BossAI::BossAIAction()) { }
-			else if (localPlayer != NULL && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
+			if (breathTimer < 15.0f && breathTimer > 0.0f && (time(0) - jumpCD) >= 1.0f) {
+				// Breathe quickly !
+				ThreadSynchronizer::pressKey(0x20);
+				ThreadSynchronizer::releaseKey(0x20);
+				jumpCD = time(0);
+			}
+			else if (Combat && BossAI::BossAIAction()) { }
+			else if ((localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
 				ThreadSynchronizer::RunOnMainThread([=]() {
 					los_target = true;
 					if (targetUnit != NULL) {
@@ -428,7 +447,7 @@ los_target = false, passiveGroup = false, inInstance = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
 unsigned int LastTarget = 0;
-float distTarget = 0, autoAttackTimer = 0;
+float distTarget = 0, autoAttackTimer = 0, breathTimer = 0;
 std::string tarType = "party";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<std::tuple<int, int, int, std::string>> virtualInventory;

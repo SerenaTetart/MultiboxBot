@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 import socket
@@ -25,6 +24,12 @@ import parser
 FACTION_ALLIANCE = 0
 FACTION_HORDE = 1
 
+MAX_ACCOUNTS = 40
+GROUP_SIZE = 5
+
+SERVER_HOST = "localhost"
+SERVER_PORT = 50001
+
 
 def rgb_hack(rgb):
     return "#%02x%02x%02x" % rgb
@@ -33,7 +38,8 @@ def rgb_hack(rgb):
 def getRole(player_class, spec):
     if spec in ("Protection", "Feral (bear)"):
         return 0
-    elif (
+
+    if (
         player_class == "Warrior"
         or player_class == "Rogue"
         or (player_class == "Druid" and spec == "Feral (cat)")
@@ -41,8 +47,10 @@ def getRole(player_class, spec):
         or (player_class == "Shaman" and spec == "Enhancement")
     ):
         return 1
-    elif spec in ("Restoration", "Holy") or (player_class == "Priest" and spec != "Shadow"):
+
+    if spec in ("Restoration", "Holy") or (player_class == "Priest" and spec != "Shadow"):
         return 3
+
     return 2
 
 
@@ -55,35 +63,13 @@ class Interface(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.quit_program)
         self.attributes("-topmost", True)
 
+        self.iconWoW = self.load_photo("assets/iconWoW.png")
+        self.iconKeybind = self.load_photo("assets/iconKeybind.png")
+        self.iconAlliance = self.load_resized_photo("assets/alliance.jpg", 16, 16)
+        self.iconHorde = self.load_resized_photo("assets/horde.jpg", 16, 16)
+
         try:
             self.iconphoto(True, ImageTk.PhotoImage(Image.open(r"assets/icon.jpg")))
-        except Exception:
-            pass
-
-        self.iconWoW = None
-        self.iconKeybind = None
-        self.iconAlliance = None
-        self.iconHorde = None
-
-        try:
-            self.iconWoW = tk.PhotoImage(file="assets/iconWoW.png")
-        except Exception:
-            pass
-
-        try:
-            self.iconKeybind = tk.PhotoImage(file="assets/iconKeybind.png")
-        except Exception:
-            pass
-
-        try:
-            alliance_img = Image.open("assets/alliance.jpg").resize((16, 16))
-            self.iconAlliance = ImageTk.PhotoImage(alliance_img)
-        except Exception:
-            pass
-
-        try:
-            horde_img = Image.open("assets/horde.jpg").resize((16, 16))
-            self.iconHorde = ImageTk.PhotoImage(horde_img)
         except Exception:
             pass
 
@@ -91,6 +77,9 @@ class Interface(tk.Tk):
         self.PATH_WoW = parser.get_value("config.conf", "PATH_WoW", "=")
         self.ACC_Info = parser.get_multiplevalues("config.conf", "ACC_Infos")
         self.KEYBIND_Info = parser.get_multiplevalues("config.conf", "KEYBIND_Infos")
+
+        while len(self.ACC_Info) < MAX_ACCOUNTS:
+            self.ACC_Info.append(("", ""))
 
         self.MOVEMENT_KEY = [
             win32con.VK_RIGHT,
@@ -102,20 +91,20 @@ class Interface(tk.Tk):
         self.listCoord = []
         self.hwndACC = []
         self.script_running = False
-        self.InMovement = [0 for _ in range(20)]
+        self.InMovement = [0 for _ in range(MAX_ACCOUNTS)]
         self.indexIMG = 0
         self.NBR_ACCOUNT = 0
 
-        self.credentialTab = None
-        self.credentials_Entry = []
-        self.keybindingsTab = None
-        self.keybind_Entry = []
         self.listener = None
+        self.credentialTab = None
+        self.keybindingsTab = None
+        self.credentials_Entry = []
+        self.keybind_Entry = []
 
         self.Group_Label = None
         self.Players_Container = None
         self.FactionBlocks = {}
-        self.PlayerFaction = [-1 for _ in range(25)]
+        self.PlayerFaction = [-1 for _ in range(MAX_ACCOUNTS)]
         self.Player_Row = []
         self.Name_Label = []
         self.Class_Label = []
@@ -123,10 +112,31 @@ class Interface(tk.Tk):
         self.Specialisation_Menu = []
         self.OptionList = []
 
+        self.mc_mode = tk.IntVar(value=0)
+        self.spec_check_after_id = None
+        self.role_cache = {}
+        self.refresh_players_pending = False
+
         self.serverthread = server_thread()
         self.serverthread.start()
 
         self._build_ui()
+        self.spec_check_after_id = self.after(500, self.check_all_specs)
+
+    # =========================
+    # Assets
+    # =========================
+    def load_photo(self, path):
+        try:
+            return tk.PhotoImage(file=path)
+        except Exception:
+            return None
+
+    def load_resized_photo(self, path, width, height):
+        try:
+            return ImageTk.PhotoImage(Image.open(path).resize((width, height)))
+        except Exception:
+            return None
 
     # =========================
     # UI
@@ -136,20 +146,11 @@ class Interface(tk.Tk):
         self.tab1 = ttk.Frame(tabControl)
         self.tab2 = ttk.Frame(tabControl)
 
-        self.tab1.grid_columnconfigure(0, weight=1)
-        self.tab1.grid_columnconfigure(1, weight=1)
-        self.tab1.grid_columnconfigure(2, weight=1)
-        self.tab1.grid_columnconfigure(3, weight=1)
-        self.tab1.grid_columnconfigure(4, weight=1)
-        self.tab1.grid_columnconfigure(5, weight=1)
+        for col in range(6):
+            self.tab1.grid_columnconfigure(col, weight=1)
 
-        self.tab2.grid_columnconfigure(0, weight=0)
-        self.tab2.grid_columnconfigure(1, weight=1)
-        self.tab2.grid_columnconfigure(2, weight=1)
-        self.tab2.grid_columnconfigure(3, weight=1)
-        self.tab2.grid_columnconfigure(4, weight=1)
-        self.tab2.grid_columnconfigure(5, weight=1)
-        self.tab2.grid_columnconfigure(6, weight=1)
+        for col in range(9):
+            self.tab2.grid_columnconfigure(col, weight=1 if col else 0)
 
         tabControl.pack(expand=1, fill="both")
         tabControl.add(self.tab1, text="Menu")
@@ -162,6 +163,7 @@ class Interface(tk.Tk):
             width=30 if self.iconWoW is None else None,
             command=self.selectWoWDir,
         )
+
         self.WoWDirEntry = tk.Entry(self.tab2, state="normal")
         self.WoWDirEntry.insert(0, self.PATH_WoW)
         self.WoWDirEntry.configure(state="disabled")
@@ -173,6 +175,7 @@ class Interface(tk.Tk):
             padx=5,
             pady=5,
         )
+
         self.ModifyKeyBindings_Button = tk.Button(
             self.tab2,
             text="Modify key bindings",
@@ -194,40 +197,24 @@ class Interface(tk.Tk):
         self.NbrClient_Entry = tk.Entry(self.tab1, state="normal", justify=tk.CENTER, width=7)
         self.NbrClient_Label = tk.Label(self.tab1, text="Number clients:")
 
-        # Mode MC unique :
-        # 0 = off, 1 = no auto, 2 = auto focus/move
-        self.mc_mode = tk.IntVar(value=0)
+        self.MC_Radios = []
 
-        self.MCOff_Radio = tk.Radiobutton(
-            self.tab1,
-            text="MC: default",
-            variable=self.mc_mode,
-            value=0,
-            command=self.send_mc_mode,
-            indicatoron=False,
-            width=12,
-            pady=5,
-        )
-        self.MCNoAuto_Radio = tk.Radiobutton(
-            self.tab1,
-            text="MC: off",
-            variable=self.mc_mode,
-            value=1,
-            command=self.send_mc_mode,
-            indicatoron=False,
-            width=16,
-            pady=5,
-        )
-        self.MCAutoMove_Radio = tk.Radiobutton(
-            self.tab1,
-            text="MC: auto focus/move",
-            variable=self.mc_mode,
-            value=2,
-            command=self.send_mc_mode,
-            indicatoron=False,
-            width=18,
-            pady=5,
-        )
+        for text, value, width in (
+            ("MC: default", 0, 12),
+            ("MC: off", 1, 16),
+            ("MC: auto focus/move", 2, 18),
+        ):
+            radio = tk.Radiobutton(
+                self.tab1,
+                text=text,
+                variable=self.mc_mode,
+                value=value,
+                command=self.send_mc_mode,
+                indicatoron=False,
+                width=width,
+                pady=5,
+            )
+            self.MC_Radios.append(radio)
 
         self.Group_Label = tk.Label(self.tab1, text="Players detected:")
         self.Players_Container = tk.Frame(self.tab1)
@@ -249,25 +236,22 @@ class Interface(tk.Tk):
         self._create_player_rows()
 
         self.WoWDirButton.grid(row=0, column=0, sticky="w", padx=2, pady=10)
-        self.WoWDirEntry.grid(row=0, column=1, columnspan=6, sticky="ew", padx=2)
+        self.WoWDirEntry.grid(row=0, column=1, columnspan=8, sticky="ew", padx=2)
 
-        self.ModifyCredentials_Button.grid(row=1, column=0, columnspan=3, sticky="ew", padx=2, pady=2)
-        self.ModifyKeyBindings_Button.grid(row=1, column=4, columnspan=3, sticky="ew", padx=2, pady=2)
+        self.ModifyCredentials_Button.grid(row=1, column=0, columnspan=4, sticky="ew", padx=2, pady=2)
+        self.ModifyKeyBindings_Button.grid(row=1, column=5, columnspan=4, sticky="ew", padx=2, pady=2)
 
         self.ScriptOnOff_Label.grid(row=0, column=5, sticky=tk.E)
         self.LaunchRepair_Button.grid(row=1, column=0, columnspan=2, pady=2)
         self.NbrClient_Label.grid(row=1, column=3, columnspan=2, sticky=tk.E)
         self.NbrClient_Entry.grid(row=1, column=5, sticky=tk.W)
 
-        self.MCOff_Radio.grid(row=2, column=0, columnspan=2, padx=2, pady=2)
-        self.MCNoAuto_Radio.grid(row=2, column=2, columnspan=2, padx=2, pady=2)
-        self.MCAutoMove_Radio.grid(row=2, column=4, columnspan=2, padx=2, pady=2)
+        for i, radio in enumerate(self.MC_Radios):
+            radio.grid(row=2, column=i * 2, columnspan=2, padx=2, pady=2)
 
     def _create_faction_block(self, parent, faction_name, faction_icon):
         frame = tk.Frame(parent, bd=2, relief=tk.GROOVE, padx=6, pady=4)
         frame.grid_columnconfigure(0, weight=1)
-
-        rows = tk.Frame(frame)
 
         if faction_icon is not None:
             title = tk.Label(
@@ -286,23 +270,15 @@ class Interface(tk.Tk):
                 anchor="w",
             )
 
+        rows = tk.Frame(frame)
+
         title.grid(row=0, column=0, sticky="w", pady=(0, 3))
         rows.grid(row=1, column=0, sticky="w")
 
-        return {
-            "frame": frame,
-            "rows": rows,
-        }
+        return {"frame": frame, "rows": rows}
 
     def _create_player_rows(self):
-        self.Name_Label = []
-        self.Class_Label = []
-        self.SpecialisationList = []
-        self.Specialisation_Menu = []
-        self.OptionList = []
-        self.Player_Row = []
-
-        for i in range(25):
+        for _ in range(MAX_ACCOUNTS):
             row_frame = tk.Frame(self.Players_Container)
 
             name_label = tk.Label(row_frame, text="Null", foreground="grey", width=7, anchor="center")
@@ -311,8 +287,7 @@ class Interface(tk.Tk):
             spec_var = tk.StringVar(self)
             spec_var.set("Null")
 
-            options = ["Null"]
-            menu = tk.OptionMenu(row_frame, spec_var, *options)
+            menu = tk.OptionMenu(row_frame, spec_var, "Null")
             menu.config(width=10)
 
             name_label.grid(row=0, column=0, sticky="w")
@@ -324,18 +299,21 @@ class Interface(tk.Tk):
             self.Class_Label.append(class_label)
             self.SpecialisationList.append(spec_var)
             self.Specialisation_Menu.append(menu)
-            self.OptionList.append(options)
+            self.OptionList.append(["Null"])
 
     def show_infoAccounts(self, nbr):
         self.Group_Label.grid(row=3, column=0, columnspan=6, pady=(10, 2))
         self.Players_Container.grid(row=4, column=0, columnspan=6, sticky="ew", padx=4)
-
-        self.refresh_player_blocks()
         self.WoWDirEntry.configure(width=60)
+        self.schedule_player_refresh()
+
+    def schedule_player_refresh(self):
+        if not self.refresh_players_pending:
+            self.refresh_players_pending = True
+            self.after_idle(self.refresh_player_blocks)
 
     def refresh_player_blocks(self):
-        if self.Players_Container is None or not self.FactionBlocks:
-            return
+        self.refresh_players_pending = False
 
         for row in self.Player_Row:
             row.grid_forget()
@@ -347,7 +325,7 @@ class Interface(tk.Tk):
 
             members = [
                 i
-                for i in range(min(self.NBR_ACCOUNT, len(self.PlayerFaction)))
+                for i in range(min(self.NBR_ACCOUNT, MAX_ACCOUNTS))
                 if self.PlayerFaction[i] == faction
                 and self.Name_Label[i].cget("text") not in ("", "Null")
             ]
@@ -378,11 +356,11 @@ class Interface(tk.Tk):
     # Réseau / protocole
     # =========================
     def sendCheckbox(self, msg):
-        full_msg = "C" + msg
-        self.serverthread.sendMainClient(full_msg.encode("utf-8"))
+        self.serverthread.sendMainClients(("C" + msg).encode("utf-8"))
 
     def send_mc_mode(self):
         mode = self.mc_mode.get()
+        # C20 / C21 pour MC auto focus/move
         self.sendCheckbox(f"1{1 if mode == 1 else 0}")
         self.sendCheckbox(f"2{1 if mode == 2 else 0}")
 
@@ -390,6 +368,13 @@ class Interface(tk.Tk):
     # Fermeture
     # =========================
     def quit_program(self):
+        try:
+            if self.spec_check_after_id is not None:
+                self.after_cancel(self.spec_check_after_id)
+                self.spec_check_after_id = None
+        except Exception:
+            pass
+
         try:
             self.serverthread.sendAllClients(b"QUIT")
         except Exception:
@@ -414,7 +399,7 @@ class Interface(tk.Tk):
 
         try:
             tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tcp_socket.connect(("localhost", 50001))
+            tcp_socket.connect((SERVER_HOST, SERVER_PORT))
             tcp_socket.close()
         except Exception:
             pass
@@ -431,13 +416,17 @@ class Interface(tk.Tk):
             filetypes=[("WoW", ["exe"])],
             initialdir=self.PATH_WoW,
         )
-        if tmp is not None and tmp.name != self.PATH_WoW:
-            parser.modify_config("config.conf", path_wow=tmp.name)
-            self.PATH_WoW = tmp.name
-            self.WoWDirEntry.configure(state="normal")
-            self.WoWDirEntry.delete(0, tk.END)
-            self.WoWDirEntry.insert(0, tmp.name)
-            self.WoWDirEntry.configure(state="disabled")
+
+        if tmp is None or tmp.name == self.PATH_WoW:
+            return
+
+        parser.modify_config("config.conf", path_wow=tmp.name)
+        self.PATH_WoW = tmp.name
+
+        self.WoWDirEntry.configure(state="normal")
+        self.WoWDirEntry.delete(0, tk.END)
+        self.WoWDirEntry.insert(0, tmp.name)
+        self.WoWDirEntry.configure(state="disabled")
 
     def open_credentials_tab(self):
         if self.credentialTab and self.credentialTab.winfo_exists():
@@ -451,21 +440,16 @@ class Interface(tk.Tk):
 
         self.credentials_Entry = []
 
-        account_Label = []
-        username_Label = []
-        password_Label = []
+        for i in range(MAX_ACCOUNTS):
+            column_index = i // 10
+            row_index = i % 10
 
-        validate_Button = tk.Button(
-            self.credentialTab,
-            text="Validate changes",
-            command=self.modify_credentials,
-        )
+            col = column_index * 2
+            y = row_index * 3
 
-        y = 0
-        for i in range(25):
-            account_Label.append(tk.Label(self.credentialTab, text=f"Account {i + 1}"))
-            username_Label.append(tk.Label(self.credentialTab, text="Username:"))
-            password_Label.append(tk.Label(self.credentialTab, text="Password:"))
+            account_Label = tk.Label(self.credentialTab, text=f"Account {i + 1}")
+            username_Label = tk.Label(self.credentialTab, text="Username:")
+            password_Label = tk.Label(self.credentialTab, text="Password:")
 
             user_entry = tk.Entry(self.credentialTab, width=15)
             pass_entry = tk.Entry(self.credentialTab, width=15)
@@ -475,32 +459,29 @@ class Interface(tk.Tk):
 
             self.credentials_Entry.append([user_entry, pass_entry])
 
-            col = 0
-            if i >= 20:
-                col = 4
-            elif i >= 10:
-                col = 2
-
-            if i in (10, 20):
-                y = 0
-
-            account_Label[i].grid(row=y, column=col + 1)
-            username_Label[i].grid(row=y + 1, column=col)
-            password_Label[i].grid(row=y + 2, column=col)
+            account_Label.grid(row=y, column=col + 1)
+            username_Label.grid(row=y + 1, column=col)
+            password_Label.grid(row=y + 2, column=col)
             user_entry.grid(row=y + 1, column=col + 1)
             pass_entry.grid(row=y + 2, column=col + 1)
 
-            y += 3
+        validate_Button = tk.Button(
+            self.credentialTab,
+            text="Validate changes",
+            command=self.modify_credentials,
+        )
 
-        validate_Button.grid(row=28, column=5, padx=2)
+        validate_Button.grid(row=31, column=7, padx=2, pady=4)
 
     def modify_credentials(self):
-        for i in range(25):
+        for i in range(MAX_ACCOUNTS):
             self.ACC_Info[i] = (
                 self.credentials_Entry[i][0].get(),
                 self.credentials_Entry[i][1].get(),
             )
+
         parser.modify_config("config.conf", acc_info=self.ACC_Info)
+
         if self.credentialTab and self.credentialTab.winfo_exists():
             self.credentialTab.destroy()
 
@@ -525,6 +506,7 @@ class Interface(tk.Tk):
 
         for i, text in enumerate(labels):
             label = tk.Label(self.keybindingsTab, text=text)
+
             entry = tk.Entry(self.keybindingsTab, state="normal", width=15)
             entry.insert(0, self.KEYBIND_Info[i][1])
             entry.configure(state="disabled")
@@ -534,7 +516,7 @@ class Interface(tk.Tk):
                 image=self.iconKeybind,
                 text="...",
                 width=30 if self.iconKeybind is None else None,
-                command=lambda i=i: self.bindKey(i),
+                command=lambda index=i: self.bindKey(index),
             )
 
             self.keybind_Entry.append(entry)
@@ -544,20 +526,16 @@ class Interface(tk.Tk):
             btn.grid(row=i, column=2)
 
     def bindKey(self, index):
-        handlers = {
-            0: lambda e: self._set_keybind(0, e),
-            1: lambda e: self._set_keybind(1, e),
-            2: lambda e: self._set_keybind(2, e),
-            3: lambda e: self._set_keybind(3, e),
-        }
-        self.keybindingsTab.bind("<Key>", handlers[index])
+        self.keybindingsTab.bind("<Key>", lambda event, i=index: self._set_keybind(i, event))
 
     def _set_keybind(self, index, event):
         self.keybindingsTab.unbind("<Key>")
+
         self.keybind_Entry[index].configure(state="normal")
         self.keybind_Entry[index].delete(0, tk.END)
         self.keybind_Entry[index].insert(0, event.keysym)
         self.keybind_Entry[index].configure(state="disabled")
+
         self.KEYBIND_Info[index] = (str(event.keycode), event.keysym)
         parser.modify_config("config.conf", keybind_info=self.KEYBIND_Info)
 
@@ -574,84 +552,42 @@ class Interface(tk.Tk):
         except AttributeError:
             key_code = key.value.vk
 
-        for i in range(len(self.KEYBIND_Info)):
-            if str(key_code) == self.KEYBIND_Info[i][0]:
-                msg = "K" + str(i + 1)
-                self.serverthread.sendGroupClients(msg.encode("utf-8"))
+        for i, keybind in enumerate(self.KEYBIND_Info):
+            if str(key_code) == keybind[0]:
+                self.serverthread.sendGroupClients(f"K{i + 1}".encode("utf-8"))
                 break
 
     # =========================
     # Placement fenêtres
     # =========================
     def _row_distribution_horizontal_first(self, count):
-        """
-        Répartit les clients en lignes en privilégiant l'horizontal.
-
-        Exemples :
-        1  -> [1]
-        2  -> [2]
-        3  -> [3]
-        4  -> [2, 2]
-        5  -> [3, 2]
-        6  -> [3, 3]
-        7  -> [4, 3]
-        8  -> [4, 4]
-        9  -> [3, 3, 3]
-        10 -> [4, 3, 3]
-        25 -> [5, 5, 5, 5, 5]
-        """
         if count <= 0:
             return []
 
         rows_count = max(1, int(count ** 0.5))
-
         base = count // rows_count
         extra = count % rows_count
 
-        return [
-            base + (1 if row < extra else 0)
-            for row in range(rows_count)
-        ]
+        return [base + (1 if row < extra else 0) for row in range(rows_count)]
 
-    def _coords_for_monitor(
-        self,
-        monitor,
-        client_indices,
-        x_gap=8,
-        width_increase=18,
-        height_increase=23,
-    ):
-        """
-        Génère les coordonnées d'une liste de clients sur un écran.
-
-        La règle générale privilégie l'étirement horizontal :
-        - 2 clients sur un écran => côte à côte
-        - 5 clients sur un écran => 3 en haut, 2 en bas
-        - 7 clients sur un écran => 4 en haut, 3 en bas
-        """
-        coords = {}
-
+    def _coords_for_monitor(self, monitor, client_indices, x_gap=8, width_increase=18, height_increase=23):
         if not client_indices:
-            return coords
+            return {}
 
         monitor_x0, monitor_y0, monitor_x1, monitor_y1 = monitor
         monitor_width = monitor_x1 - monitor_x0
         monitor_height = monitor_y1 - monitor_y0
 
+        coords = {}
         rows = self._row_distribution_horizontal_first(len(client_indices))
-        rows_count = len(rows)
-
         client_pos = 0
 
         for row_index, clients_in_row in enumerate(rows):
-            row_y0 = monitor_y0 + (monitor_height * row_index) // rows_count
-            row_y1 = monitor_y0 + (monitor_height * (row_index + 1)) // rows_count
+            row_y0 = monitor_y0 + (monitor_height * row_index) // len(rows)
+            row_y1 = monitor_y0 + (monitor_height * (row_index + 1)) // len(rows)
 
-            row_height = row_y1 - row_y0
-
-            y = row_y0
-            if row_index > 0:
-                y -= height_increase - 10
+            y = row_y0 - (height_increase - 10 if row_index > 0 else 0)
+            height = (row_y1 - row_y0) + height_increase
 
             for col_index in range(clients_in_row):
                 client_index = client_indices[client_pos]
@@ -659,11 +595,12 @@ class Interface(tk.Tk):
                 col_x0 = monitor_x0 + (monitor_width * col_index) // clients_in_row
                 col_x1 = monitor_x0 + (monitor_width * (col_index + 1)) // clients_in_row
 
-                width = (col_x1 - col_x0) + width_increase
-                height = row_height + height_increase
-                x = col_x0 - x_gap
-
-                coords[client_index] = (x, y, width, height)
+                coords[client_index] = (
+                    col_x0 - x_gap,
+                    y,
+                    (col_x1 - col_x0) + width_increase,
+                    height,
+                )
 
                 client_pos += 1
 
@@ -674,89 +611,79 @@ class Interface(tk.Tk):
 
         monitors = win32api.EnumDisplayMonitors()
 
+        if not monitors:
+            return
+
         idx_primary = next(
             i
             for i, m in enumerate(monitors)
             if win32api.GetMonitorInfo(m[0])["Flags"] & win32con.MONITORINFOF_PRIMARY
         )
 
-        x_gap = 8
-        width_increase = 18
-        height_increase = 23
-
         coords_by_index = {}
+        monitor_count = len(monitors)
 
-        if len(monitors) == 1:
-            monitor = monitors[0][2]
-            client_indices = list(range(self.NBR_ACCOUNT))
-
+        if monitor_count == 1:
             coords_by_index.update(
                 self._coords_for_monitor(
-                    monitor,
-                    client_indices,
-                    x_gap,
-                    width_increase,
-                    height_increase,
+                    monitors[0][2],
+                    list(range(self.NBR_ACCOUNT)),
                 )
             )
+
+        elif monitor_count == 2:
+            second_monitor = max(
+                [i for i in range(monitor_count) if i != idx_primary],
+                key=lambda i: monitors[i][2][0],
+            )
+
+            main_clients = [i for i in range(self.NBR_ACCOUNT) if i % GROUP_SIZE == 0]
+            second_clients = [i for i in range(self.NBR_ACCOUNT) if i % GROUP_SIZE != 0]
+
+            coords_by_index.update(self._coords_for_monitor(monitors[idx_primary][2], main_clients))
+            coords_by_index.update(self._coords_for_monitor(monitors[second_monitor][2], second_clients))
 
         else:
-            main_monitor = idx_primary
-            other_monitors = [i for i in range(len(monitors)) if i != main_monitor]
+            primary_x0 = monitors[idx_primary][2][0]
+            others = [i for i in range(monitor_count) if i != idx_primary]
 
-            if not other_monitors:
-                return
+            left_candidates = [i for i in others if monitors[i][2][0] < primary_x0]
+            right_candidates = [i for i in others if monitors[i][2][0] >= primary_x0]
 
-            # Même comportement que ton code d'origine :
-            # écran secondaire = écran le plus à droite.
-            second_monitor = max(other_monitors, key=lambda i: monitors[i][2][0])
-
-            m1 = monitors[main_monitor][2]
-            m2 = monitors[second_monitor][2]
-
-            # Clients principaux :
-            # 0, 5, 10, 15, 20...
-            #
-            # Exemple avec 7 clients :
-            # écran principal => clients 0 et 5.
-            main_clients = [
-                i
-                for i in range(self.NBR_ACCOUNT)
-                if i % 5 == 0
-            ]
-
-            # Tous les autres vont sur l'écran secondaire.
-            #
-            # Exemple avec 7 clients :
-            # écran secondaire => clients 1, 2, 3, 4, 6.
-            second_clients = [
-                i
-                for i in range(self.NBR_ACCOUNT)
-                if i % 5 != 0
-            ]
-
-            coords_by_index.update(
-                self._coords_for_monitor(
-                    m1,
-                    main_clients,
-                    x_gap,
-                    width_increase,
-                    height_increase,
-                )
+            left_monitor = (
+                max(left_candidates, key=lambda i: monitors[i][2][0])
+                if left_candidates
+                else min(others, key=lambda i: monitors[i][2][0])
             )
 
-            coords_by_index.update(
-                self._coords_for_monitor(
-                    m2,
-                    second_clients,
-                    x_gap,
-                    width_increase,
-                    height_increase,
-                )
+            right_monitor = (
+                min(right_candidates, key=lambda i: monitors[i][2][0])
+                if right_candidates
+                else max(others, key=lambda i: monitors[i][2][0])
             )
 
-        # Important :
-        # listCoord[index] doit correspondre au client index.
+            if left_monitor == right_monitor and len(others) >= 2:
+                sorted_others = sorted(others, key=lambda i: monitors[i][2][0])
+                left_monitor = sorted_others[0]
+                right_monitor = sorted_others[-1]
+
+            main_clients = [i for i in range(self.NBR_ACCOUNT) if i % GROUP_SIZE == 0]
+
+            groups = []
+            for start in range(0, self.NBR_ACCOUNT, GROUP_SIZE):
+                followers = list(range(start + 1, min(start + GROUP_SIZE, self.NBR_ACCOUNT)))
+                if followers:
+                    groups.append(followers)
+
+            right_group_count = (len(groups) + 1) // 2
+
+            right_clients = [i for group in groups[:right_group_count] for i in group]
+            left_clients = [i for group in groups[right_group_count:] for i in group]
+
+            coords_by_index.update(self._coords_for_monitor(monitors[left_monitor][2], left_clients))
+            coords_by_index.update(self._coords_for_monitor(monitors[idx_primary][2], main_clients))
+            coords_by_index.update(self._coords_for_monitor(monitors[right_monitor][2], right_clients))
+
         for i in range(self.NBR_ACCOUNT):
             if i in coords_by_index:
                 self.listCoord.append(coords_by_index[i])
@@ -784,9 +711,14 @@ class Interface(tk.Tk):
                 messagebox.showerror("Error", f"You can't have {nbr} clients !")
                 return
 
+            if nbr > MAX_ACCOUNTS:
+                messagebox.showerror("Error", f"Maximum number of clients is {MAX_ACCOUNTS} !")
+                return
+
             self.NBR_ACCOUNT = nbr
             self.NbrClient_Entry.configure(state="disabled")
             self.LaunchRepair_Button.config(text="Repair")
+
             self.adapt_listCoord()
 
             for i in range(self.NBR_ACCOUNT):
@@ -798,36 +730,43 @@ class Interface(tk.Tk):
                 self._login_client(i)
 
             self.show_infoAccounts(self.NBR_ACCOUNT)
+            return
 
-        else:
-            for i in range(self.NBR_ACCOUNT):
-                hwnd = self.hwndACC[i] if i < len(self.hwndACC) else 0
+        self.adapt_listCoord()
 
-                if not hwnd or not win32gui.IsWindow(hwnd):
-                    hwnd = self._spawn_or_find_client(i)
-                    if i < len(self.hwndACC):
-                        self.hwndACC[i] = hwnd
-                    else:
-                        self.hwndACC.append(hwnd)
-                    self._login_client(i)
+        for i in range(self.NBR_ACCOUNT):
+            hwnd = self.hwndACC[i] if i < len(self.hwndACC) else 0
 
-                self._place_client_window(i, hwnd, nbr_monitor)
+            if not hwnd or not win32gui.IsWindow(hwnd):
+                hwnd = self._spawn_or_find_client(i)
+
+                if i < len(self.hwndACC):
+                    self.hwndACC[i] = hwnd
+                else:
+                    self.hwndACC.append(hwnd)
+
+                self._login_client(i)
+
+            self._place_client_window(i, hwnd, nbr_monitor)
 
     def _spawn_or_find_client(self, index):
         p1 = subprocess.Popen(["./src/Bootstrap.exe", self.PATH_WoW])
         p1.wait()
 
         hwnd = win32gui.FindWindow(None, "World of Warcraft")
+
         while hwnd == 0:
-            hwnd = win32gui.FindWindow(None, "World of Warcraft")
             time.sleep(0.1)
+            hwnd = win32gui.FindWindow(None, "World of Warcraft")
 
         time.sleep(0.5)
         win32gui.SetWindowText(hwnd, f"WoW{index + 1}")
+
         return hwnd
 
     def _login_client(self, index):
         hwnd = self.hwndACC[index]
+
         self.send_client_txt(hwnd, self.ACC_Info[index][0])
 
         win32api.SendMessage(hwnd, win32con.WM_KEYDOWN, win32con.VK_TAB, 0)
@@ -840,11 +779,7 @@ class Interface(tk.Tk):
         win32api.SendMessage(hwnd, win32con.WM_KEYUP, win32con.VK_RETURN, 0)
 
     def _place_client_window(self, index, hwnd, nbr_monitor):
-        # Plein écran conservé :
-        # - 1 client
-        # - ou <= 5 clients avec au moins 2 écrans :
-        #   le client principal reste plein écran.
-        if index == 0 and ((self.NBR_ACCOUNT <= 5 and nbr_monitor >= 2) or (self.NBR_ACCOUNT == 1)):
+        if index == 0 and ((self.NBR_ACCOUNT <= GROUP_SIZE and nbr_monitor >= 2) or self.NBR_ACCOUNT == 1):
             win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
             return
 
@@ -852,8 +787,6 @@ class Interface(tk.Tk):
             x, y, w, h = self.listCoord[index]
             win32gui.MoveWindow(hwnd, x, y, w, h, True)
 
-        # Plein écran conservé :
-        # cas spécial d'origine avec 2 clients et 2 écrans.
         if index == 1 and self.NBR_ACCOUNT == 2 and nbr_monitor == 2:
             win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
 
@@ -872,16 +805,74 @@ class Interface(tk.Tk):
             self.script_running = False
             self.serverthread.sendAllClients(b"Bot: OFF")
             self.ScriptOnOff_Label.config(text="OFF", foreground="red")
-        else:
-            self.script_running = True
-            self.serverthread.sendAllClients(b"Bot: ON")
-            self.ScriptOnOff_Label.config(text="ON", foreground="green")
+            return
+
+        self.script_running = True
+        self.serverthread.sendAllClients(b"Bot: ON")
+        self.ScriptOnOff_Label.config(text="ON", foreground="green")
 
     # =========================
-    # UI update helpers
+    # Specs / rôles optimisés
+    # =========================
+    def check_all_specs(self):
+        self.spec_check_after_id = None
+        roles_changed = False
+
+        for i in range(min(self.NBR_ACCOUNT, len(self.serverthread.clients_thread))):
+            ct = self.serverthread.clients_thread[i]
+
+            if ct is None or not ct.running or len(ct.Name) <= 0:
+                continue
+
+            spec = self.SpecialisationList[i].get()
+
+            if ct.currentSpec == spec:
+                continue
+
+            ct.currentSpec = spec
+            self.send_spec_to_client(i, ct, spec)
+            roles_changed = True
+
+        if roles_changed:
+            self.broadcast_roles()
+
+        self.spec_check_after_id = self.after(500, self.check_all_specs)
+
+    def send_spec_to_client(self, index, client, spec):
+        for option_index, option in enumerate(self.OptionList[index]):
+            if spec != option:
+                continue
+
+            try:
+                client.conn.sendall(f"Spec: {option_index} ".encode("utf-8"))
+            except Exception:
+                client.running = False
+
+            return
+
+    def broadcast_roles(self, force=False):
+        for i in range(min(self.NBR_ACCOUNT, len(self.serverthread.clients_thread))):
+            ct = self.serverthread.clients_thread[i]
+
+            if ct is None or not ct.running or len(ct.Name) <= 0:
+                continue
+
+            role_nbr = getRole(ct.Class, ct.currentSpec)
+            payload = (role_nbr, ct.Name)
+
+            if not force and self.role_cache.get(i) == payload:
+                continue
+
+            self.role_cache[i] = payload
+
+            msg = f"Role{role_nbr}_{str(i).zfill(2)}_{str(len(ct.Name)).zfill(2)}_{ct.Name}"
+            self.serverthread.sendAllClients(msg.encode("utf-8"))
+
+    # =========================
+    # UI update joueur
     # =========================
     def update_player_class(self, index, name, player_class, options, color, faction):
-        if index >= len(self.PlayerFaction):
+        if index >= MAX_ACCOUNTS:
             return
 
         self.PlayerFaction[index] = faction if faction in (FACTION_ALLIANCE, FACTION_HORDE) else -1
@@ -901,13 +892,15 @@ class Interface(tk.Tk):
             )
 
         self.SpecialisationList[index].set(options[0] if options else "Null")
-        self.refresh_player_blocks()
+        self.role_cache.pop(index, None)
+        self.schedule_player_refresh()
 
     def clear_player(self, index):
-        if index >= len(self.PlayerFaction):
+        if index >= MAX_ACCOUNTS:
             return
 
         self.PlayerFaction[index] = -1
+        self.role_cache.pop(index, None)
 
         self.Name_Label[index].config(text="Null", foreground="grey")
         self.Class_Label[index].config(text="Null", foreground="grey")
@@ -923,7 +916,7 @@ class Interface(tk.Tk):
 
         self.SpecialisationList[index].set("Null")
         self.Player_Row[index].grid_forget()
-        self.refresh_player_blocks()
+        self.schedule_player_refresh()
 
 
 class client_thread(threading.Thread):
@@ -953,11 +946,10 @@ class client_thread(threading.Thread):
         self.CraftSkill = [0, 0]
 
     def run(self):
-        interface.after(500, self.checkSpecChange)
-
         while self.running:
             try:
                 data = self.conn.recv(128)
+
                 if not data:
                     break
 
@@ -973,7 +965,9 @@ class client_thread(threading.Thread):
                 break
 
         self.running = False
-        interface.serverthread.clients[self.index] = None
+
+        if self.index < len(interface.serverthread.clients):
+            interface.serverthread.clients[self.index] = None
 
         try:
             self.conn.close()
@@ -986,7 +980,7 @@ class client_thread(threading.Thread):
         except Exception:
             pass
 
-        interface.after(0, lambda: interface.clear_player(self.index))
+        interface.after(0, lambda index=self.index: interface.clear_player(index))
 
         print(f"[-] Client disconnected: {self.addr[0]}:{self.addr[1]}")
 
@@ -1027,57 +1021,14 @@ class client_thread(threading.Thread):
         except Exception:
             return
 
-        # Format envoyé au serveur C++ :
-        # Craft{type}{id:02}{len:02}{skill}{name}
-        #
-        # type = 0 ou 1
-        # id   = index du joueur sur 2 chiffres
-        # len  = longueur complète du nom sur 2 chiffres
-        #
-        # Important :
-        # on n'utilise plus len(self.Name) - 1, sinon le nom est tronqué.
-        out0 = f"Craft0{str(self.index).zfill(2)}{str(len(self.Name)).zfill(2)}{self.CraftSkill[0]}{self.Name}"
-        out1 = f"Craft1{str(self.index).zfill(2)}{str(len(self.Name)).zfill(2)}{self.CraftSkill[1]}{self.Name}"
+        name_len = str(len(self.Name)).zfill(2)
+        player_id = str(self.index).zfill(2)
+
+        out0 = f"Craft0{player_id}{name_len}{self.CraftSkill[0]}{self.Name}"
+        out1 = f"Craft1{player_id}{name_len}{self.CraftSkill[1]}{self.Name}"
 
         interface.serverthread.sendAllClients(out0.encode("utf-8"))
         interface.serverthread.sendAllClients(out1.encode("utf-8"))
-
-    def checkSpecChange(self):
-        if not self.running:
-            return
-
-        spec_tmp = interface.SpecialisationList[self.index].get()
-
-        if self.currentSpec != spec_tmp and len(self.Name) > 0:
-            self.currentSpec = spec_tmp
-
-            for i in range(interface.NBR_ACCOUNT):
-                ct = interface.serverthread.clients_thread[i] if i < len(interface.serverthread.clients_thread) else None
-                if ct is None or len(ct.Name) <= 0:
-                    continue
-
-                role_nbr = getRole(ct.Class, ct.currentSpec)
-
-                # Format envoyé au serveur C++ :
-                # Role{role}_{id:02}_{len:02}_{name}
-                #
-                # Important :
-                # on n'utilise plus len(ct.Name) - 1, sinon le nom est tronqué.
-                msg = f"Role{role_nbr}_{str(i).zfill(2)}_{str(len(ct.Name)).zfill(2)}_{ct.Name}"
-
-                interface.serverthread.sendAllClients(msg.encode("utf-8"))
-
-            for i, option in enumerate(interface.OptionList[self.index]):
-                if self.currentSpec == option:
-                    msg = f"Spec: {i} "
-                    try:
-                        self.conn.send(msg.encode("utf-8"))
-                    except Exception:
-                        self.running = False
-                    time.sleep(0.01)
-                    break
-
-        interface.after(500, self.checkSpecChange)
 
 
 class ChildServer:
@@ -1089,7 +1040,9 @@ class ChildServer:
             self.job,
             win32job.JobObjectExtendedLimitInformation,
         )
+
         info["BasicLimitInformation"]["LimitFlags"] |= win32job.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+
         win32job.SetInformationJobObject(
             self.job,
             win32job.JobObjectExtendedLimitInformation,
@@ -1132,8 +1085,8 @@ class server_thread(threading.Thread):
     def run(self):
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.tcp_socket.bind(("localhost", 50001))
-        self.tcp_socket.listen(25)
+        self.tcp_socket.bind((SERVER_HOST, SERVER_PORT))
+        self.tcp_socket.listen(MAX_ACCOUNTS)
 
         while self.running:
             try:
@@ -1151,25 +1104,35 @@ class server_thread(threading.Thread):
             free_index = next((i for i, c in enumerate(self.clients) if c is None), None)
 
             if free_index is None:
+                if len(self.clients) >= MAX_ACCOUNTS:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                    continue
+
+                free_index = len(self.clients)
                 self.clients.append((conn, addr))
-                ct = client_thread(len(self.clients) - 1, conn, addr)
-                self.clients_thread.append(ct)
-                ct.start()
+                self.clients_thread.append(None)
             else:
                 self.clients[free_index] = (conn, addr)
-                ct = client_thread(free_index, conn, addr)
-                self.clients_thread[free_index] = ct
-                ct.start()
+
+            ct = client_thread(free_index, conn, addr)
+            self.clients_thread[free_index] = ct
+            ct.start()
 
             print(f"[+] New client: {addr[0]}:{addr[1]}")
 
         for ct in self.clients_thread:
-            if ct is not None:
-                ct.running = False
-                try:
-                    ct.conn.close()
-                except Exception:
-                    pass
+            if ct is None:
+                continue
+
+            ct.running = False
+
+            try:
+                ct.conn.close()
+            except Exception:
+                pass
 
         try:
             if self.tcp_socket:
@@ -1178,20 +1141,21 @@ class server_thread(threading.Thread):
             pass
 
         print("server over...")
-        interface.after(0, interface.destroy)
+
+        try:
+            interface.after(0, interface.destroy)
+        except Exception:
+            pass
 
     def _safe_send(self, client_tuple, msg):
         if client_tuple is None:
             return False
 
         try:
-            # TCP ne conserve pas les frontières entre messages.
-            # On ajoute donc un séparateur clair pour les clients C++.
             if not msg.endswith(b"\n"):
                 msg += b"\n"
 
             client_tuple[0].sendall(msg)
-            time.sleep(0.01)
             return True
         except Exception:
             return False
@@ -1207,38 +1171,44 @@ class server_thread(threading.Thread):
 
         if index == -1:
             foreground = win32gui.GetForegroundWindow()
-            for i in range(((interface.NBR_ACCOUNT - 1) // 5) + 1):
-                start = i * 5
-                end = min(start + 5, interface.NBR_ACCOUNT)
-                if foreground in interface.hwndACC[start:end]:
-                    for y in range(start, end):
-                        if y < len(self.clients) and self.clients[y] is not None:
-                            if not self._safe_send(self.clients[y], msg):
-                                self.clients[y] = None
-                    return
-        else:
-            start = index - (index % 5)
-            end = min(start + 5, interface.NBR_ACCOUNT)
-            for y in range(start, end):
-                if y < len(self.clients) and self.clients[y] is not None:
-                    if not self._safe_send(self.clients[y], msg):
-                        self.clients[y] = None
 
-    def sendMainClient(self, msg):
-        if not self.clients:
+            for group_index in range(((interface.NBR_ACCOUNT - 1) // GROUP_SIZE) + 1):
+                start = group_index * GROUP_SIZE
+                end = min(start + GROUP_SIZE, interface.NBR_ACCOUNT)
+
+                if foreground not in interface.hwndACC[start:end]:
+                    continue
+
+                for y in range(start, end):
+                    if y < len(self.clients) and self.clients[y] is not None:
+                        if not self._safe_send(self.clients[y], msg):
+                            self.clients[y] = None
+
+                return
+
+        start = index - (index % GROUP_SIZE)
+        end = min(start + GROUP_SIZE, interface.NBR_ACCOUNT)
+
+        for y in range(start, end):
+            if y < len(self.clients) and self.clients[y] is not None:
+                if not self._safe_send(self.clients[y], msg):
+                    self.clients[y] = None
+
+    def sendMainClients(self, msg):
+        if not self.clients or interface.NBR_ACCOUNT <= 0:
             return
 
-        if interface.NBR_ACCOUNT == 1:
-            if len(self.clients) > 0 and self.clients[0] is not None:
-                if not self._safe_send(self.clients[0], msg):
-                    self.clients[0] = None
-            return
+        # Chefs de groupe :
+        # 0, 5, 10, 15, 20, 25, 30, 35...
+        for idx in range(0, interface.NBR_ACCOUNT, GROUP_SIZE):
+            if idx >= len(self.clients):
+                continue
 
-        for i in range(((interface.NBR_ACCOUNT - 1) // 5) + 1):
-            idx = i * 5
-            if idx < len(self.clients) and self.clients[idx] is not None:
-                if not self._safe_send(self.clients[idx], msg):
-                    self.clients[idx] = None
+            if self.clients[idx] is None:
+                continue
+
+            if not self._safe_send(self.clients[idx], msg):
+                self.clients[idx] = None
 
 
 if __name__ == "__main__":

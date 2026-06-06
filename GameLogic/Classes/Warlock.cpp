@@ -164,10 +164,6 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Curse of Shadow");
 					CurseGCD = time(0);
 				}
-				else if (!localPlayer->isMoving && (localPlayer->prctHP < 40.0f) && FunctionsLua::IsSpellReady("Drain Life")) {
-					//Drain Life
-					FunctionsLua::CastSpellByName("Drain Life");
-				}
 				else if (!CoAgonyDebuff && targetUnit->getNbrDebuff() < 16 && !CoTonguesDebuff && targetPlayer && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::IsSpellReady("Curse of Agony")) {
 					//Curse of Agony (PvP)
 					FunctionsLua::CastSpellByName("Curse of Agony");
@@ -184,6 +180,10 @@ void ListAI::WarlockDps() {
 				else if (!localPlayer->isMoving && !ImmolateDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Immolate")) {
 					//Immolate (PvP)
 					FunctionsLua::CastSpellByName("Immolate");
+				}
+				else if (!localPlayer->isMoving && (localPlayer->prctHP < 40.0f) && ((HasAggro[0].size() == 0) || (FunctionsLua::GetTalentInfo(1, 8) > 0)) && FunctionsLua::IsSpellReady("Drain Life")) {
+					//Drain Life
+					FunctionsLua::CastSpellByName("Drain Life");
 				}
 				else if (!localPlayer->isMoving && (nbrSoulShard < 6) && (targetUnit->prctHP < 15.0f) && FunctionsLua::IsSpellReady("Drain Soul")) {
 					//Drain Soul

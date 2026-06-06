@@ -39,7 +39,7 @@ float Functions::GetDepth(Position pos, float height) {
 Position Functions::ProjectPos(Position pos) {
 	typedef bool __fastcall func(Position* p1, Position* p2, int ignore, Position* intersection, float* distance, unsigned int flags);
 	func* function = (func*)INTERSECT_FUN_PTR;
-	Position p1 = Position(pos.X, pos.Y, pos.Z + 1.5f);
+	Position p1 = Position(pos.X, pos.Y, pos.Z + 2.0f);
 	Position p2 = Position(pos.X, pos.Y, pos.Z - 10.0f);
 	Position intersection = Position(0, 0, 0);
 	float distance = float(p1.DistanceTo(p2));
