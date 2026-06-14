@@ -74,12 +74,16 @@ class Interface(tk.Tk):
             pass
 
         parser.init_config("config.conf")
+
         self.PATH_WoW = parser.get_value("config.conf", "PATH_WoW", "=")
         self.ACC_Info = parser.get_multiplevalues("config.conf", "ACC_Infos")
         self.KEYBIND_Info = parser.get_multiplevalues("config.conf", "KEYBIND_Infos")
 
         while len(self.ACC_Info) < MAX_ACCOUNTS:
             self.ACC_Info.append(("", ""))
+
+        while len(self.KEYBIND_Info) < 4:
+            self.KEYBIND_Info.append(("", ""))
 
         self.MOVEMENT_KEY = [
             win32con.VK_RIGHT,
@@ -360,7 +364,7 @@ class Interface(tk.Tk):
 
     def send_mc_mode(self):
         mode = self.mc_mode.get()
-        # C20 / C21 pour MC auto focus/move
+
         self.sendCheckbox(f"1{1 if mode == 1 else 0}")
         self.sendCheckbox(f"2{1 if mode == 2 else 0}")
 
@@ -722,8 +726,15 @@ class Interface(tk.Tk):
             self.adapt_listCoord()
 
             for i in range(self.NBR_ACCOUNT):
+                self.serverthread.reserve_index(i)
+
                 hwnd = self._spawn_or_find_client(i)
-                self.hwndACC.append(hwnd)
+
+                if i < len(self.hwndACC):
+                    self.hwndACC[i] = hwnd
+                else:
+                    self.hwndACC.append(hwnd)
+
                 self._place_client_window(i, hwnd, nbr_monitor)
 
             for i in range(self.NBR_ACCOUNT):
@@ -738,6 +749,8 @@ class Interface(tk.Tk):
             hwnd = self.hwndACC[i] if i < len(self.hwndACC) else 0
 
             if not hwnd or not win32gui.IsWindow(hwnd):
+                self.serverthread.reserve_index(i)
+
                 hwnd = self._spawn_or_find_client(i)
 
                 if i < len(self.hwndACC):
@@ -745,7 +758,9 @@ class Interface(tk.Tk):
                 else:
                     self.hwndACC.append(hwnd)
 
+                self._place_client_window(i, hwnd, nbr_monitor)
                 self._login_client(i)
+                continue
 
             self._place_client_window(i, hwnd, nbr_monitor)
 
@@ -765,7 +780,13 @@ class Interface(tk.Tk):
         return hwnd
 
     def _login_client(self, index):
+        if index >= len(self.hwndACC):
+            return
+
         hwnd = self.hwndACC[index]
+
+        if not hwnd or not win32gui.IsWindow(hwnd):
+            return
 
         self.send_client_txt(hwnd, self.ACC_Info[index][0])
 
@@ -779,6 +800,9 @@ class Interface(tk.Tk):
         win32api.SendMessage(hwnd, win32con.WM_KEYUP, win32con.VK_RETURN, 0)
 
     def _place_client_window(self, index, hwnd, nbr_monitor):
+        if not hwnd or not win32gui.IsWindow(hwnd):
+            return
+
         if index == 0 and ((self.NBR_ACCOUNT <= GROUP_SIZE and nbr_monitor >= 2) or self.NBR_ACCOUNT == 1):
             win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
             return
@@ -819,7 +843,7 @@ class Interface(tk.Tk):
         roles_changed = False
 
         for i in range(min(self.NBR_ACCOUNT, len(self.serverthread.clients_thread))):
-            ct = self.serverthread.clients_thread[i]
+            ct = self.serverthread.get_client_thread(i)
 
             if ct is None or not ct.running or len(ct.Name) <= 0:
                 continue
@@ -852,7 +876,7 @@ class Interface(tk.Tk):
 
     def broadcast_roles(self, force=False):
         for i in range(min(self.NBR_ACCOUNT, len(self.serverthread.clients_thread))):
-            ct = self.serverthread.clients_thread[i]
+            ct = self.serverthread.get_client_thread(i)
 
             if ct is None or not ct.running or len(ct.Name) <= 0:
                 continue
@@ -894,6 +918,7 @@ class Interface(tk.Tk):
         self.SpecialisationList[index].set(options[0] if options else "Null")
         self.role_cache.pop(index, None)
         self.schedule_player_refresh()
+        self.broadcast_roles(force=True)
 
     def clear_player(self, index):
         if index >= MAX_ACCOUNTS:
@@ -966,8 +991,12 @@ class client_thread(threading.Thread):
 
         self.running = False
 
-        if self.index < len(interface.serverthread.clients):
-            interface.serverthread.clients[self.index] = None
+        with interface.serverthread.lock:
+            if self.index < len(interface.serverthread.clients):
+                interface.serverthread.clients[self.index] = None
+
+            if self.index < len(interface.serverthread.clients_thread):
+                interface.serverthread.clients_thread[self.index] = None
 
         try:
             self.conn.close()
@@ -1077,10 +1106,52 @@ class ChildServer:
 class server_thread(threading.Thread):
     def __init__(self):
         super().__init__(daemon=True)
+
         self.running = True
         self.clients = []
         self.clients_thread = []
         self.tcp_socket = None
+
+        self.lock = threading.Lock()
+        self.reserved_indices = []
+
+    def reserve_index(self, index):
+        if index < 0 or index >= MAX_ACCOUNTS:
+            return
+
+        with self.lock:
+            if index not in self.reserved_indices:
+                self.reserved_indices.append(index)
+
+            while len(self.clients) <= index:
+                self.clients.append(None)
+
+            while len(self.clients_thread) <= index:
+                self.clients_thread.append(None)
+
+    def get_client_thread(self, index):
+        with self.lock:
+            if index < len(self.clients_thread):
+                return self.clients_thread[index]
+            return None
+
+    def _take_accept_index(self):
+        with self.lock:
+            if self.reserved_indices:
+                return self.reserved_indices.pop(0)
+
+            free_index = next((i for i, c in enumerate(self.clients) if c is None), None)
+
+            if free_index is not None:
+                return free_index
+
+            if len(self.clients) >= MAX_ACCOUNTS:
+                return None
+
+            self.clients.append(None)
+            self.clients_thread.append(None)
+
+            return len(self.clients) - 1
 
     def run(self):
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1101,29 +1172,37 @@ class server_thread(threading.Thread):
                     pass
                 break
 
-            free_index = next((i for i, c in enumerate(self.clients) if c is None), None)
+            free_index = self._take_accept_index()
 
             if free_index is None:
-                if len(self.clients) >= MAX_ACCOUNTS:
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
-                    continue
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                continue
 
-                free_index = len(self.clients)
-                self.clients.append((conn, addr))
-                self.clients_thread.append(None)
-            else:
+            with self.lock:
+                while len(self.clients) <= free_index:
+                    self.clients.append(None)
+
+                while len(self.clients_thread) <= free_index:
+                    self.clients_thread.append(None)
+
                 self.clients[free_index] = (conn, addr)
 
             ct = client_thread(free_index, conn, addr)
-            self.clients_thread[free_index] = ct
+
+            with self.lock:
+                self.clients_thread[free_index] = ct
+
             ct.start()
 
-            print(f"[+] New client: {addr[0]}:{addr[1]}")
+            print(f"[+] New client {free_index + 1}: {addr[0]}:{addr[1]}")
 
-        for ct in self.clients_thread:
+        with self.lock:
+            threads = list(self.clients_thread)
+
+        for ct in threads:
             if ct is None:
                 continue
 
@@ -1161,12 +1240,23 @@ class server_thread(threading.Thread):
             return False
 
     def sendAllClients(self, msg):
-        for i, client in enumerate(self.clients):
+        with self.lock:
+            snapshot = list(enumerate(self.clients))
+
+        for i, client in snapshot:
             if client is not None and not self._safe_send(client, msg):
-                self.clients[i] = None
+                with self.lock:
+                    if i < len(self.clients):
+                        self.clients[i] = None
 
     def sendGroupClients(self, msg, index=-1):
-        if not self.clients:
+        if interface.NBR_ACCOUNT <= 0:
+            return
+
+        with self.lock:
+            clients_snapshot = list(self.clients)
+
+        if not clients_snapshot:
             return
 
         if index == -1:
@@ -1180,9 +1270,11 @@ class server_thread(threading.Thread):
                     continue
 
                 for y in range(start, end):
-                    if y < len(self.clients) and self.clients[y] is not None:
-                        if not self._safe_send(self.clients[y], msg):
-                            self.clients[y] = None
+                    if y < len(clients_snapshot) and clients_snapshot[y] is not None:
+                        if not self._safe_send(clients_snapshot[y], msg):
+                            with self.lock:
+                                if y < len(self.clients):
+                                    self.clients[y] = None
 
                 return
 
@@ -1190,25 +1282,36 @@ class server_thread(threading.Thread):
         end = min(start + GROUP_SIZE, interface.NBR_ACCOUNT)
 
         for y in range(start, end):
-            if y < len(self.clients) and self.clients[y] is not None:
-                if not self._safe_send(self.clients[y], msg):
-                    self.clients[y] = None
+            if y < len(clients_snapshot) and clients_snapshot[y] is not None:
+                if not self._safe_send(clients_snapshot[y], msg):
+                    with self.lock:
+                        if y < len(self.clients):
+                            self.clients[y] = None
 
     def sendMainClients(self, msg):
-        if not self.clients or interface.NBR_ACCOUNT <= 0:
+        if interface.NBR_ACCOUNT <= 0:
             return
 
-        # Chefs de groupe :
-        # 0, 5, 10, 15, 20, 25, 30, 35...
+        with self.lock:
+            clients_snapshot = list(self.clients)
+
+        if not clients_snapshot:
+            return
+
         for idx in range(0, interface.NBR_ACCOUNT, GROUP_SIZE):
-            if idx >= len(self.clients):
+            if idx >= len(clients_snapshot):
                 continue
 
-            if self.clients[idx] is None:
+            if clients_snapshot[idx] is None:
                 continue
 
-            if not self._safe_send(self.clients[idx], msg):
-                self.clients[idx] = None
+            if not self._safe_send(clients_snapshot[idx], msg):
+                with self.lock:
+                    if idx < len(self.clients):
+                        self.clients[idx] = None
+
+    def sendMainClient(self, msg):
+        self.sendMainClients(msg)
 
 
 if __name__ == "__main__":

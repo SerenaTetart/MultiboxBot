@@ -86,8 +86,31 @@ static void handle_client(SOCKET csock, sockaddr_in caddr) {
     std::printf("ServerNavigation: [-] Client %s:%u disconnected\n", ip, ntohs(caddr.sin_port));
 }
 
+struct WarmupPath {
+    unsigned int mapId;
+    Vector3 start;
+    Vector3 end;
+};
+
+static const WarmupPath warmups[] = {
+    { 0, { -11105.501953f, 1486.848267f, 32.607071f }, { -11207.504883f, 1680.481934f, 24.358500f } }
+};
+
+static void WarmupNavigation() {
+    std::lock_guard<std::mutex> lock(g_compute_mutex);
+
+    for (const auto& w : warmups) {
+        Vector3 r = Navigation::ComputePath(w.mapId, w.start, w.end);
+        std::cout << "Warmup map " << w.mapId
+            << " -> " << r.X << "," << r.Y << "," << r.Z << "\n";
+    }
+}
+
 int main() {
     Navigation::Load("Navigation.dll");
+
+    WarmupNavigation();
+
     WSADATA wsa{};
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         std::printf("ServerNavigation: WSAStartup failed\n");

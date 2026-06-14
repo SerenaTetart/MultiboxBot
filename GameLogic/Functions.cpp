@@ -36,10 +36,10 @@ float Functions::GetDepth(Position pos, float height) {
 	return distance;
 }
 
-Position Functions::ProjectPos(Position pos) {
+Position Functions::ProjectPos(Position pos, float height) {
 	typedef bool __fastcall func(Position* p1, Position* p2, int ignore, Position* intersection, float* distance, unsigned int flags);
 	func* function = (func*)INTERSECT_FUN_PTR;
-	Position p1 = Position(pos.X, pos.Y, pos.Z + 2.0f);
+	Position p1 = Position(pos.X, pos.Y, pos.Z + height);
 	Position p2 = Position(pos.X, pos.Y, pos.Z - 10.0f);
 	Position intersection = Position(0, 0, 0);
 	float distance = float(p1.DistanceTo(p2));
@@ -380,7 +380,7 @@ bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
 		Position next = Functions::ProjectPos(stepPos);
 
 		// Reject if snap is too big or the segment hits something
-		if (next.DistanceTo(stepPos) > 1.5f) return false;
+		if (next.DistanceTo(stepPos) > 2.0f) return false;
 		if (Functions::Intersect(last, next, 0.5f)) return false;
 
 		// Progress guard (avoid potential stalls on weird projections)
@@ -412,7 +412,7 @@ bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
 			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
 			Position next = Functions::ProjectPos(stepPos);
 
-			if ((next.DistanceTo(stepPos) < 1.5f) && !Functions::Intersect(last, next, 0.5f) && (!checkEnemyClose || !Functions::enemyClose(next))) {
+			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(last, next, 0.5f) && (!checkEnemyClose || !Functions::enemyClose(next))) {
 				if (MoveObstacle_tmp(target_pos, next)) {
 					if (off == 0) localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
 					else localPlayer->ClickToMove(Move, localPlayer->Guid, next);

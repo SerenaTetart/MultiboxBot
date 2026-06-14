@@ -65,17 +65,21 @@ bool Navigation::Load(const std::string& dllPath) {
 Vector3 Navigation::ComputePath(unsigned int mapId, const Vector3& start, const Vector3& end) {
     int length = 0;
     Vector3* path = calculatePath(mapId, start, end, &length);
-    if (!path || length <= 0 || path[length-1].DistanceTo(end) > 5.0f) {
+
+    if (!path || length <= 0 || path[length - 1].DistanceTo(end) > 5.0f) {
+        if (path) {
+            freePathArr(path);
+        }
         return start;
     }
 
-    //std::cout << "path[0]: " << path[0].X << "," << path[0].Y << "," << path[0].Z << "\n";
-
     Vector3 nextpos = path[0];
+
     for (int i = 1; i < length && nextpos.DistanceTo(start) < 2.0f; ++i) {
         nextpos = path[i];
     }
 
+    freePathArr(path);
     return nextpos;
 }
 

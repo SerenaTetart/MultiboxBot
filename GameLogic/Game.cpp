@@ -174,7 +174,7 @@ void Game::MainLoop() {
 			);
 
 			if (localPlayer == NULL) {
-				Sleep(333);
+				Sleep(500);
 				break;
 			}
 
@@ -339,7 +339,7 @@ void Game::MainLoop() {
 					Moving = 0;
 				}
 				else if (
-					!Combat && !localPlayer->isdead && !IsSitting && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
+					(!Combat || passiveGroup) && !localPlayer->isdead && !IsSitting && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
 					(Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) &&
 					(targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead || passiveGroup)
 				) {
@@ -429,14 +429,14 @@ void Game::MainLoop() {
 			/*end = std::chrono::high_resolution_clock::now();
 			float_ms = end - start;
 			std::cout << "Actions: elapsed time is " << float_ms.count() << " milliseconds" << std::endl;*/
-			Sleep(333);
+			Sleep(500);
 		}
 		if (Moving > 0) {
 			if (Moving < 3) ThreadSynchronizer::pressKey(0x28);
 			ThreadSynchronizer::releaseKey(0x28);
 			Moving = 0;
 		}
-		Sleep(333);
+		Sleep(500);
 	}
 	Navigation::DisconnectClient();
 }

@@ -302,13 +302,13 @@ LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType 
 
                 int equipSlot = *(int*)(cacheEntryPTR + 0x2C);
                 if (equipSlot > 0) {
-                    int intellect = *(int*)(cacheEntryPTR + 0x90);
+                    /*int intellect = *(int*)(cacheEntryPTR + 0x90);
                     int spirit = *(int*)(cacheEntryPTR + 0x94);
                     int stamina = *(int*)(cacheEntryPTR + 0x98);
                     int strength = *(int*)(cacheEntryPTR + 0x9c);
                     int armor = *(int*)(cacheEntryPTR + 0xf4);
                     int frostRes = *(int*)(cacheEntryPTR + 0x104);
-                    int shadowRes = *(int*)(cacheEntryPTR + 0x108);
+                    int shadowRes = *(int*)(cacheEntryPTR + 0x108);*/
                     int bonusSpell[3] = { *(int*)(cacheEntryPTR + 0x11c), *(int*)(cacheEntryPTR + 0x120), *(int*)(cacheEntryPTR + 0x124) };
 
                     for (int i = 0; i < 3; i++) {
@@ -394,16 +394,16 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
     displayID = *(int*)((char*)Pointer  + descriptor + 0x8);
     level = 0; gatherType = 0;
         // === Mining === //
-    if (displayID == 310) gatherType = 1;
-    else if (displayID == 315) { level = 65; gatherType = 1; }
-    else if (displayID == 314) { level = 75; gatherType = 1; }
-    else if (displayID == 312) { level = 125; gatherType = 1; }
-    else if (displayID == 311) { level = 155; gatherType = 1; }
-    else if (displayID == 313) { level = 175; gatherType = 1; }
-    else if (displayID == 2571) { level = 230; gatherType = 1; }
-    else if (displayID == 3951) { level = 245; gatherType = 1; }
-    else if (displayID == 3952) { level = 275; gatherType = 1; }
-    else if (displayID == 6650) { level = 305; gatherType = 1; }
+    if (displayID == 310) gatherType = 1; // Copper
+    else if (displayID == 315) { level = 65; gatherType = 1; } // Tin
+    else if (displayID == 312) { level = 125; gatherType = 1; } // Iron
+    else if (displayID == 311) { level = 155; gatherType = 1; } // Gold
+    else if (displayID == 313) { level = 175; gatherType = 1; } // Mithril
+    else if (displayID == 314) { level = 230; gatherType = 1; } // True Silver
+    else if (displayID == 2571) { level = 230; gatherType = 1; } // Dark Iron ?
+    else if (displayID == 3951) { level = 245; gatherType = 1; } // Thorium
+    else if (displayID == 3952) { level = 275; gatherType = 1; } // Rich Thorium
+    else if (displayID == 6650) { level = 305; gatherType = 1; } // Obsidian
         // === Herbalism === //
     else if (displayID == 269) { level = 0; gatherType = 2; }
     else if (displayID == 270) { level = 0; gatherType = 2; }

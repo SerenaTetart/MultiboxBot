@@ -6,7 +6,7 @@ class Functions {
 	public:
 		static bool Intersect(Position start, Position end, float z=1.25f);
 		static float GetDepth(Position pos, float height);
-		static Position ProjectPos(Position pos);
+		static Position ProjectPos(Position pos, float height=2.0f);
 		static unsigned long GetPlayerGuid();
 		static int GetPositionCircle();
 		static void EnumerateVisibleObjects(int filter);
