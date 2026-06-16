@@ -11,10 +11,10 @@ MultiboxBot is an **in-process** bot for multiboxing on WoW 1.12.1 with up to 25
 
 This project is the continuation of the **out-of-process** project <a href=https://github.com/Serenalyw/PixelBot>PixelBot</a>.
 
-And this is an exemple of how the interface looks like using 2 monitors:
+And this is an exemple of how the interface looks like using 3 monitors:
 
 <p align="center">
-<img src="https://user-images.githubusercontent.com/65224852/204255664-b6724d95-9df1-42df-8076-947da46f8220.png">
+<img width="6400" height="1440" alt="Image" src="https://github.com/user-attachments/assets/9f6a7834-6370-452c-b16d-c316c215d0ea" />
 </p>
 
 All windows are placed automatically by the program when the button **Launch** is pushed, if a window crash or move you can use the button **Repair** to replace it.
