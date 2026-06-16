@@ -22,10 +22,10 @@ All windows are placed automatically by the program when the button **Launch** i
 You can set the role and specialisation of every account by clicking on the menu next to the character's name:
 
 <p align="center">
-<img src="https://user-images.githubusercontent.com/65224852/204256381-dd4b8998-c72c-4ac3-91d8-ede0aff2101a.png">
+<img width="453" height="586" alt="Image" src="https://github.com/user-attachments/assets/282fa4ad-332d-48a9-9bb0-83148c531c0b" />
 </p>
 
-*Melee characters will follow the tank of the current group and ranged will follow melee characters of the current group.*
+*Characters will follow the leader of the group: it is either the first window the program make (WoW1) or the closest tank*
 
 Finally you can register every account credentials (password and username) on a .config file to connect to your accounts faster:
 
