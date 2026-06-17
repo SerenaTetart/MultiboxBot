@@ -7,7 +7,9 @@ Why? Because the program now reads various kinds of data to handle pathfinding a
 
 *The project is still under development*
 
-MultiboxBot is an **in-process** bot for multiboxing on WoW 1.12.1 with up to 25 accounts using DLL injection, hooking and sockets. *(2.4.3 and 3.3.5 versions are planned)*
+MultiboxBot is an **in-process** bot for multiboxing on WoW 1.12.1 with up to 40 accounts using DLL injection, hooking and sockets. *(2.4.3 and 3.3.5 versions are planned)*
+
+The project is intended **only** for use on your own local server. Using it elsewhere will result in a ban, as there is no protection against Warden or other anti-cheat systems.
 
 This project is the continuation of the **out-of-process** project <a href=https://github.com/Serenalyw/PixelBot>PixelBot</a>.
 
