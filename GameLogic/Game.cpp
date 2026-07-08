@@ -19,32 +19,33 @@ static bool TradeShow = false, TradePendingSelf = false;
 
 void Game::MainLoop() {
 	while (Client::client_running == true) {
-		ThreadSynchronizer::RunOnMainThread(
-			[]() {
-				playerGuid = Functions::GetPlayerGuid();
-				if (playerGuid > 0 && playerGuid != pastPlayerGuid) {
-					Functions::EnumerateVisibleObjects(0);
+		if (playerGuid == 0 || playerGuid != pastPlayerGuid) {
+			ThreadSynchronizer::RunOnMainThread(
+				[]() {
+					playerGuid = Functions::GetPlayerGuid();
+					if (playerGuid > 0 && playerGuid != pastPlayerGuid) {
+						Functions::EnumerateVisibleObjects(0);
 
-					if (localPlayer != NULL) {
-						pastPlayerGuid = playerGuid;
-						std::string msg =
-							"Name " + FunctionsLua::UnitName("player") +
-							" Class " + localPlayer->className +
-							" Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0");
-						Client::sendMessage(msg);
+						if (localPlayer != NULL) {
+							pastPlayerGuid = playerGuid;
+							std::string msg =
+								"Name " + FunctionsLua::UnitName("player") +
+								" Class " + localPlayer->className +
+								" Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0");
+							Client::sendMessage(msg);
 
-						std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
-						int skills[] = { 0, 0 };
-						std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
-						msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
-						Client::sendMessage(msg);
+							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
+							int skills[] = { 0, 0 };
+							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, std::size(listSkills));
+							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
+							Client::sendMessage(msg);
+						}
 					}
 				}
-			}
-		);
+			);
+		}
 
 		while (Client::bot_running == true && (Leader == NULL || (Leader->Guid != playerGuid) || !MCNoAuto)) {
-
 			// ========================================== //
 			// ===========   Initialisation   =========== //
 			// ========================================== //
@@ -78,7 +79,7 @@ void Game::MainLoop() {
 
 							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
 							int skills[] = { 0, 0 };
-							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, 8);
+							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, std::size(listSkills));
 							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
 							Client::sendMessage(msg);
 						}
@@ -173,7 +174,7 @@ void Game::MainLoop() {
 				}
 			);
 
-			if (localPlayer == NULL) {
+			if (localPlayer == NULL || playerGuid == 0) {
 				Sleep(500);
 				break;
 			}

@@ -128,6 +128,21 @@ bool Game::Trade() {
 				GroupMember[y]->position.DistanceTo(localPlayer->position) < 8.0f &&
 				GroupMember[y]->name == get<0>(leaderInfos[i])
 			) {
+				if (i == 0) {
+					// Quest Items
+					int listID[] = { 18945, 22525, 22526, 22527, 22528, 22529 };
+					for (const auto& item : virtualInventory) {
+						for (unsigned int z = 0; z < 10; z++) {
+							if (get<2>(item) == listID[z]) {
+								ThreadSynchronizer::RunOnMainThread([item, y]() {
+									FunctionsLua::PickupItem(get<0>(item), get<1>(item));
+									FunctionsLua::DropItemOnUnit(tarType + std::to_string(y));
+									});
+								traded = true;
+							}
+						}
+					}
+				}
 				if ((get<2>(leaderInfos[i]) == 4 || get<3>(leaderInfos[i]) == 4)) {
 					// Tailoring
 					int listID[] = { 2589, 2592, 3182, 4306, 4337, 4338, 10285, 14047, 14227, 14256 };

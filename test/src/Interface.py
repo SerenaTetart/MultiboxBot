@@ -85,6 +85,14 @@ class Interface(tk.Tk):
         while len(self.KEYBIND_Info) < 4:
             self.KEYBIND_Info.append(("", ""))
 
+        # État toggle des keybinds, séparé par groupe de clients.
+        # Exemple : premier appui sur la keybind 1 => K1_1, deuxième appui => K1_0.
+        self.keybind_states_by_group = {}
+
+        # Anti-répétition : Windows peut répéter on_press si une touche reste maintenue.
+        # on_release sert uniquement à débloquer le prochain appui, il n'envoie rien au client.
+        self.pressed_key_codes = set()
+
         self.MOVEMENT_KEY = [
             win32con.VK_RIGHT,
             win32con.VK_UP,
@@ -543,6 +551,12 @@ class Interface(tk.Tk):
         self.KEYBIND_Info[index] = (str(event.keycode), event.keysym)
         parser.modify_config("config.conf", keybind_info=self.KEYBIND_Info)
 
+        # Après un changement de touche, on repart proprement pour éviter un état bloqué.
+        self.pressed_key_codes.clear()
+        for states in self.keybind_states_by_group.values():
+            if index < len(states):
+                states[index] = 0
+
     # =========================
     # WoW / clavier
     # =========================
@@ -550,16 +564,85 @@ class Interface(tk.Tk):
         for c in txt:
             win32api.SendMessage(hwnd, win32con.WM_CHAR, ord(c), 0)
 
-    def on_KeyPress(self, key):
+    def _get_keyboard_vk(self, key):
         try:
-            key_code = key.vk
+            return key.vk
         except AttributeError:
-            key_code = key.value.vk
+            pass
 
+        try:
+            return key.value.vk
+        except AttributeError:
+            return None
+
+    def _find_keybind_index(self, key_code):
         for i, keybind in enumerate(self.KEYBIND_Info):
             if str(key_code) == keybind[0]:
-                self.serverthread.sendGroupClients(f"K{i + 1}".encode("utf-8"))
-                break
+                return i
+
+        return None
+
+    def _get_foreground_group_start(self):
+        if self.NBR_ACCOUNT <= 0:
+            return None
+
+        foreground = win32gui.GetForegroundWindow()
+
+        for group_index in range(((self.NBR_ACCOUNT - 1) // GROUP_SIZE) + 1):
+            start = group_index * GROUP_SIZE
+            end = min(start + GROUP_SIZE, self.NBR_ACCOUNT)
+
+            if foreground in self.hwndACC[start:end]:
+                return start
+
+        return None
+
+    def _get_group_keybind_states(self, group_start):
+        if group_start not in self.keybind_states_by_group:
+            self.keybind_states_by_group[group_start] = [0 for _ in range(len(self.KEYBIND_Info))]
+
+        while len(self.keybind_states_by_group[group_start]) < len(self.KEYBIND_Info):
+            self.keybind_states_by_group[group_start].append(0)
+
+        return self.keybind_states_by_group[group_start]
+
+    def on_KeyPress(self, key):
+        key_code = self._get_keyboard_vk(key)
+
+        if key_code is None:
+            return
+
+        keybind_index = self._find_keybind_index(key_code)
+
+        if keybind_index is None:
+            return
+
+        # Empêche un maintien de touche de produire plusieurs toggles.
+        if key_code in self.pressed_key_codes:
+            return
+
+        self.pressed_key_codes.add(key_code)
+
+        group_start = self._get_foreground_group_start()
+
+        if group_start is None:
+            return
+
+        states = self._get_group_keybind_states(group_start)
+        states[keybind_index] = 1 - states[keybind_index]
+
+        # Format envoyé aux clients C++ : K{id}_{state}
+        # Exemples : K1_1, K1_0, K2_1, K2_0.
+        msg = f"K{keybind_index + 1}_{states[keybind_index]}".encode("utf-8")
+        self.serverthread.sendGroupClients(msg, index=group_start)
+
+    def on_KeyRelease(self, key):
+        key_code = self._get_keyboard_vk(key)
+
+        if key_code is None:
+            return
+
+        self.pressed_key_codes.discard(key_code)
 
     # =========================
     # Placement fenêtres
@@ -1320,7 +1403,10 @@ if __name__ == "__main__":
 
     mouse.on_middle_click(interface.activateBot)
 
-    listener = keyboard.Listener(on_press=interface.on_KeyPress)
+    listener = keyboard.Listener(
+        on_press=interface.on_KeyPress,
+        on_release=interface.on_KeyRelease,
+    )
     interface.listener = listener
     listener.start()
 

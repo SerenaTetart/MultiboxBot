@@ -138,17 +138,28 @@ void Client::recvMessage() {
             );
         }
     }
-    else if (buffer[0] == 'K' && buffer[1] == '1') {
-        keybindTrigger = 1;
-    }
-    else if (buffer[0] == 'K' && buffer[1] == '2') {
-        keybindTrigger = 2;
-    }
-    else if (buffer[0] == 'K' && buffer[1] == '3') {
-        autoLearnSpells = (autoLearnSpells + 1) % 4;
-    }
-    else if (buffer[0] == 'K' && buffer[1] == '4') {
-        passiveGroup = !passiveGroup;
+    else if (buffer[0] == 'K') {
+        if (len < 4) {
+            return;
+        }
+
+        int keyId = buffer[1] - '0';
+        int state = buffer[3] - '0';
+
+        bool value = (state == 1);
+
+        if (keyId == 1) {
+            keybindTrigger = 1;
+        }
+        else if (keyId == 2) {
+            keybindTrigger = 2;
+        }
+        else if (keyId == 3) {
+            autoLearnSpells = (autoLearnSpells + 1) % 4;
+        }
+        else if (keyId == 4) {
+            passiveGroup = value;
+        }
     }
     else if (buffer[0] == 'C' && buffer[1] == '1') {
         // Main Character no automation

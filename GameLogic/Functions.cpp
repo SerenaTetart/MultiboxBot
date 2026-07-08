@@ -1,14 +1,20 @@
 #include "Functions.h"
 
-#include <iostream>
-
 #include "MemoryManager.h"
 #include "Game.h"
 #include "FunctionsLua.h"
 #include "rng.h"
 
-#include "Navigation.h"
+#include <iostream>
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <tuple>
+#include <vector>
 #include <random>
+
+#include "Navigation.h"
 
 #include "FactionTemplate.h"
 
@@ -54,10 +60,10 @@ Position Functions::ProjectPos(Position pos, float height) {
 	}
 }
 
-unsigned long Functions::GetPlayerGuid() {
+unsigned long long Functions::GetPlayerGuid() {
 	typedef unsigned long func();
 	func* function = (func*)GET_PLAYER_GUID_FUN_PTR;
-	unsigned long guid = function();
+	unsigned long long guid = function();
 	return guid;
 }
 
@@ -81,13 +87,18 @@ void Functions::EnumerateVisibleObjects(int filter) {
 	}
 	ListUnits.clear();
 	ListGameObjects.clear();
+	ListUnits.reserve(1024);
+	ListGameObjects.reserve(1024);
+	Leader = NULL;
+	targetUnit = NULL;
+	ccTarget = NULL;
 	if (localPlayer != NULL) {
 		delete(localPlayer);
 		localPlayer = NULL;
 	}
 	typedef int (*EnumerateVisibleObjectsCallback)(unsigned long long, int);
 	EnumerateVisibleObjectsCallback callback = &Callback;
-	void* callbackPtr = (void*&)callback;
+	auto callbackPtr = reinterpret_cast<uintptr_t>(&Functions::Callback);
 
 	typedef void __fastcall func(uintptr_t, int);
 	func* function = (func*)ENUMERATE_VISIBLE_OBJECTS_FUN_PTR;
@@ -95,13 +106,61 @@ void Functions::EnumerateVisibleObjects(int filter) {
 		function((uintptr_t)callbackPtr, filter);
 	}
 	catch (...) {}
+	if (localPlayer == NULL) {
+		positionCircle = 1;
+		return;
+	}
+	for (unsigned int i = 0; i < ListUnits.size(); i++) {
+		if (ListUnits[i].objectType != Player) {
+			continue;
+		}
+
+		for (unsigned int y = 0; y < leaderInfos.size(); y++) {
+			if (ListUnits[i].name == get<0>(leaderInfos[y])) {
+				ListUnits[i].role = get<1>(leaderInfos[y]);
+				ListUnits[i].indexGroup = y;
+				break;
+			}
+		}
+
+		if (ListUnits[i].Guid == localPlayer->Guid) {
+			GroupMember[0] = &ListUnits[i];
+			PartyMember[0] = &ListUnits[i];
+			localPlayer->role = ListUnits[i].role;
+			localPlayer->indexGroup = ListUnits[i].indexGroup;
+		}
+		else if (tarType == "party") {
+			for (int y = 1; y < 5; y++) {
+				if (ListUnits[i].name == FunctionsLua::UnitName("party" + std::to_string(y))) {
+					GroupMember[y] = &ListUnits[i];
+					PartyMember[y] = &ListUnits[i];
+					ListUnits[i].isFromGroup = true;
+					break;
+				}
+			}
+		}
+		else {
+			for (int y = 1; y <= NumGroupMembers; y++) {
+				if (ListUnits[i].name == FunctionsLua::UnitName("raid" + std::to_string(y))) {
+					GroupMember[y] = &ListUnits[i];
+					ListUnits[i].isFromGroup = true;
+					break;
+				}
+			}
+			for (int y = 1; y < 5; y++) {
+				if (ListUnits[i].name == FunctionsLua::UnitName("party" + std::to_string(y))) {
+					PartyMember[y] = &ListUnits[i];
+					ListUnits[i].isFromGroup = true;
+					break;
+				}
+			}
+		}
+	}
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		ListUnits[i].unitReaction = localPlayer->getUnitReaction(ListUnits[i].Pointer);
 		ListUnits[i].attackable = localPlayer->canAttack(ListUnits[i].Pointer);
 	}
-	if (localPlayer != NULL) {
-		localPlayer->className = FunctionsLua::UnitClass("player");
-	}
+	localPlayer->className = FunctionsLua::UnitClass("player");
 	Leader = Functions::GetLeader();
 	positionCircle = GetPositionCircle();
 }
@@ -138,34 +197,6 @@ int Functions::Callback(unsigned long long guid, int filter) {
 					localPlayer = new LocalPlayer(pointer, guid, objectType);
 					localPlayer->role = ListUnits.back().role;
 					localPlayer->indexGroup = ListUnits.back().indexGroup;
-					GroupMember[0] = &ListUnits.back();
-					PartyMember[0] = &ListUnits.back();
-				}
-				else if (tarType == "party") {
-					for (int i = 1; i < 5; i++) {
-						if (unit.name == FunctionsLua::UnitName("party" + std::to_string(i))) {
-							GroupMember[i] = &ListUnits.back();
-							PartyMember[i] = &ListUnits.back();
-							ListUnits.back().isFromGroup = true;
-							break;
-						}
-					}
-				}
-				else {
-					for (int i = 1; i <= NumGroupMembers; i++) {
-						if (unit.name == FunctionsLua::UnitName("raid" + std::to_string(i))) {
-							GroupMember[i] = &ListUnits.back();
-							ListUnits.back().isFromGroup = true;
-							break;
-						}
-					}
-					for (int i = 1; i < 5; i++) {
-						if (unit.name == FunctionsLua::UnitName("party" + std::to_string(i))) {
-							PartyMember[i] = &ListUnits.back();
-							ListUnits.back().isFromGroup = true;
-							break;
-						}
-					}
 				}
 			}
 		}
@@ -181,9 +212,16 @@ void Functions::LuaCall(const char* code) {
 }
 
 uintptr_t Functions::GetText(const char* varName) {
+	if (varName == NULL) {
+		return reinterpret_cast<uintptr_t>("");
+	}
 	typedef uintptr_t __fastcall func(const char* varName, unsigned int nonSense, int zero);
 	func* f = (func*)LUA_GET_TEXT_FUN_PTR;
-	return f(varName, -1, 0);
+	uintptr_t result = f(varName, -1, 0);
+	if (result == NULL) {
+		return reinterpret_cast<uintptr_t>("");
+	}
+	return result;
 }
 
 void Functions::ClickAOE(Position position) {
@@ -438,7 +476,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type) {
 	float PI_4 = acosf(0)/2;
 	for (int i = 0; i < 32; i++) {
 		Position last_pos = target->position; //Take into account the difference in altitude at each point
-		for (int w = 7; w < 20; w++) { //Every 2.0 yards up to 40 yard check for LoS point
+		for (int w = 0; w < 10; w++) { //Every 2.0 yards up to 20 yard check for LoS point
 			Position tmp_pos = Position((cos((i * halfPI / 8)) * 2.0f) + last_pos.X, (sin((i * halfPI / 8)) * 2.0f) + last_pos.Y, last_pos.Z);
 			Position next_pos = tmp_pos;
 			if (!(localPlayer->movement_flags & MOVEFLAG_SWIMMING)) {
@@ -542,11 +580,6 @@ void Functions::CancelPlayerBuff(int buffID) {
 	}
 }
 
-//======================================================================//
-//======================   Non-memory Functions   ======================//
-//======================================================================//
-//(They don't use Lua calls and memory pointers)
-
 Position Functions::RandomisePos(Position target_pos, float radius, Position away_from, float dist_away) {
 	float halfPI = acosf(0);
 	std::uniform_real_distribution<float> U01(0.0f, 1.0f);
@@ -569,38 +602,43 @@ Position Functions::RandomisePos(Position target_pos, float radius, Position awa
 	else return candidate;
 }
 
+//======================================================================//
+//======================   Non-memory Functions   ======================//
+//======================================================================//
+//(They don't use Lua calls and memory pointers)
+
 void Functions::ClassifyHeal() {
 	//Heal all friendly players or NPC within 60 yards
-	std::vector<float> PrctHp;
-	HealTargetArray.clear();
-	AoEHeal = 0;
-	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if ((ListUnits[i].unitReaction > Neutral) && !ListUnits[i].isdead) {
-			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
-			if (dist < 60) {
-				PrctHp.push_back(ListUnits[i].prctHP);
-				HealTargetArray.push_back(i);
-			}
-		}
-	}
-	for (int i = 0; i < 5; i++) {
-		if (PartyMember[i] != NULL && PartyMember[i]->prctHP < 50) AoEHeal = AoEHeal + 1;
-	}
-	for (int i = PrctHp.size(); i > 0; i--) {
-		for (int y = 0; y < i - 1; y++) {
-			if (PrctHp[y] > PrctHp[y + 1]) {
-				float tmp = PrctHp[y];
-				PrctHp[y] = PrctHp[y + 1];
-				PrctHp[y + 1] = tmp;
-				int tmp2 = HealTargetArray[y];
-				HealTargetArray[y] = HealTargetArray[y + 1];
-				HealTargetArray[y + 1] = tmp2;
-			}
-		}
-	}
+    HealTargetArray.clear();
+    HealTargetArray.reserve(ListUnits.size());
+
+    AoEHeal = 0;
+
+    for (unsigned int i = 0; i < ListUnits.size(); i++) {
+        if ((ListUnits[i].unitReaction > Neutral) && !ListUnits[i].isdead) {
+            float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
+            if (dist < 60) {
+                HealTargetArray.push_back(i);
+            }
+        }
+    }
+
+    std::sort(
+        HealTargetArray.begin(),
+        HealTargetArray.end(),
+        [](int a, int b) {
+            return ListUnits[a].prctHP < ListUnits[b].prctHP;
+        }
+    );
+
+    for (int i = 0; i < 5; i++) {
+        if (PartyMember[i] != NULL && PartyMember[i]->prctHP < 50) {
+            AoEHeal++;
+        }
+    }
 }
 
-Position meanPos(std::vector<Position> posArr) {
+Position meanPos(const std::vector<Position>& posArr) {
 	Position clusterCenter = Position(0, 0, 0);
 	for (unsigned int i = 0; i < posArr.size(); i++) {
 		clusterCenter.X = clusterCenter.X + posArr[i].X;
@@ -668,12 +706,15 @@ std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_r
 				index = i;
 			}
 		}
-		return std::make_tuple(clusters_center[index], max_cluster_unit);
+		
+		if (max_cluster_unit == 0) return std::make_tuple(Position(0, 0, 0), 0);
+		else return std::make_tuple(clusters_center[index], max_cluster_unit);
 	}
 	else return std::make_tuple(Position(0, 0, 0), 0);
 }
 
 std::tuple<int, int, int, int> Functions::countEnemies() {
+	ccTarget = NULL;
 	for (int i = 0; i < 40; i++) {
 		HasAggro[i].clear();
 	}

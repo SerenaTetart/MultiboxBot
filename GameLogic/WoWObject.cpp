@@ -66,10 +66,17 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     speed = *(float*)(Pointer + SPEED_OFFSET);
     isMoving = ((speed > 0) || (movement_flags & MOVEFLAG_FORWARD) || (movement_flags & MOVEFLAG_BACKWARD));
     if (descriptor != NULL) {
+        isdead = false;
         health = *(int*)(descriptor + HEALTH_OFFSET);
         int max_health = *(int*)(descriptor + MAX_HEALTH_OFFSET);
-        prctHP = ((float)health / (float)max_health) * 100;
-        hpLost = max_health - health;
+        if (max_health > 0) {
+            prctHP = ((float)health / (float)max_health) * 100;
+            hpLost = max_health - health;
+        } else {
+            isdead = true;
+            prctHP = 100;
+            hpLost = 0;
+        }
         int max_mana = *(int*)(descriptor + MAXMANA_OFFSET);
         if (max_mana > 0) {
             int mana = *(int*)(descriptor + MANA_OFFSET);
@@ -80,10 +87,9 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
         energy = *(int*)(descriptor + ENERGY_OFFSET);
 
         flags = *(UnitFlags*)(descriptor + UNIT_FLAG_OFFSET);
+        if (health <= 1 && !(flags & UNIT_FLAG_FEIGN_DEATH)) isdead = true;
         dynamic_flags = *(DynamicFlags*)(descriptor + DYNAMIC_FLAG_OFFSET);
         createdBy = *(int*)(descriptor + CREATED_BY_SPELL_OFFSET);
-
-        isdead = false; if (health <= 1 && !(flags & UNIT_FLAG_FEIGN_DEATH)) isdead = true;
 
         bool travelForm = false;
         uintptr_t currentBuffOffset = BUFF_BASE_OFFSET;

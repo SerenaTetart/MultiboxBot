@@ -46,6 +46,10 @@ static void PaladinAttack(int index_paladin) {
 			// Hammer of Justice
 			FunctionsLua::CastSpellByName("Hammer of Justice");
 		}
+		else if ((nbrCloseEnemyFacing >= 1) && HasAggro[0].size() > 0) {
+			// Holy Shield
+			FunctionsLua::CastSpellByName("Holy Shield");
+		}
 		else if (((localPlayer->prctMana > 33) || (nbrCloseEnemy <= 1)) && (distTarget < 30) && ((targetUnit->creatureType == Undead) || (targetUnit->creatureType == Demon)) && FunctionsLua::IsSpellReady("Exorcism")) {
 			// Exorcism
 			FunctionsLua::CastSpellByName("Exorcism");

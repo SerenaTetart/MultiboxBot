@@ -3,15 +3,13 @@
 
 #include <windows.h>
 #include <iostream>
+#include <memory>
+#include <utility>
 
 static HWND windowHandle;
 static WNDPROC newCallback;
 static WNDPROC oldCallback;
-static std::vector<std::function<void()>> actionQueue;
-
-void SendUserMessage() {
-    SendMessageW(windowHandle, WM_USER, 0, 0);
-}
+static constexpr UINT RUN_ACTION_MESSAGE = WM_USER;
 
 void ThreadSynchronizer::pressKey(unsigned int key) {
     SendMessageW(windowHandle, WM_KEYDOWN, key, 0);
@@ -21,12 +19,20 @@ void ThreadSynchronizer::releaseKey(unsigned int key) {
     SendMessageW(windowHandle, WM_KEYUP, key, 0);
 }
 
-int WndProc(HWND hwnd, UINT Msg, WPARAM wparam, LPARAM lparam) {
-    if (actionQueue.size() > 0) {
-        std::invoke(actionQueue.back());
-        actionQueue.pop_back();
+LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wparam, LPARAM lparam) {
+    if (Msg == RUN_ACTION_MESSAGE && lparam != 0) {
+        std::unique_ptr<std::function<void()>> action(
+            reinterpret_cast<std::function<void()>*>(lparam)
+        );
+        std::invoke(*action);
+        return 0;
     }
-    return CallWindowProcW(oldCallback, hwnd, Msg, wparam, lparam);
+
+    if (oldCallback) {
+        return CallWindowProcW(oldCallback, hwnd, Msg, wparam, lparam);
+    }
+
+    return DefWindowProcW(hwnd, Msg, wparam, lparam);
 }
 
 void ThreadSynchronizer::Init() {
@@ -37,10 +43,12 @@ void ThreadSynchronizer::Init() {
     }
     std::cout << "windowHandle:" << windowHandle << "\n";
     newCallback = (WNDPROC)&WndProc;
-    oldCallback = (WNDPROC)SetWindowLongW(windowHandle, GWL_WNDPROC, (LONG)newCallback);
+    oldCallback = reinterpret_cast<WNDPROC>(
+        SetWindowLongPtrW(windowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(newCallback))
+    );
 }
 
 void ThreadSynchronizer::RunOnMainThread(std::function<void()> action) {
-    actionQueue.push_back(action);
-    SendUserMessage();
+    auto* actionPtr = new std::function<void()>(std::move(action));
+    SendMessageW(windowHandle, RUN_ACTION_MESSAGE, 0, reinterpret_cast<LPARAM>(actionPtr));
 }
