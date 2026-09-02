@@ -13,7 +13,7 @@ bool Game::Loot() {
 				continue;
 			else if (Functions::enemyClose(ListGameObjects[i].position)) continue;
 			int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
-			if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 100)
+			if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)
 				|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 100)) {
 				if (ListGameObjects[i].position.DistanceTo(localPlayer->position) < 5.0f) {
 					if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
@@ -137,7 +137,7 @@ bool Game::Trade() {
 								ThreadSynchronizer::RunOnMainThread([item, y]() {
 									FunctionsLua::PickupItem(get<0>(item), get<1>(item));
 									FunctionsLua::DropItemOnUnit(tarType + std::to_string(y));
-									});
+								});
 								traded = true;
 							}
 						}

@@ -2,9 +2,11 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 SOCKET Navigation::sock;
 WSADATA Navigation::WSAData;
+std::vector<BlacklistEntry> Navigation::Blacklists;
 
 bool Navigation::is_socket_connected(SOCKET s) {
 	if (s == INVALID_SOCKET) return false;
@@ -29,9 +31,7 @@ void appendPosition(std::string& msg, Position& pos) {
 }
 
 Position Navigation::CalculatePath(unsigned int mapID, Position start, Position end) {
-	if (!is_socket_connected(sock) && !ConnectToServer("127.0.0.1", 50002)) {
-		return start;
-	}
+	if (!is_socket_connected(sock) && !ConnectToServer("127.0.0.1", 50002)) return start;
 
     Position nextpos = start;
     if (end.DistanceTo(start) < 2.0f) return start;
@@ -56,6 +56,77 @@ Position Navigation::CalculatePath(unsigned int mapID, Position start, Position 
     }
 
     return nextpos;
+}
+
+static bool ReceiveNavigationAck(SOCKET sock) {
+    char buffer[16];
+    int r = recv(sock, buffer, sizeof(buffer) - 1, 0);
+    if (r <= 0) return false;
+    buffer[r] = '\0';
+    return std::string(buffer) == "OK";
+}
+
+bool Navigation::AddBlacklist(unsigned int mapId, const std::string& name, const Position& position, float radius, unsigned int type) {
+    if (IsBlacklisted(name) || (!is_socket_connected(sock) && !ConnectToServer("127.0.0.1", 50002))) return false;
+
+    std::ostringstream oss;
+    oss << "B "
+        << mapId << " "
+        << name << " "
+        << std::fixed << std::setprecision(4)
+        << position.X << ","
+        << position.Y << ","
+        << position.Z << " "
+        << radius << " "
+        << type;
+    std::string msg = oss.str();
+
+    if (send(sock, msg.c_str(), static_cast<int>(msg.size()), 0) == SOCKET_ERROR) return false;
+    else if (!ReceiveNavigationAck(sock)) return false;
+    Blacklists.push_back({name, position, radius});
+
+    return true;
+}
+
+bool Navigation::RemoveBlacklist(const std::string& name) {
+    if (!is_socket_connected(sock) && !ConnectToServer("127.0.0.1", 50002)) return false;
+
+    std::string msg = "R " + name;
+    if (send(sock, msg.c_str(), static_cast<int>(msg.size()),0) == SOCKET_ERROR) return false;
+
+    if (!ReceiveNavigationAck(sock)) return false;
+
+    Blacklists.erase(
+		std::remove_if(
+			Blacklists.begin(),
+			Blacklists.end(),
+			[&](const BlacklistEntry& entry) {
+				return entry.Name == name;
+			}),
+		Blacklists.end()
+	);
+
+    return true;
+}
+
+bool Navigation::IsBlacklisted(const string& name) {
+    for (const auto& blacklist : Blacklists) {
+		if(blacklist.Name == name) return true;
+    }
+
+    return false;
+}
+
+bool Navigation::HasBlacklists() {
+    return !Blacklists.empty();
+}
+
+void Navigation::ClearBlacklists() {
+    while (!Blacklists.empty()) {
+        const std::string name = Blacklists.back().Name;
+
+        if (!RemoveBlacklist(name)) break;
+    }
 }
 
 bool Navigation::ConnectToServer(const char* addr, int port) {

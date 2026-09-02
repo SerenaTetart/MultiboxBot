@@ -77,23 +77,27 @@ static void DruidAttack() {
 			int MoonfireIDs[10] = { 8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835 };
 			bool MoonfireDebuff = targetUnit->hasDebuff(MoonfireIDs, 10);
 			if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
-			if (!localPlayer->isMoving && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Hurricane")) {
+			if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Nature) && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Hurricane")) {
 				//Hurricane
 				FunctionsLua::CastSpellByName("Hurricane");
 				Functions::ClickAOE(cluster_center);
 			}
-			else if (IsFacing && !MoonfireDebuff && targetUnit->getNbrDebuff() < 16 && !IsInGroup && FunctionsLua::IsSpellReady("Moonfire")) {
+			else if (IsFacing && !MoonfireDebuff && !targetUnit->resist(SpellSchool::Arcane) && targetUnit->getNbrDebuff() < 16 && (localPlayer->prctMana > 33.3f) && FunctionsLua::IsSpellReady("Moonfire")) {
 				//Moonfire
 				FunctionsLua::CastSpellByName("Moonfire");
 			}
-			else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && FunctionsLua::IsSpellReady("Entangling Roots")) {
+			else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !targetUnit->resist(SpellSchool::Nature) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && FunctionsLua::IsSpellReady("Entangling Roots")) {
 				//Entangling Roots (PvP)
 				FunctionsLua::CastSpellByName("Entangling Roots");
 				if (localPlayer->isCasting()) EntanglingRootsTimer = time(0);
 			}
-			else if (IsFacing && !localPlayer->isMoving && !IsInGroup && FunctionsLua::IsSpellReady("Wrath")) {
+			else if (IsFacing && !localPlayer->isMoving && (localPlayer->prctMana > 33.3f) && !targetUnit->resist(SpellSchool::Nature) && FunctionsLua::IsSpellReady("Wrath")) {
 				//Wrath
 				FunctionsLua::CastSpellByName("Wrath");
+			}
+			else if (IsFacing && !localPlayer->isMoving && (localPlayer->prctMana > 33.3f) && !targetUnit->resist(SpellSchool::Arcane) && FunctionsLua::IsSpellReady("Starfire")) {
+				//Starfire
+				FunctionsLua::CastSpellByName("Starfire");
 			}
 		}
 	}

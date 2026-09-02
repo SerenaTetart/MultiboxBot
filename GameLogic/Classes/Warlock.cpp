@@ -150,11 +150,11 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Inferno");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!localPlayer->isMoving && (localPlayer->prctHP > 70.0f) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Hellfire")) {
+				else if (!localPlayer->isMoving && (localPlayer->prctHP > 70.0f) && !targetUnit->resist(SpellSchool::Fire) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Hellfire")) {
 					//Hellfire
 					FunctionsLua::CastSpellByName("Hellfire");
 				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Rain of Fire")) {
+				else if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Fire) && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Rain of Fire")) {
 					//Rain of Fire
 					FunctionsLua::CastSpellByName("Rain of Fire");
 					Functions::ClickAOE(cluster_center);
@@ -164,12 +164,12 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Curse of Shadow");
 					CurseGCD = time(0);
 				}
-				else if (!CoAgonyDebuff && targetUnit->getNbrDebuff() < 16 && !CoTonguesDebuff && targetPlayer && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::IsSpellReady("Curse of Agony")) {
+				else if (!CoAgonyDebuff && !targetUnit->resist(SpellSchool::Shadow) && targetUnit->getNbrDebuff() < 16 && !CoTonguesDebuff && targetPlayer && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::IsSpellReady("Curse of Agony")) {
 					//Curse of Agony (PvP)
 					FunctionsLua::CastSpellByName("Curse of Agony");
 					CurseGCD = time(0);
 				}
-				else if (!CorruptionDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Corruption")) {
+				else if (!CorruptionDebuff && !targetUnit->resist(SpellSchool::Shadow) && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Corruption")) {
 					//Corruption (PvP)
 					FunctionsLua::CastSpellByName("Corruption");
 				}
@@ -177,7 +177,7 @@ void ListAI::WarlockDps() {
 					//Siphon Life (PvP)
 					FunctionsLua::CastSpellByName("Siphon Life");
 				}
-				else if (!localPlayer->isMoving && !ImmolateDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Immolate")) {
+				else if (!localPlayer->isMoving && !ImmolateDebuff && !targetUnit->resist(SpellSchool::Fire) && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Immolate")) {
 					//Immolate (PvP)
 					FunctionsLua::CastSpellByName("Immolate");
 				}
@@ -193,7 +193,7 @@ void ListAI::WarlockDps() {
 					//Drain Mana (PvP)
 					FunctionsLua::CastSpellByName("Drain Mana");
 				}
-				else if (IsFacing && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Shadow Bolt")) {
+				else if (IsFacing && !localPlayer->isMoving && !targetUnit->resist(SpellSchool::Shadow) && FunctionsLua::IsSpellReady("Shadow Bolt")) {
 					//Shadow Bolt
 					FunctionsLua::CastSpellByName("Shadow Bolt");
 				}

@@ -66,7 +66,6 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     speed = *(float*)(Pointer + SPEED_OFFSET);
     isMoving = ((speed > 0) || (movement_flags & MOVEFLAG_FORWARD) || (movement_flags & MOVEFLAG_BACKWARD));
     if (descriptor != NULL) {
-        isdead = false;
         health = *(int*)(descriptor + HEALTH_OFFSET);
         int max_health = *(int*)(descriptor + MAX_HEALTH_OFFSET);
         if (max_health > 0) {
@@ -87,7 +86,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
         energy = *(int*)(descriptor + ENERGY_OFFSET);
 
         flags = *(UnitFlags*)(descriptor + UNIT_FLAG_OFFSET);
-        if (health <= 1 && !(flags & UNIT_FLAG_FEIGN_DEATH)) isdead = true;
+        if (health <= 1 && !(flags & UNIT_FLAG_FEIGN_DEATH) && (flags & UNIT_FLAG_NON_ATTACKABLE)) isdead = true;
         dynamic_flags = *(DynamicFlags*)(descriptor + DYNAMIC_FLAG_OFFSET);
         createdBy = *(int*)(descriptor + CREATED_BY_SPELL_OFFSET);
 
@@ -143,6 +142,15 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     position = Position(x, y, z);
 
     entryID = ((uint32_t)((guid >> 24) & 0xFFFF));
+
+    // Spell Resistances
+    const ResistanceFlags flags = GetNPCResistances(entryID);
+        
+    resist(SpellSchool::Fire) = HasResistance(flags, ResistanceFlags::Fire);
+    resist(SpellSchool::Frost) = HasResistance(flags, ResistanceFlags::Frost);
+    resist(SpellSchool::Nature) = HasResistance(flags, ResistanceFlags::Nature);
+    resist(SpellSchool::Shadow) = HasResistance(flags, ResistanceFlags::Shadow);
+    resist(SpellSchool::Arcane) = HasResistance(flags, ResistanceFlags::Arcane);
 }
 
 int WoWUnit::hasBuff(const int* IDs, int size) {

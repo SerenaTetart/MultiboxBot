@@ -1,6 +1,9 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <array>
+
+#include "Data/NPCResistance.h"
 
 enum ObjectType {
     None,
@@ -175,6 +178,17 @@ class WoWObject {
         uintptr_t GetDescriptorPtr(uintptr_t pointer);
 };
 
+
+enum class SpellSchool : std::size_t {
+    Fire,
+    Frost,
+    Nature,
+    Shadow,
+    Arcane,
+
+    Count
+};
+
 class WoWUnit : public WoWObject {
     public:
         Position position; CreatureType creatureType = Null; UnitReaction unitReaction = Neutral;
@@ -183,6 +197,15 @@ class WoWUnit : public WoWObject {
         unsigned long long targetGuid = 0; char* name; bool attackable = false, isdead = false, isMoving = false, isFromGroup = false, isMounted = false;
         int rage = 0, energy = 0, level = 0, channelInfo = 0, hpLost = 0, factionTemplateID = 0, indexGroup = -1, role = -1, health = 0,
         createdBy = 0, entryID = 0, rank = 0, mountModelID = 0;
+        std::array<bool, static_cast<std::size_t>(SpellSchool::Count)> spellResist {};
+
+        bool& resist(SpellSchool school) {
+            return spellResist[static_cast<std::size_t>(school)];
+        }
+
+        bool resist(SpellSchool school) const {
+            return spellResist[static_cast<std::size_t>(school)];
+        }
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);
         bool hasBuff(int buffID);

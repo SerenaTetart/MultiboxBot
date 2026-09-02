@@ -179,6 +179,7 @@ void Game::MainLoop() {
 				break;
 			}
 
+			if(!Combat && Navigation::HasBlacklists()) Navigation::ClearBlacklists();
 			Functions::ClassifyHeal();
 			std::tie(nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer) = Functions::countEnemies();
 
@@ -215,7 +216,7 @@ void Game::MainLoop() {
 				ThreadSynchronizer::releaseKey(0x20);
 				jumpCD = time(0);
 			}
-			else if (Combat && BossAI::BossAIAction()) { }
+			else if (BossAI::BossAIAction()) { }
 			else if ((localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
 				ThreadSynchronizer::RunOnMainThread([=]() {
 					los_target = true;

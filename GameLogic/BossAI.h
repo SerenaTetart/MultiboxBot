@@ -1,5 +1,6 @@
 #pragma once
 #include "Game.h"
+#include "Navigation.h"
 
 class BossAI {
 public:

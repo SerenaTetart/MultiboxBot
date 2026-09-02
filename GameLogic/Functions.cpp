@@ -254,7 +254,7 @@ void Functions::MoveTo(Position target_pos, int MoveType, bool checkEnemyClose, 
 		}
 		else Moving = 0;
 	}
-	else if (Functions::MoveObstacle(target_pos, checkEnemyClose) == false) {
+	else if(Navigation::HasBlacklists() || (Functions::MoveObstacle(target_pos, checkEnemyClose) == false)) {
 		Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
 		if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !Functions::enemyClose(nextpos) && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
 			localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
@@ -308,7 +308,7 @@ void Functions::FollowMultibox(int placement) {
 			return;
 		}
 		Functions::MoveTo(target_pos, 4, true, targetSwim);
-		});
+	});
 }
 
 bool MoveObstacleSwim_tmp(const Position& target_pos, const Position& start_pos) {

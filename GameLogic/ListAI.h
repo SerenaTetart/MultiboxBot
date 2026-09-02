@@ -16,6 +16,7 @@ public:
 	static void RogueDps();
 	static void WarlockDps();
 	static void WarriorTank();
+	
 	static void DPSTargeting();
 	static void TankTargeting();
 };
