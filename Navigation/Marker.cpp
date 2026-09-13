@@ -22,31 +22,51 @@ void MarkerCreator::RemoveMarker(std::string name)
     RemoveMarkerByName.push_back(name);
 }
 
-void MarkerCreator::Remove(dtNavMeshQuery* meshQuery, const dtNavMesh* navmesh, dtQueryFilter query)
+void MarkerCreator::Remove(
+    dtNavMeshQuery* meshQuery,
+    const dtNavMesh* navmesh,
+    dtQueryFilter query)
 {
-    if (RemoveMarkerByName.empty())
-        return;
+    if (RemoveMarkerByName.empty()) return;
+    std::vector<std::string> processedNames;
 
-    for (auto it = Marks.begin(); it != Marks.end(); )
-    {
+    for (auto it = Marks.begin(); it != Marks.end(); ) {
         Marker marker = it->first;
-        if (it->second && std::find(RemoveMarkerByName.begin(), RemoveMarkerByName.end(), marker.Name) != RemoveMarkerByName.end())
-        {
 
+        auto removeRequest = std::find(RemoveMarkerByName.begin(), RemoveMarkerByName.end(), marker.Name);
+
+        if (removeRequest == RemoveMarkerByName.end()) {
+            ++it;
+            continue;
+        }
+
+        if (!it->second) {
+            processedNames.push_back(marker.Name);
+            it = Marks.erase(it);
+            continue;
+        }
+
+        Marker restoreMarker = marker;
+        restoreMarker.Type = Area::Walkable;
+
+        if (PathFinder::ApplyCircleBlacklistToPolys(meshQuery, navmesh, query, restoreMarker)) {
             std::cout << "Removing " << marker.Name << std::endl;
-            // Set the type to Walkable before removing the marker
-            marker.Type = Area::Walkable;
 
-            // Apply the circle blacklist to polys
-            PathFinder::ApplyCircleBlacklistToPolys(meshQuery, navmesh, query, marker);
-
-            // Remove the marker from Marks
+            processedNames.push_back(marker.Name);
             it = Marks.erase(it);
         }
-        else
-        {
-            ++it;
-        }
+        else ++it;
+    }
+
+    for (const auto& name : processedNames) {
+        RemoveMarkerByName.erase(
+            std::remove(
+                RemoveMarkerByName.begin(),
+                RemoveMarkerByName.end(),
+                name
+            ),
+            RemoveMarkerByName.end()
+        );
     }
 }
 

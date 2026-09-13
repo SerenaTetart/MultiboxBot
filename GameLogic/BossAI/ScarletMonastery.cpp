@@ -1,7 +1,4 @@
-#include "BossAI.h"
-#include "MemoryManager.h"
-#include "FunctionsLua.h"
-#include <time.h>
+#include "../BossAI.h"
 
 static time_t mechanicTimer = time(0);
 
@@ -38,19 +35,9 @@ bool BossAI::ScarletMonastery() {
 					ThreadSynchronizer::RunOnMainThread([listAwayPoints, pointIndex]() {
 						Functions::MoveTo(listAwayPoints[pointIndex], 10, false, false);
 					});
+					return true;
 				}
-				else if (Moving == 10) {
-					//Stop
-					Moving = 0;
-					ThreadSynchronizer::pressKey(0x28);
-					ThreadSynchronizer::releaseKey(0x28);
-				}
-				else if (targetUnit != NULL && !IsFacing) {
-					ThreadSynchronizer::RunOnMainThread([]() { localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position); });
-				}
-				return true;
 			}
-			else return false;
 		}
 	}
 	return false;

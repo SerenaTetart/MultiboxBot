@@ -19,23 +19,27 @@ static void DruidAttack() {
 			//Moonkin Form
 			FunctionsLua::CastSpellByName("Moonkin Form");
 		}
-		else if (!localPlayer->isMoving && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Hurricane")) {
+		else if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Nature) && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Hurricane")) {
 			//Hurricane
 			FunctionsLua::CastSpellByName("Hurricane");
 			Functions::ClickAOE(cluster_center);
 		}
-		else if (IsFacing && !MoonfireDebuff && (targetUnit->getNbrDebuff() < 16) && FunctionsLua::IsSpellReady("Moonfire") && ((localPlayer->prctMana > 50.0f) || (MoonkinFormBuff))) {
+		else if (IsFacing && !MoonfireDebuff && !targetUnit->resist(SpellSchool::Arcane) && (targetUnit->getNbrDebuff() < 16) && FunctionsLua::IsSpellReady("Moonfire") && ((localPlayer->prctMana > 50.0f) || (MoonkinFormBuff))) {
 			//Moonfire
 			FunctionsLua::CastSpellByName("Moonfire");
 		}
-		else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && FunctionsLua::IsSpellReady("Entangling Roots")) {
+		else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !targetUnit->resist(SpellSchool::Nature) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && FunctionsLua::IsSpellReady("Entangling Roots")) {
 			//Entangling Roots (PvP)
 			FunctionsLua::CastSpellByName("Entangling Roots");
 			if (localPlayer->isCasting()) EntanglingRootsTimer = time(0);
 		}
-		else if (IsFacing && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Wrath") && ((localPlayer->prctMana > 50.0f) || (MoonkinFormBuff))) {
+		else if (IsFacing && !localPlayer->isMoving && ((localPlayer->prctMana > 50.0f) || (MoonkinFormBuff)) && !targetUnit->resist(SpellSchool::Nature) && FunctionsLua::IsSpellReady("Wrath")) {
 			//Wrath
 			FunctionsLua::CastSpellByName("Wrath");
+		}
+		else if (IsFacing && !localPlayer->isMoving && ((localPlayer->prctMana > 50.0f) || (MoonkinFormBuff)) && !targetUnit->resist(SpellSchool::Arcane) && FunctionsLua::IsSpellReady("Starfire")) {
+			//Starfire
+			FunctionsLua::CastSpellByName("Starfire");
 		}
 	}
 	else if (!Combat && (localPlayer->prctMana > 33.0f) && MoonkinFormBuff) {

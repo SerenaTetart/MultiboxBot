@@ -18,7 +18,7 @@ class Functions {
 		static void InteractObject(uintptr_t object_ptr, int autoloot);
 		static bool MoveLoS(Position target_pos);
 		static bool MoveLoSSwim(Position target_pos);
-		static bool StepBack(WoWUnit* target, int move_type);
+		static bool StepBack(WoWUnit* target, int move_type, float dist_away=15.0f);
 		static bool MoveObstacle(Position target_pos, bool checkEnemyClose=true);
 		static bool MoveObstacleSwim(Position target_pos, bool checkEnemyClose);
 		static void FollowMultibox(int placement = 0);

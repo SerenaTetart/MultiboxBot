@@ -1,5 +1,10 @@
 #pragma once
 #include "Game.h"
+#include "Navigation.h"
+#include "MemoryManager.h"
+#include "FunctionsLua.h"
+
+#include <time.h>
 
 class BossAI {
 public:

@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <cstring>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -31,6 +32,26 @@ static bool parse_two_vec3_and_map(const std::string& s, Vector3& a, Vector3& b,
     return true;
 }
 
+static bool parse_add_blacklist(const std::string& payload, unsigned int& mapID, std::string& name, Vector3& position, float& radius, unsigned int& type) {
+    std::istringstream iss(payload);
+    std::string positionStr;
+
+    if (!(iss >> mapID >> name >> positionStr >> radius >> type)) return false;
+
+    float x, y, z;
+    int n = std::sscanf(positionStr.c_str(), "%f,%f,%f", &x, &y, &z);
+    if (n != 3) return false;
+
+    position = Vector3{x, y, z};
+
+    return true;
+}
+
+static bool parse_remove_blacklist(const std::string& payload, std::string& name) {
+    std::istringstream iss(payload);
+    return static_cast<bool>(iss >> name);
+}
+
 static float trunc4(float v) {
     return std::trunc(v * 10000.0f) / 10000.0f;
 }
@@ -44,7 +65,7 @@ static void handle_client(SOCKET csock, sockaddr_in caddr) {
         char buffer[128];
         int r = recv(csock, buffer, sizeof(buffer), 0);
 
-        if (r == 0) break;                 // peer closed
+        if (r == 0) break;
         if (r == SOCKET_ERROR) {
             int err = WSAGetLastError();
             if (err == WSAETIMEDOUT) continue;
@@ -57,29 +78,73 @@ static void handle_client(SOCKET csock, sockaddr_in caddr) {
 
             Vector3 start_pos{}, end_pos{}, result{};
             int mapID;
+
             if (!parse_two_vec3_and_map(payload, start_pos, end_pos, mapID)) {
-                //std::cout << "Nope Vector\n";
                 result = start_pos;
             }
             else {
                 std::lock_guard<std::mutex> lock(g_compute_mutex);
+
                 result = Navigation::ComputePath(mapID, start_pos, end_pos);
             }
 
-            // Format reply: "nx,ny,nz" with 4 decimals
             std::ostringstream oss;
-            oss << std::fixed << std::setprecision(4)
+
+            oss << std::fixed
+                << std::setprecision(4)
                 << trunc4(result.X) << ","
                 << trunc4(result.Y) << ","
                 << trunc4(result.Z);
+
             auto out = oss.str();
-            //std::cout << "out: " << out << "\n";
-            send(csock, out.c_str(), (int)out.size(), 0);
+
+            send(csock, out.c_str(), static_cast<int>(out.size()), 0);
         }
-        else {
-            // Unknown opcode; ignore
-            continue;
+        else if (buffer[0] == 'B') {
+            std::string payload(buffer + 1, buffer + r);
+
+            unsigned int mapID = 0;
+            unsigned int type = 0;
+
+            std::string name;
+            Vector3 position{};
+
+            float radius = 0.0f;
+
+            if (!parse_add_blacklist(payload, mapID, name, position, radius, type)) {
+                const char* response = "ERROR";
+                send(csock, response, static_cast<int>(std::strlen(response)), 0);
+                continue;
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(g_compute_mutex);
+                Navigation::AddBlackList(mapID, name, position, radius, type);
+            }
+
+            const char* response = "OK";
+
+            send(csock, response, static_cast<int>(std::strlen(response)), 0);
         }
+        else if (buffer[0] == 'R') {
+            std::string payload(buffer + 1, buffer + r);
+            std::string name;
+
+            if (!parse_remove_blacklist(payload, name)) {
+                const char* response = "ERROR";
+                send(csock, response, static_cast<int>(std::strlen(response)), 0);
+                continue;
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(g_compute_mutex);
+                Navigation::RemoveFromBlacklist(name);
+            }
+
+            const char* response = "OK";
+            send(csock, response, static_cast<int>(std::strlen(response)), 0);
+        }
+        else continue;
     }
 
     ::closesocket(csock);

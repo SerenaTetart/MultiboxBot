@@ -57,6 +57,9 @@
     <ClInclude Include="BossAI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Data\NPCResistance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -128,20 +131,20 @@
     <ClCompile Include="Classes\DruidFeralCat.cpp">
       <Filter>Source Files\Classes</Filter>
     </ClCompile>
-    <ClCompile Include="BossAI.cpp">
-      <Filter>Source Files\BossAI</Filter>
-    </ClCompile>
-    <ClCompile Include="ScarletMonastery.cpp">
-      <Filter>Source Files\BossAI</Filter>
-    </ClCompile>
-    <ClCompile Include="Maraudon.cpp">
-      <Filter>Source Files\BossAI</Filter>
-    </ClCompile>
     <ClCompile Include="Loot.cpp">
       <Filter>Source Files\OutOfCombat</Filter>
     </ClCompile>
     <ClCompile Include="Mount.cpp">
       <Filter>Source Files\OutOfCombat</Filter>
+    </ClCompile>
+    <ClCompile Include="BossAI\BossAI.cpp">
+      <Filter>Source Files\BossAI</Filter>
+    </ClCompile>
+    <ClCompile Include="BossAI\Maraudon.cpp">
+      <Filter>Source Files\BossAI</Filter>
+    </ClCompile>
+    <ClCompile Include="BossAI\ScarletMonastery.cpp">
+      <Filter>Source Files\BossAI</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -254,7 +254,7 @@ void Functions::MoveTo(Position target_pos, int MoveType, bool checkEnemyClose, 
 		}
 		else Moving = 0;
 	}
-	else if (Functions::MoveObstacle(target_pos, checkEnemyClose) == false) {
+	else if(Navigation::HasBlacklists() || (Functions::MoveObstacle(target_pos, checkEnemyClose) == false)) {
 		Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
 		if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !Functions::enemyClose(nextpos) && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
 			localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
@@ -308,7 +308,7 @@ void Functions::FollowMultibox(int placement) {
 			return;
 		}
 		Functions::MoveTo(target_pos, 4, true, targetSwim);
-		});
+	});
 }
 
 bool MoveObstacleSwim_tmp(const Position& target_pos, const Position& start_pos) {
@@ -465,8 +465,7 @@ bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
 	return false;
 }
 
-bool Functions::StepBack(WoWUnit* target, int move_type) {
-	float DIST_AWAY = 15.0f;
+bool Functions::StepBack(WoWUnit* target, int move_type, float dist_away) {
 	if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving == move_type) {
 		Moving = move_type;
 		return true;
@@ -495,7 +494,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type) {
 				if (!depthCheck) break;
 			}
 			if (!Functions::Intersect(last_pos, next_pos)) {
-				if ((target->position.DistanceTo(next_pos) - localPlayer->combatReach - target->combatReach) >= DIST_AWAY && !Functions::enemyClose(next_pos) && !Functions::Intersect(next_pos, target->position)) {
+				if ((target->position.DistanceTo(next_pos) - localPlayer->combatReach - target->combatReach) >= dist_away && !Functions::enemyClose(next_pos) && !Functions::Intersect(next_pos, target->position)) {
 					list_pos.push_back(next_pos);
 					break;
 				}
@@ -514,7 +513,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type) {
 		}
 	}
 	if (min_dist_index > -1 && min_dist > 2.0f) {
-		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f, target->position, (DIST_AWAY+localPlayer->combatReach+target->combatReach));
+		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f, target->position, (dist_away+localPlayer->combatReach+target->combatReach));
 		localPlayer->ClickToMove(Move, target->Guid, candidate);
 		Moving = move_type;
 		return true;
