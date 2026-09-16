@@ -48,7 +48,7 @@ static void PriestAttack() {
 		bool ShadowWordPainDebuff = targetUnit->hasDebuff(ShadowWordPainIDs, 8);
 		int HolyFireIDs[8] = { 14914, 15262, 15263, 15264, 15265, 15266, 15267, 15261 };
 		bool HolyFireDebuff = targetUnit->hasDebuff(HolyFireIDs, 8);
-		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
+		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) Functions::InteractUnit(targetUnit->Pointer, 1);
 		if ((nbrCloseEnemy >= 4) && localPlayer->prctMana > 40 && FunctionsLua::IsSpellReady("Holy Nova")) {
 			//Holy Nova
 			FunctionsLua::CastSpellByName("Holy Nova");

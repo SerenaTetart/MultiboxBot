@@ -14,7 +14,7 @@ static void PaladinAttack() {
 		int SoRIDs[9] = { 20154, 21084, 20287, 20288, 20289, 20290, 20291, 20292, 20293 };
 		bool SoRBuff = localPlayer->hasBuff(SoRIDs, 9);
 		bool SealBuff = (SoRBuff || SoLBuff);
-		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
+		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) Functions::InteractUnit(targetUnit->Pointer, 1);
 		else if (!SealBuff && !SoLDebuff && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Seal of Light")) {
 			//Seal of Light
 			FunctionsLua::CastSpellByName("Seal of Light");

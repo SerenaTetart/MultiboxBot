@@ -37,7 +37,7 @@ void ListAI::RogueDps() {
 				int GougeIDs[5] = { 1776, 1777, 8629, 11285, 11286 };
 				bool GougeDebuff = targetUnit->hasDebuff(GougeIDs, 5);
 				bool stopAttack = false;
-				if ((StealthBuff || GougeDebuff || targetConfused) && FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
+				if ((StealthBuff || GougeDebuff || targetConfused) && FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) Functions::InteractUnit(targetUnit->Pointer, 1);
 				if (GougeDebuff || targetConfused) stopAttack = true; else stopAttack = false;
 				if (!Combat && !StealthBuff && FunctionsLua::IsSpellReady("Stealth")) {
 					//Stealth

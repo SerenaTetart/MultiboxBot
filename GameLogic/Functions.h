@@ -14,7 +14,7 @@ class Functions {
 		static void LuaCall(const char* code);
 		static uintptr_t GetText(const char* varName);
 		static void ClickAOE(Position tpos);
-		static void LootUnit(uintptr_t guid, int autoloot);
+		static void InteractUnit(uintptr_t target, int autoloot);
 		static void InteractObject(uintptr_t object_ptr, int autoloot);
 		static bool MoveLoS(Position target_pos);
 		static bool MoveLoSSwim(Position target_pos);

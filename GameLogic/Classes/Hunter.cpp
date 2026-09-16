@@ -70,7 +70,7 @@ void ListAI::HunterDps() {
 				bool attacking = FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"));
 				bool autoShotInRange = FunctionsLua::IsActionInRange(FunctionsLua::GetSlot("Auto Shot"));
 				if ((FreezingTrapDebuff || (targetUnit->flags & UNIT_FLAG_CONFUSED)) && attacking) FunctionsLua::CastSpellByName("Attack");
-				else if (!autoShotInRange && !attacking) FunctionsLua::CastSpellByName("Attack");
+				else if (!autoShotInRange && !attacking) Functions::InteractUnit(targetUnit->Pointer, 1);
 				if (autoShotInRange && !FunctionsLua::IsAutoRepeatAction(FunctionsLua::GetSlot("Auto Shot"))) FunctionsLua::CastSpellByName("Auto Shot");
 				if ((targetUnit->flags & UNIT_FLAG_IN_COMBAT) && FunctionsLua::HasPetUI()) {
 					Functions::LuaCall("PetAttack()");

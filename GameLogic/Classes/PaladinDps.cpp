@@ -20,7 +20,7 @@ static void PaladinAttack() {
 		//int SoLDebuffIDs[1] = { 20167 };
 		//bool SoLDebuff = targetUnit->hasDebuff(SoLDebuffIDs, 1);
 		bool SealBuff = (SoRBuff || SotCBuff || SoCBuff || SoLBuff);
-		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
+		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) Functions::InteractUnit(targetUnit->Pointer, 1);
 		if (!SealBuff && !SotCDebuff && targetUnit->isElite() && FunctionsLua::IsSpellReady("Seal of the Crusader")) {
 			//Seal of the Crusader
 			FunctionsLua::CastSpellByName("Seal of the Crusader");

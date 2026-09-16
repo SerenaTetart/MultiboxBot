@@ -21,7 +21,7 @@ static void PaladinAttack(int index_paladin) {
 				break;
 			}
 		}
-		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
+		if (!FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) Functions::InteractUnit(targetUnit->Pointer, 1);
 		if (((nbrCloseEnemy >= 2) || (localPlayer->prctMana < 33)) && !SealBuff && !SoWDebuff && FunctionsLua::IsSpellReady("Seal of Wisdom")) {
 			// Seal of Wisdom
 			FunctionsLua::CastSpellByName("Seal of Wisdom");

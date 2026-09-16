@@ -19,7 +19,7 @@ static void DruidAttack() {
 			int ProwlIDs[3] = { 5215, 6783, 9913 };
 			bool ProwlBuff = localPlayer->hasBuff(ProwlIDs, 3);
 			int ComboPoints = FunctionsLua::GetComboPoints();
-			if (!ProwlBuff && !FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) FunctionsLua::CastSpellByName("Attack");
+			if (!ProwlBuff && !FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) Functions::InteractUnit(targetUnit->Pointer, 1);
 			if (!Combat && !ProwlBuff && FunctionsLua::IsSpellReady("Prowl")) {
 				// Prowl -> Not in PvE raids
 				FunctionsLua::CastSpellByName("Prowl");

@@ -76,7 +76,7 @@ bool Game::Loot() {
 				else if (localPlayer->speed == 0.0f) {
 					ThreadSynchronizer::RunOnMainThread([i]() {
 						if (localPlayer->isMounted) Dismount();
-						Functions::LootUnit(ListUnits[i].Pointer, 1);
+						Functions::InteractUnit(ListUnits[i].Pointer, 1);
 					});
 					LootHistory.push_back(std::tuple<unsigned long long, time_t>(ListUnits[i].Guid, time(0)));
 				}
@@ -101,7 +101,7 @@ bool Game::Loot() {
 				else if (localPlayer->speed == 0.0f) {
 					ThreadSynchronizer::RunOnMainThread([i]() {
 						if (localPlayer->isMounted) Dismount();
-						Functions::LootUnit(ListUnits[i].Pointer, 1);
+						Functions::InteractUnit(ListUnits[i].Pointer, 1);
 						});
 					LootHistory.push_back(std::tuple<unsigned long long, time_t>(ListUnits[i].Guid, time(0)));
 				}

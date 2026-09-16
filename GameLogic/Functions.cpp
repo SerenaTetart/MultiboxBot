@@ -231,7 +231,7 @@ void Functions::ClickAOE(Position position) {
 	function(xyz);
 }
 
-void Functions::LootUnit(uintptr_t target, int autoloot) {
+void Functions::InteractUnit(uintptr_t target, int autoloot) {
 	typedef void(__thiscall* func)(uintptr_t target, int autoloot);
 	func function = (func)RIGHT_CLICK_UNIT_FUN_PTR;
 	function(target, autoloot);
