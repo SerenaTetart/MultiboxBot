@@ -1,5 +1,6 @@
 #pragma once
 #include "Functions.h"
+#include "./data/Inventory.h"
 
 static int GetIntFromChar(const char* txt) {
 	//Obtient le !premier! nombre d'un char*
@@ -59,14 +60,15 @@ class FunctionsLua {
         static void SellUselessItems();
         // === Items === //
 	static int GetContainerNumSlots(int slot);
-	static std::tuple<std::string, int> GetContainerItemInfo(int bag, int slot);
+	static std::tuple<int, std::string, std::string> GetItemInfo(int item_id);
+	static std::tuple<std::string, int, bool, bool, bool> GetContainerItemInfo(int bag, int slot);
 	static std::string GetContainerItemLink(int bag, int slot);
-	static bool IsInventoryFull();
-	static int GetItemCount(int item_info);
+	static int GetItemCount(int item_id);
+	static void CloseLoot();
 	static bool HasItem(int* item_id, int size);
 	static bool PickupItem(int item_id);
 	static void PickupItem(int x, int y);
-	static void MakeVirtualInventory(std::vector<std::tuple<int, int, int, std::string>> *listItems);
+	static void MakeVirtualInventory(std::vector<InventoryItem>* listItems);
 	static void DropItemOnUnit(std::string target);
 	static void UseItem(int item_id);
 	static void UseHPotion();
@@ -75,7 +77,9 @@ class FunctionsLua {
 	static int HasDrink(); static int HasMeat();
 	static bool HasHPotion(); static bool HasMPotion(); static bool HasHealthstone();
 	static float GetHPotionCD(); static float GetMPotionCD(); static float GetHealthstoneCD();
-	static int GetItemQuality(std::string item_link);
+	static int GetItemQuality(const std::string& item_link);
+	static std::string GetTradePlayerItemLink(int id);
+	static std::string GetTradeTargetItemLink(int id);
         // === Buffs / Debuffs === //
 	static std::string UnitBuff(std::string target, int index);
 	static std::tuple<std::string, int, std::string> UnitDebuff(std::string target, int index);
@@ -90,7 +94,7 @@ class FunctionsLua {
 	static std::string GetSpellName(int id);
 	static std::string GetSpellTexture(int spellID);
 	static std::tuple<std::string, std::string, int, int> GetSpellTabInfo(int index);
-	static std::tuple<int, int> GetSpellID(std::string spell_name, bool spell_exist=false);
+	static SpellSlotData GetSpellData(std::string spell_name);
 	static bool IsPlayerSpell(std::string spell_name);
 	static bool IsSpellReady(std::string spell_name);
 	static void CastSpellByName(std::string spell_name);
@@ -124,4 +128,7 @@ class FunctionsLua {
 	static bool IsCurrentAction(int slot);
 	static float UnitAttackSpeed(std::string target);
 	static void FollowUnit(std::string target);
+	// === Gossip === //
+	static void SelectGossipOption(int index);
+	static void BuyTrainerService(int index);
 };

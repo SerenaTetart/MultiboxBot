@@ -45,7 +45,7 @@ void Game::MainLoop() {
 			);
 		}
 
-		while (Client::bot_running == true && (Leader == NULL || (Leader->Guid != playerGuid) || !MCNoAuto)) {
+		while (Client::bot_running == true && ((Leader != NULL && (Leader->Guid != playerGuid)) || !MCNoAuto)) {
 			// ========================================== //
 			// ===========   Initialisation   =========== //
 			// ========================================== //
@@ -88,6 +88,7 @@ void Game::MainLoop() {
 							targetUnit = localPlayer->getTarget();
 
 							FunctionsLua::MakeVirtualInventory(&virtualInventory);
+							Functions::MakeVirtualSpellBook(&virtualSpellBook);
 
 							if (FunctionsLua::GetRepairAllCost() > 0) Functions::LuaCall("RepairAllItems()");
 							if (FunctionsLua::GetMerchantNumItems() > 0) FunctionsLua::SellUselessItems();
@@ -161,7 +162,15 @@ void Game::MainLoop() {
 								TradeShow = tradeShowText && std::strcmp(tradeShowText, "1") == 0;
 								bool TradePending = tradePendingText && std::strcmp(tradePendingText, "1") == 0;
 								TradePendingSelf = tradePendingText2 && std::strcmp(tradePendingText2, "1") == 0;
-								if (TradeShow && TradePending) { Functions::LuaCall("AcceptTrade()"); }
+								if (Combat && TradeShow) {
+									Functions::LuaCall("CloseTrade()");
+									TradeShow = false;
+									TradePendingSelf = false;
+								}
+								else if (TradeShow && TradePending) Functions::LuaCall("AcceptTrade()");
+								else if (TradeShow && !TradePending && !TradePendingSelf && FunctionsLua::GetTradePlayerItemLink(1) != "") {
+									Functions::LuaCall("AcceptTrade()");
+								}
 								const char* breathTimer_char = (const char*)Functions::GetText("Multibox_BreathTimer");
 								breathTimer = GetFloatFromChar(breathTimer_char);
 							}
@@ -234,12 +243,11 @@ void Game::MainLoop() {
 					else ind++;
 				}
 				if (localPlayer->isdead && localPlayer->health == 1) {
-					// Logic actions
 					CorpseRun();
 				}
-				else if (!Combat && autoLearnSpells) {
-					// Go learn spells
-					TrainSpellRun();
+				else if (!Combat && autoChores) {
+					// Go chores: train spells, train trading skills, sell/repair, etc...
+					DoChores();
 				}
 				else if (!passiveGroup && !(localPlayer->isCrowdControlled()) && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
 					if (Functions::PlayerIsRanged()) {
@@ -345,15 +353,9 @@ void Game::MainLoop() {
 					(Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) &&
 					(targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead || passiveGroup)
 				) {
-					if( Loot() ) { }
-					else if (localPlayer->speed == 0 && !Combat && Trade()) {
-						// Trade
-						if (TradeShow && !TradePendingSelf) {
-							ThreadSynchronizer::RunOnMainThread([]() {
-								Functions::LuaCall("AcceptTrade()");
-							});
-						}
-					}
+					if( !Combat && Loot() ) { }
+					else if (localPlayer->speed == 0 && !Combat && Trade()) { }
+					else if (!Combat && Disenchant()) { }
 					else if (!localPlayer->isMounted && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && Leader != NULL && Leader->isMounted) {
 						// Mount up !
 						ThreadSynchronizer::RunOnMainThread([]() {
@@ -445,14 +447,15 @@ void Game::MainLoop() {
 
 std::vector<WoWUnit*> HasAggro[40]; std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 bool Combat = false, IsSitting = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
-los_target = false, passiveGroup = false, inInstance = false;
+los_target = false, passiveGroup = false, inInstance = false, inventoryFull = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
-skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoLearnSpells = 0;
+skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoChores = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0, autoAttackTimer = 0, breathTimer = 0;
 std::string tarType = "party";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
-std::vector<std::tuple<int, int, int, std::string>> virtualInventory;
+std::vector<InventoryItem> virtualInventory;
+std::vector<SpellSlotData> virtualSpellBook;
 std::vector<int> HealTargetArray;
 WoWUnit* ccTarget = NULL; WoWUnit* targetUnit = NULL; WoWUnit* GroupMember[40]; WoWUnit* PartyMember[5]; WoWUnit* Leader = NULL;
 time_t current_time = time(0);

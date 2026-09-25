@@ -19,8 +19,8 @@ static bool isPrioritary(WoWUnit* unit1, WoWUnit* unit2) {
 	else return false;
 }
 
-void ListAI::DPSTargeting() {
-	if ((Leader != NULL) && (Leader->Guid == localPlayer->Guid) && !MCAutoMove && Leader->indexGroup == 0) return;
+bool ListAI::DPSTargeting() {
+	if ((Leader != NULL) && (Leader->Guid == localPlayer->Guid) && !MCAutoMove && Leader->indexGroup == 0) return false;
 	else if (nbrEnemyPlayer > 0) {
 		if (targetUnit == NULL || targetUnit->isdead || !targetUnit->attackable) {
 			WoWUnit* target = NULL; float minDist = INFINITY;
@@ -38,7 +38,10 @@ void ListAI::DPSTargeting() {
 					minDist = ListUnits[i].position.DistanceTo(localPlayer->position);
 				}
 			}
-			if (target != NULL) localPlayer->SetTarget(target->Guid);
+			if (target != NULL) {
+				localPlayer->SetTarget(target->Guid);
+				return true;
+			}
 		}
 	}
 	else {
@@ -59,20 +62,21 @@ void ListAI::DPSTargeting() {
 		}
 		if (target != NULL && target->Guid != localPlayer->targetGuid) {
 			localPlayer->SetTarget(target->Guid);
-			return;
+			return true;
 		}
 		else if (targetUnit == NULL || !targetUnit->attackable) {
 			for (int i = NumGroupMembers; i >= 0; i--) { //Tank also
 				if (HasAggro[i].size() > 0) {
 					localPlayer->SetTarget(HasAggro[i][0]->Guid);
-					return;
+					return true;
 				}
 			}
 		}
 	}
+	return false;
 }
 
-void ListAI::TankTargeting() {
+bool ListAI::TankTargeting() {
 	if ((Leader == NULL) || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) {
 		bool targetFocusingTank = false;
 		if (targetUnit != NULL) {
@@ -93,9 +97,10 @@ void ListAI::TankTargeting() {
 			}
 			if (target != NULL) {
 				localPlayer->SetTarget(target->Guid);
-				return;
+				return true;
 			}
-			DPSTargeting();
+			else DPSTargeting();
 		}
 	}
+	return false;
 }

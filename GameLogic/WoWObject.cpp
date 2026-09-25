@@ -354,9 +354,9 @@ void LocalPlayer::ClickToMove(ClickType clickType, unsigned long long interactGu
 }
 
 void LocalPlayer::SetTarget(unsigned long long tguid) {
-    typedef void __stdcall func(unsigned long long tguid);
-    func* function = (func*)SET_TARGET_FUN_PTR;
-    function(tguid);
+    using TargetByGUID_t = void(__fastcall*)(const uint64_t*);
+    static auto TargetByGUID = reinterpret_cast<TargetByGUID_t>(SET_TARGET_FUN_PTR);
+    TargetByGUID(&tguid);
 }
 
 WoWUnit* LocalPlayer::getTarget() {
@@ -413,8 +413,8 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
     else if (displayID == 312) { level = 125; gatherType = 1; } // Iron
     else if (displayID == 311) { level = 155; gatherType = 1; } // Gold
     else if (displayID == 313) { level = 175; gatherType = 1; } // Mithril
-    else if (displayID == 314) { level = 230; gatherType = 1; } // True Silver
-    else if (displayID == 2571) { level = 230; gatherType = 1; } // Dark Iron ?
+    else if (displayID == 314) { level = 230; gatherType = 1; } // True Silver || Silver
+    else if (displayID == 2571) { level = 230; gatherType = 1; } // Dark Iron
     else if (displayID == 3951) { level = 245; gatherType = 1; } // Thorium
     else if (displayID == 3952) { level = 275; gatherType = 1; } // Rich Thorium
     else if (displayID == 6650) { level = 305; gatherType = 1; } // Obsidian
