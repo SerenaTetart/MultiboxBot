@@ -1,5 +1,4 @@
 #include "FunctionsLua.h"
-
 #include "Game.h"
 #include <iostream>
 
@@ -57,8 +56,8 @@ float FunctionsLua::GetTime() {
 
 float FunctionsLua::GetItemCooldownDuration(int item_id) {
 	for (const auto& item : virtualInventory) {
-		if (get<2>(item) == item_id) {
-			std::string command = "start, duration = GetContainerItemCooldown(" + std::to_string(get<0>(item)) + +", " + std::to_string(get<1>(item)) + ")";
+		if (item.id == item_id) {
+			std::string command = "start, duration = GetContainerItemCooldown(" + std::to_string(item.bag) + +", " + std::to_string(item.slot) + ")";
 			Functions::LuaCall(command.c_str());
 			float start = GetFloatFromChar((char*)Functions::GetText("start"));
 			float duration = GetFloatFromChar((char*)Functions::GetText("duration"));
@@ -73,8 +72,8 @@ float FunctionsLua::GetItemCooldownDuration(int item_id) {
 float FunctionsLua::GetItemCooldownDuration(int* items_id, int size) {
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < size; i++) {
-			if (get<2>(item) == items_id[i]) {
-				std::string command = "start, duration = GetContainerItemCooldown(" + std::to_string(get<0>(item)) + +", " + std::to_string(get<1>(item)) + ")";
+			if (item.id == items_id[i]) {
+				std::string command = "start, duration = GetContainerItemCooldown(" + std::to_string(item.bag) + +", " + std::to_string(item.slot) + ")";
 				Functions::LuaCall(command.c_str());
 				float start = GetFloatFromChar((char*)Functions::GetText("start"));
 				float duration = GetFloatFromChar((char*)Functions::GetText("duration"));
@@ -98,10 +97,9 @@ float FunctionsLua::GetActionCooldownDuration(int slot) {
 }
 
 float FunctionsLua::GetSpellCooldownDuration(std::string spell_name) {
-	int spell_id;
-	std::tie(spell_id, std::ignore) = GetSpellID(spell_name);
-	if (spell_id > 0) {
-		std::string command = "start, duration = GetSpellCooldown(" + std::to_string(spell_id) + ", BOOKTYPE_SPELL)";
+	SpellSlotData spell = GetSpellData(spell_name);
+	if (spell.id > 0) {
+		std::string command = "start, duration = GetSpellCooldown(" + std::to_string(spell.slot) + ", BOOKTYPE_SPELL)";
 		Functions::LuaCall(command.c_str());
 		float start = GetFloatFromChar((char*)Functions::GetText("start"));
 		float duration = GetFloatFromChar((char*)Functions::GetText("duration"));
@@ -128,13 +126,36 @@ int FunctionsLua::GetRepairAllCost() {
 }
 
 void FunctionsLua::SellUselessItems() {
+	int craftItems[] = {2901 ,5956, 7005, };
 	for (const auto& item : virtualInventory) {
-		if (GetItemQuality(get<3>(item)) == 0) {
-			std::string command = "UseContainerItem(" + std::to_string(get<0>(item)) + ", " + std::to_string(get<1>(item)) + ")";
+		bool craftItem = false;
+		for (int i = 0; i < 3; i++) {
+			if (item.id == craftItems[i]) {
+				craftItem = true;
+				break;
+			}
+		}
+		if (!craftItem && (item.quality == 0 || ((item.type == "Weapon" || item.type == "Armor") && item.quality <= 3 && item.minLevel < localPlayer->level))) {
+			// Sell grey items OR equipment under epic and under player's level
+			std::string command = "UseContainerItem(" + std::to_string(item.bag) + ", " + std::to_string(item.slot) + ")";
 			Functions::LuaCall(command.c_str());
 			return;
 		}
 	}
+}
+
+std::string FunctionsLua::GetTradePlayerItemLink(int id) {
+	std::string command = "itemLink = GetTradePlayerItemLink(" + std::to_string(id) + ")";
+	Functions::LuaCall(command.c_str());
+	std::string itemLink = (char*)Functions::GetText("itemLink");
+	return itemLink;
+}
+
+std::string FunctionsLua::GetTradeTargetItemLink(int id) {
+	std::string command = "itemLink = GetTradeTargetItemLink(" + std::to_string(id) + ")";
+	Functions::LuaCall(command.c_str());
+	std::string itemLink = (char*)Functions::GetText("itemLink");
+	return itemLink;
 }
 
 int FunctionsLua::GetTradingSkill(std::string name) {
@@ -179,16 +200,70 @@ std::tuple<int, int> FunctionsLua::GetTradeSkillList(std::string names[], int si
 //=============================   Items   ==============================//
 //======================================================================//
 
-void FunctionsLua::MakeVirtualInventory(std::vector<std::tuple<int, int, int, std::string>>* listItems) {
-	listItems->clear();
-	for (int i = 0; i <= 4; i++) {
-		for (int y = 1; y <= GetContainerNumSlots(i); y++) {
-			std::string item_link = GetContainerItemLink(i, y);
-			if (item_link.empty()) continue;
-			if (item_link.size() <= 11) continue;
+int FunctionsLua::GetItemQuality(const std::string& item_link) {
+	if (item_link.size() < 10) return -1;
+	std::string_view color(item_link.data() + 4, 6);
 
-			int link_nbr = GetIntFromChar(item_link.c_str() + 11);
-			listItems->push_back(std::make_tuple(i, y, link_nbr, item_link));
+	if (color == "9d9d9d") return 0; // Poor
+	if (color == "ffffff") return 1; // Common
+	if (color == "1eff00") return 2; // Uncommon
+	if (color == "0070dd") return 3; // Rare
+	if (color == "a335ee") return 4; // Epic
+	if (color == "ff8000") return 5; // Legendary
+	if (color == "e6cc80") return 6; // Artifact
+
+	return -1;
+}
+
+void FunctionsLua::MakeVirtualInventory(std::vector<InventoryItem>* listItems) {
+	listItems->clear();
+	inventoryFull = true;
+
+	int item_count, item_quality, item_min_level;
+	bool item_locked, item_readable, item_lootable;
+	std::string item_texture, item_link, item_type, item_subtype;
+
+	for (int bag = 0; bag <= 4; ++bag)
+	{
+		for (int slot = 1; slot <= GetContainerNumSlots(bag); ++slot)
+		{
+			std::string item_link = GetContainerItemLink(bag, slot);
+			if (item_link.empty() || item_link.size() <= 11) {
+				inventoryFull = false;
+				continue;
+			}
+
+			std::tie(
+				item_texture,
+				item_count,
+				item_locked,
+				item_readable,
+				item_lootable
+			) = GetContainerItemInfo(bag, slot);
+
+			int item_id = GetIntFromChar(item_link.c_str() + 11);
+			int item_quality = GetItemQuality(item_link);
+
+			std::tie(
+				item_min_level,
+				item_type,
+				item_subtype
+			) = GetItemInfo(item_id);
+
+			listItems->push_back({
+				bag,
+				slot,
+				item_id,
+				item_texture,
+				item_count,
+				item_locked,
+				item_quality,
+				item_readable,
+				item_lootable,
+				item_min_level,
+				item_type,
+				item_subtype
+			});
 		}
 	}
 }
@@ -200,14 +275,6 @@ int FunctionsLua::GetContainerNumSlots(int slot) {
 	return slots;
 }
 
-std::tuple<std::string, int> FunctionsLua::GetContainerItemInfo(int bag, int slot) {
-	std::string command = "texture, itemCount = GetContainerItemInfo("+std::to_string(bag)+", "+std::to_string(slot)+")";
-	Functions::LuaCall(command.c_str());
-	std::string texture = (char*)Functions::GetText("texture");
-	int itemCount = GetIntFromChar((char*)Functions::GetText("itemCount"));
-	return std::make_tuple(texture, itemCount);
-}
-
 std::string FunctionsLua::GetContainerItemLink(int bag, int slot) {
 	std::string command = "link = GetContainerItemLink(" + std::to_string(bag) + ", " + std::to_string(slot) + ")";
 	Functions::LuaCall(command.c_str());
@@ -215,24 +282,36 @@ std::string FunctionsLua::GetContainerItemLink(int bag, int slot) {
 	return link;
 }
 
-bool FunctionsLua::IsInventoryFull() {
-	for (int i = 0; i <= 4; i++) {
-		for (int y = 1; y <= GetContainerNumSlots(i); y++) {
-			std::string texture;
-			std::tie(texture, std::ignore) = GetContainerItemInfo(i, y);
-			if (texture == "") return false;
-		}
-	}
-	return true;
+std::tuple<std::string, int, bool, bool, bool> FunctionsLua::GetContainerItemInfo(int bag, int slot) {
+	std::string command = "texture, itemCount, locked, _, readable, lootable = GetContainerItemInfo("+std::to_string(bag)+", "+std::to_string(slot)+")";
+	Functions::LuaCall(command.c_str());
+	std::string texture = (char*)Functions::GetText("texture");
+	int itemCount = GetIntFromChar((char*)Functions::GetText("itemCount"));
+	bool locked = (GetIntFromChar((char*)Functions::GetText("locked")) == 1);
+	bool readable = (GetIntFromChar((char*)Functions::GetText("readable")) == 1);
+	bool lootable = (GetIntFromChar((char*)Functions::GetText("lootable")) == 1);
+	return std::make_tuple(texture, itemCount, locked, readable, lootable);
+}
+
+std::tuple<int, std::string, std::string> FunctionsLua::GetItemInfo(int item_id) {
+	std::string command = "_, _, _, itemMinLevel, itemType, itemSubtype = GetItemInfo("+std::to_string(item_id)+")";
+	Functions::LuaCall(command.c_str());
+	int itemMinLevel = GetIntFromChar((char*)Functions::GetText("itemMinLevel"));
+	std::string itemType = (char*)Functions::GetText("itemType");
+	std::string itemSubtype = (char*)Functions::GetText("itemSubtype");
+	return std::make_tuple(itemMinLevel, itemType, itemSubtype);
+}
+
+void FunctionsLua::CloseLoot() {
+	std::string command = "CloseLoot(0)";
+	Functions::LuaCall(command.c_str());
 }
 
 int FunctionsLua::GetItemCount(int item_id) {
-	//Trouve par l'ID la quantit� d'item similaire dans l'inventaire
 	int total = 0;
 	for (const auto& item : virtualInventory) {
-		if (get<2>(item) == item_id) {
-			int itemCount;
-			std::tie(std::ignore, itemCount) = GetContainerItemInfo(get<0>(item), get<1>(item));
+		if (item.id == item_id) {
+			int itemCount = item.count;
 			total = total + itemCount;
 		}
 	}
@@ -240,31 +319,18 @@ int FunctionsLua::GetItemCount(int item_id) {
 }
 
 bool FunctionsLua::HasItem(int* item_ids, int size) {
-	//Trouve par l'ID si un des items de la liste est présent
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < size; i++) {
-			if (get<2>(item) == item_ids[i]) return true;
+			if (item.id == item_ids[i]) return true;
 		}
 	}
 	return false;
 }
 
-int FunctionsLua::GetItemQuality(std::string item_link) {
-	if (item_link == "") return -1;
-	else if (item_link.find("9d9d9d") != std::string::npos) return 0;	//Poor
-	else if (item_link.find("ffffff") != std::string::npos) return 1;	//Common
-	else if (item_link.find("1eff00") != std::string::npos) return 2;	//Uncommon
-	else if (item_link.find("0070dd") != std::string::npos) return 3;	//Rare
-	else if (item_link.find("a335ee") != std::string::npos) return 4;	//Epic
-	else if (item_link.find("ff8000") != std::string::npos) return 5;	//Legendary
-	else if (item_link.find("e6cc80") != std::string::npos) return 6;	//Artifact
-	else return -1;
-}
-
 bool FunctionsLua::PickupItem(int item_id) {
 	for (const auto& item : virtualInventory) {
-		if (get<2>(item) == item_id) {
-			std::string command = "PickupContainerItem(" + std::to_string(get<0>(item)) + ", " + std::to_string(get<1>(item)) + ")";
+		if (item.id == item_id && !item.locked) {
+			std::string command = "PickupContainerItem(" + std::to_string(item.bag) + ", " + std::to_string(item.slot) + ")";
 			Functions::LuaCall(command.c_str());
 			return true;
 		}
@@ -285,8 +351,8 @@ void FunctionsLua::DropItemOnUnit(std::string target) {
 void FunctionsLua::UseItem(int item_id) {
 	//Use the indicated item
 	for (const auto& item : virtualInventory) {
-		if (get<2>(item) == item_id) {
-			std::string command = "UseContainerItem(" + std::to_string(get<0>(item)) + ", " + std::to_string(get<1>(item)) + ")";
+		if (item.id == item_id && !item.locked) {
+			std::string command = "UseContainerItem(" + std::to_string(item.bag) + ", " + std::to_string(item.slot) + ")";
 			Functions::LuaCall(command.c_str());
 			return;
 		}
@@ -298,7 +364,7 @@ int FunctionsLua::HasDrink() {
 		, 8078, 8079, 8766, 9451, 10841, 13724, 18300, 19301, 20031 };
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < 20; i++) {
-			if (get<2>(item) == listID[i]) return get<2>(item);
+			if (item.id == listID[i]) return item.id;
 		}
 	}
 	return 0;
@@ -308,7 +374,7 @@ int FunctionsLua::HasMeat() {
 	int CookedlistID[47] = { 117, 724, 1017, 2287, 2679, 2680, 2681, 2684, 2685, 2687, 2888, 3220, 3662, 3664, 3726, 3727, 3728, 3770, 3771, 4457, 4599, 5472, 5474, 5477, 5478, 5479, 7097, 8952, 11444, 12209, 12210, 12211, 12213, 12215, 12216, 12224, 13851, 17119, 17222, 17407, 17408, 18045, 19224, 19304, 19305, 20074, 21023 };
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < 47; i++) {
-			if (get<2>(item) == CookedlistID[i]) return get<2>(item);
+			if (item.id == CookedlistID[i]) return item.id;
 		}
 	}
 	return 0;
@@ -325,7 +391,7 @@ bool FunctionsLua::HasHPotion() {
 	int listID[6] = { 118, 858, 929, 1710, 3928, 13446};
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < 6; i++) {
-			if (get<2>(item) == listID[i]) return true;
+			if (item.id == listID[i]) return true;
 		}
 	}
 	return false;
@@ -341,7 +407,7 @@ bool FunctionsLua::HasMPotion() {
 	int listID[6] = { 2455, 3385, 3827, 6149, 13443, 13444 };
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < 6; i++) {
-			if (get<2>(item) == listID[i]) return true;
+			if (item.id == listID[i]) return true;
 		}
 	}
 	return false;
@@ -364,7 +430,7 @@ bool FunctionsLua::HasHealthstone() {
 	int listID[] = { 5512, 19004, 19005, 5511, 19006, 19007, 5509, 19008, 19009, 5510, 19010, 19011, 9421, 19012, 19013 };
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < 15; i++) {
-			if (get<2>(item) == listID[i]) return true;
+			if (item.id == listID[i]) return true;
 		}
 	}
 	return false;
@@ -498,42 +564,24 @@ std::tuple<std::string, std::string, int, int> FunctionsLua::GetSpellTabInfo(int
 	return std::make_tuple(name, texture, offset, numSpells);
 }
 
-std::tuple<int, int> FunctionsLua::GetSpellID(std::string spell_name, bool spell_exist) {
-	//Execution = 1ms
-	int id = 0; int rank = 0;
-	for (int i = 1; i <= GetNumSpellTabs(); i++) {
-		int numSpells;
-		std::tie(std::ignore, std::ignore, std::ignore, numSpells) = GetSpellTabInfo(i);
-		for (int y = 0; y < numSpells; y++) {
-			id++;
-			if (spell_name == GetSpellName(id)) {
-				if (spell_exist) return std::make_tuple(id, 1);
-				while (spell_name == GetSpellName(id + 1)) {
-					id++; rank++;
-				}
-				return std::make_tuple(id, rank);
-			}
-		}
-	}
-	return std::make_tuple(0, 0);
+SpellSlotData FunctionsLua::GetSpellData(std::string spell_name) {
+	SpellSlotData current_spell;
+    for (std::size_t i = 0; i < virtualSpellBook.size(); ++i) {
+        if (virtualSpellBook[i].name == spell_name) {
+            current_spell = virtualSpellBook[i];
+            while (i + 1 < virtualSpellBook.size() && virtualSpellBook[i + 1].name == spell_name) {
+                ++i;
+                current_spell = virtualSpellBook[i];
+            }
+            return current_spell;
+        }
+    }
+    return current_spell;
 }
 
 bool FunctionsLua::IsPlayerSpell(std::string spell_name) {
-	int spellID;
-	std::tie(spellID, std::ignore) = GetSpellID(spell_name, true);
-	if (spellID == 0) return false;
-	else return true;
-}
-
-bool FunctionsLua::IsSpellReady(std::string spell_name) {
-	//Execution: ~2.2ms
-	if (!(localPlayer->flags & UNIT_FLAG_SILENCED)) {
-		int slot = GetSlot(spell_name);
-		if (slot > 0) {
-			if (IsUsableAction(slot) && (GetActionCooldownDuration(slot) < 1.25f)) {
-				return true;
-			}
-		}
+	for (const auto& spell : virtualSpellBook) {
+		if (spell.name == spell_name) return true;
 	}
 	return false;
 }
@@ -609,11 +657,11 @@ void FunctionsLua::SpellStopTargeting() {
 
 int FunctionsLua::GetSlot(std::string spell_name, std::string slot_type) {
 	//Execution: 2ms
-	int slot = 0; int spellID;
-	std::tie(spellID, std::ignore) = GetSpellID(spell_name);
-	if (spellID > 0) {
+	int slot = 0; int spell_id;
+	SpellSlotData spell = GetSpellData(spell_name);
+	if (spell.id > 0) {
 		for (int i = 1; i < 120; i++) {
-			if (HasAction(i) && (GetSpellTexture(spellID) == GetActionTexture(i))
+			if (HasAction(i) && (GetSpellTexture(spell.slot) == GetActionTexture(i))
 				&& ((slot_type == "SPELL" && !IsConsumableAction(i))
 				|| (slot_type == "ITEM" && IsConsumableAction(i)))) {
 				slot = i;
@@ -761,5 +809,19 @@ float FunctionsLua::UnitAttackSpeed(std::string target) {
 
 void FunctionsLua::FollowUnit(std::string target) {
 	std::string command = "FollowUnit(\"" + target + "\")";
+	Functions::LuaCall(command.c_str());
+}
+
+//======================================================================//
+//=============================   Gossip   =============================//
+//======================================================================//
+
+void FunctionsLua::SelectGossipOption(int index) {
+	std::string command = "SelectGossipOption(\"" + std::to_string(index) + "\")";
+	Functions::LuaCall(command.c_str());
+}
+
+void FunctionsLua::BuyTrainerService(int index) {
+	std::string command = "BuyTrainerService(\"" + std::to_string(index) + "\")";
 	Functions::LuaCall(command.c_str());
 }

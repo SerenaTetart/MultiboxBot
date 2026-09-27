@@ -22,6 +22,9 @@
     <Filter Include="Source Files\OutOfCombat">
       <UniqueIdentifier>{8fc29939-a0d0-4d0b-a842-2e2169cf4823}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Data">
+      <UniqueIdentifier>{677a2085-179c-43db-9d9c-662dd1e87d2c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h">
@@ -58,7 +61,16 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Data\NPCResistance.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Data\Inventory.h">
+      <Filter>Header Files\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Data\Spell.h">
+      <Filter>Header Files\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Data\SpellTrain.h">
+      <Filter>Header Files\Data</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

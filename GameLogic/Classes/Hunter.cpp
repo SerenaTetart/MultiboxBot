@@ -22,13 +22,12 @@ void ListAI::HunterDps() {
 
 			bool FeedingBuff = FunctionsLua::GetUnitBuff("pet", "Interface\\Icons\\Ability_Hunter_BeastTraining");
 
-			ListAI::DPSTargeting();
-
-			if (!FunctionsLua::HasPetUI() && FunctionsLua::IsSpellReady("Call Pet")) {
+			if (ListAI::DPSTargeting()) {}
+			else if (!FunctionsLua::HasPetUI() && Functions::IsSpellReady("Call Pet")) {
 				//Call Pet
 				FunctionsLua::CastSpellByName("Call Pet");
 			}
-			else if (FunctionsLua::UnitIsDeadOrGhost("pet") && FunctionsLua::IsSpellReady("Revive Pet")) {
+			else if (FunctionsLua::UnitIsDeadOrGhost("pet") && Functions::IsSpellReady("Revive Pet")) {
 				//Revive Pet
 				FunctionsLua::CastSpellByName("Revive Pet");
 			}
@@ -37,7 +36,7 @@ void ListAI::HunterDps() {
 				FunctionsLua::CastSpellByName("Feed Pet");
 				FunctionsLua::UseItem(FunctionsLua::HasMeat());
 			}
-			else if (!TrueshotAuraBuff && FunctionsLua::IsSpellReady("Trueshot Aura")) {
+			else if (!TrueshotAuraBuff && Functions::IsSpellReady("Trueshot Aura")) {
 				//Trueshot Aura
 				FunctionsLua::CastSpellByName("Trueshot Aura");
 			}
@@ -53,7 +52,7 @@ void ListAI::HunterDps() {
 				//Mana Potion
 				FunctionsLua::UseMPotion();
 			}
-			else if ((nbrEnemyPlayer == 0) && (nbrAggro > 0) && IsInGroup && FunctionsLua::IsSpellReady("Feign Death")) {
+			else if ((nbrEnemyPlayer == 0) && (nbrAggro > 0) && IsInGroup && Functions::IsSpellReady("Feign Death")) {
 				//Feign Death (Aggro PvE)
 				FunctionsLua::CastSpellByName("Feign Death");
 			}
@@ -75,80 +74,80 @@ void ListAI::HunterDps() {
 				if ((targetUnit->flags & UNIT_FLAG_IN_COMBAT) && FunctionsLua::HasPetUI()) {
 					Functions::LuaCall("PetAttack()");
 				}
-				if ((distTarget < 5.0f) && (localPlayer->prctMana > 10) && targetPlayer && FunctionsLua::IsSpellReady("Feign Death")) {
+				if ((distTarget < 5.0f) && (localPlayer->prctMana > 10) && targetPlayer && Functions::IsSpellReady("Feign Death")) {
 					//Feign Death
 					FunctionsLua::CastSpellByName("Feign Death");
 				}
-				else if (!Combat && (distTarget < 5.0f) && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Freezing Trap")) {
+				else if (!Combat && (distTarget < 5.0f) && targetUnit->getNbrDebuff() < 16 && targetPlayer && Functions::IsSpellReady("Freezing Trap")) {
 					//Freezing Trap
 					FunctionsLua::CastSpellByName("Freezing Trap");
 				}
-				else if (!Combat && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Explosive Trap")) {
+				else if (!Combat && (nbrCloseEnemy >= 4) && Functions::IsSpellReady("Explosive Trap")) {
 					//Explosive trap (AoE)
 					FunctionsLua::CastSpellByName("Explosive Trap");
 				}
-				else if ((distTarget < 15.0f) && targetPlayer && !FreezingTrapDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Scatter Shot")) {
+				else if ((distTarget < 15.0f) && targetPlayer && !FreezingTrapDebuff && targetUnit->getNbrDebuff() < 16 && Functions::IsSpellReady("Scatter Shot")) {
 					//Scatter Shot
 					FunctionsLua::CastSpellByName("Scatter Shot");
 				}
-				else if ((distTarget < 5.0f) && targetPlayer && !WingClipDebuff && targetUnit->getNbrDebuff() < 16 && !FreezingTrapDebuff && FunctionsLua::IsSpellReady("Wing Clip")) {
+				else if ((distTarget < 5.0f) && targetPlayer && !WingClipDebuff && targetUnit->getNbrDebuff() < 16 && !FreezingTrapDebuff && Functions::IsSpellReady("Wing Clip")) {
 					//Wing Clip
 					FunctionsLua::CastSpellByName("Wing Clip");
 				}
-				else if (IsFacing && targetUnit->channelInfo > 0 && (distTarget < 15.0f) && FunctionsLua::IsSpellReady("Scatter Shot")) {
+				else if (IsFacing && targetUnit->channelInfo > 0 && (distTarget < 15.0f) && Functions::IsSpellReady("Scatter Shot")) {
 					//Scatter Shot (Silence)
 					FunctionsLua::CastSpellByName("Scatter Shot");
 				}
-				else if ((distTarget < 5.0f) && !AspectMonkeyBuff && (targetUnit->targetGuid == localPlayer->Guid) && FunctionsLua::IsSpellReady("Aspect of the Monkey")) {
+				else if ((distTarget < 5.0f) && !AspectMonkeyBuff && (targetUnit->targetGuid == localPlayer->Guid) && Functions::IsSpellReady("Aspect of the Monkey")) {
 					//Aspect of the Monkey
 					FunctionsLua::CastSpellByName("Aspect of the Monkey");
 				}
-				else if (((autoShotInRange && !targetPlayer) || ((distTarget > 20.0f) && targetPlayer)) && !AspectHawkBuff && FunctionsLua::IsSpellReady("Aspect of the Hawk")) {
+				else if (((autoShotInRange && !targetPlayer) || ((distTarget > 20.0f) && targetPlayer)) && !AspectHawkBuff && Functions::IsSpellReady("Aspect of the Hawk")) {
 					//Aspect of the Hawk
 					FunctionsLua::CastSpellByName("Aspect of the Hawk");
 				}
-				else if (IsFacing && autoShotInRange && (targetUnit->speed > 0) && (targetUnit->level > 0) && FunctionsLua::IsSpellReady("Concussive Shot")) {
+				else if (IsFacing && autoShotInRange && (targetUnit->speed > 0) && (targetUnit->level > 0) && Functions::IsSpellReady("Concussive Shot")) {
 					//Concussive Shot (PvP)
 					FunctionsLua::CastSpellByName("Concussive Shot");
 				}
-				else if (IsFacing && !targetPlayer && hasTargetAggro && (distTarget < 5.0f) && FunctionsLua::IsSpellReady("Disengage")) {
+				else if (IsFacing && !targetPlayer && hasTargetAggro && (distTarget < 5.0f) && Functions::IsSpellReady("Disengage")) {
 					//Disengage
 					FunctionsLua::CastSpellByName("Disengage");
 				}
-				else if (IsFacing && (distTarget < 5.0f) && FunctionsLua::IsSpellReady("Mongoose Bite")) {
+				else if (IsFacing && (distTarget < 5.0f) && Functions::IsSpellReady("Mongoose Bite")) {
 					//Mongoose Bite
 					FunctionsLua::CastSpellByName("Mongoose Bite");
 				}
-				else if (IsFacing && (distTarget < 5.0f) && FunctionsLua::IsSpellReady("Raptor Strike")) {
+				else if (IsFacing && (distTarget < 5.0f) && Functions::IsSpellReady("Raptor Strike")) {
 					//Raptor Strike
 					FunctionsLua::CastSpellByName("Raptor Strike");
 				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Volley")) {
+				else if (!localPlayer->isMoving && (cluster_unit >= 4) && Functions::IsSpellReady("Volley")) {
 					//Volley
 					FunctionsLua::CastSpellByName("Volley");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!HunterMarkDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Hunter's Mark")) {
+				else if (!HunterMarkDebuff && targetUnit->getNbrDebuff() < 16 && Functions::IsSpellReady("Hunter's Mark")) {
 					//Hunter's Mark
 					FunctionsLua::CastSpellByName("Hunter's Mark");
 				}
-				else if (!localPlayer->isMoving && ((autoShotInRange && !targetPlayer) || ((distTarget > 20.0f) && targetPlayer)) && FunctionsLua::UnitIsElite("target") && FunctionsLua::IsSpellReady("Rapid Fire")) {
+				else if (!localPlayer->isMoving && ((autoShotInRange && !targetPlayer) || ((distTarget > 20.0f) && targetPlayer)) && FunctionsLua::UnitIsElite("target") && Functions::IsSpellReady("Rapid Fire")) {
 					//Rapid Fire
 					FunctionsLua::CastSpellByName("Rapid Fire");
 				}
-				else if (IsFacing && autoShotInRange && targetPlayer && !SerpentStingDebuff && targetUnit->getNbrDebuff() < 16 && FunctionsLua::IsSpellReady("Serpent Sting")) {
+				else if (IsFacing && autoShotInRange && targetPlayer && !SerpentStingDebuff && targetUnit->getNbrDebuff() < 16 && Functions::IsSpellReady("Serpent Sting")) {
 					//Serpent Sting (PvP)
 					FunctionsLua::CastSpellByName("Serpent Sting");
 				}
-				else if (IsFacing && autoShotInRange && (localPlayer->speed > 0) && FunctionsLua::IsSpellReady("Arcane Shot")) {
+				else if (IsFacing && autoShotInRange && (localPlayer->speed > 0) && Functions::IsSpellReady("Arcane Shot")) {
 					//Arcane Shot (Movement)
 					FunctionsLua::CastSpellByName("Arcane Shot");
 				}
-				else if (IsFacing && ((autoShotInRange && !targetPlayer) || ((distTarget > 20.0f) && targetPlayer)) && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Aimed Shot")) {
+				else if (IsFacing && ((autoShotInRange && !targetPlayer) || ((distTarget > 20.0f) && targetPlayer)) && !localPlayer->isMoving && Functions::IsSpellReady("Aimed Shot")) {
 					//Aimed Shot
 					FunctionsLua::CastSpellByName("Aimed Shot");
 				}
-				else if (IsFacing && autoShotInRange && !localPlayer->isMoving && FunctionsLua::IsSpellReady("Multi-Shot")) {
+				else if (IsFacing && autoShotInRange && !localPlayer->isMoving && Functions::IsSpellReady("Multi-Shot")) {
 					//Multi-Shot
 					FunctionsLua::CastSpellByName("Multi-Shot");
 				}

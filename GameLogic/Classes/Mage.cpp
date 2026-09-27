@@ -47,7 +47,7 @@ void ListAI::MageDps() {
 			// Cancel Ice Block
 			Functions::CancelPlayerBuff(11958);
 		}
-		if ((IsConfused || (localPlayer->prctHP < 20 && (HasAggro[0].size() > 0)) || (HasAggro[0].size() >= 4 && nbrCloseEnemy >= 4) || (IsStunned && nbrEnemyPlayer > 0) || localPlayer->getNbrDebuff() >= 4) && FunctionsLua::IsSpellReady("Ice Block")) {
+		if ((IsConfused || (localPlayer->prctHP < 20 && (HasAggro[0].size() > 0)) || (HasAggro[0].size() >= 4 && nbrCloseEnemy >= 4) || (IsStunned && nbrEnemyPlayer > 0) || localPlayer->getNbrDebuff() >= 4) && Functions::IsSpellReady("Ice Block")) {
 			// Ice Block
 			FunctionsLua::CastSpellByName("Ice Block");
 		}
@@ -82,44 +82,43 @@ void ListAI::MageDps() {
 			WoWUnit* RemoveCurseTarget = FunctionsLua::GetGroupDispel("Curse");
 			std::string RankConjureMana = GetSpellRank("Conjure Mana");
 
-			ListAI::DPSTargeting();
-
-			if (IsStunned && FunctionsLua::IsSpellReady("Blink")) {
+			if (ListAI::DPSTargeting()) {}
+			else if (IsStunned && Functions::IsSpellReady("Blink")) {
 				//Blink
 				FunctionsLua::CastSpellByName("Blink");
 			}
-			else if (!FrostArmorBuff && (mapID == 489 || mapID == 529 || !FunctionsLua::IsPlayerSpell("Mage Armor")) && FunctionsLua::IsSpellReady("Frost Armor")) {
+			else if (!FrostArmorBuff && (mapID == 489 || mapID == 529 || !FunctionsLua::IsPlayerSpell("Mage Armor")) && Functions::IsSpellReady("Frost Armor")) {
 				//Frost|Ice Armor (PvP -> BG)
 				FunctionsLua::CastSpellByName("Ice Armor");
 				FunctionsLua::CastSpellByName("Frost Armor");
 			}
-			else if (!MageArmorBuff && !FrostArmorBuff && (mapID != 489 && mapID != 529) && FunctionsLua::IsSpellReady("Mage Armor")) {
+			else if (!MageArmorBuff && !FrostArmorBuff && (mapID != 489 && mapID != 529) && Functions::IsSpellReady("Mage Armor")) {
 				//Mage Armor (PvE)
 				FunctionsLua::CastSpellByName("Mage Armor");
 			}
-			else if (!Combat && !ArcaneIntellectBuff && FunctionsLua::IsSpellReady("Arcane Intellect")) {
+			else if (!Combat && !ArcaneIntellectBuff && Functions::IsSpellReady("Arcane Intellect")) {
 				//Arcane Intellect (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Arcane Intellect");
 			}
-			else if (!Combat && (ArcaneIntellectTarget != NULL) && FunctionsLua::IsSpellReady("Arcane Intellect")) {
+			else if (!Combat && (ArcaneIntellectTarget != NULL) && Functions::IsSpellReady("Arcane Intellect")) {
 				//Arcane Intellect (group)
 				localPlayer->SetTarget(ArcaneIntellectTarget->Guid);
 				FunctionsLua::CastSpellByName("Arcane Intellect");
 			}
-			else if (!Combat && !localPlayer->isMoving && !HasManaStone() && FunctionsLua::IsSpellReady(RankConjureMana)) {
+			else if (!Combat && !localPlayer->isMoving && !HasManaStone() && Functions::IsSpellReady(RankConjureMana)) {
 				//Conjure Mana (stone)
 				FunctionsLua::CastSpellByName(RankConjureMana);
 			}
-			else if (!Combat && !localPlayer->isMoving && (FunctionsLua::HasDrink() == 0) && FunctionsLua::IsSpellReady("Conjure Water")) {
+			else if (!Combat && !localPlayer->isMoving && (FunctionsLua::HasDrink() == 0) && Functions::IsSpellReady("Conjure Water")) {
 				//Conjure Water
 				FunctionsLua::CastSpellByName("Conjure Water");
 			}
-			else if (Combat && !IceBarrierBuff && FunctionsLua::IsSpellReady("Ice Barrier")) {
+			else if (Combat && !IceBarrierBuff && Functions::IsSpellReady("Ice Barrier")) {
 				//Ice Barrier
 				FunctionsLua::CastSpellByName("Ice Barrier");
 			}
-			else if ((localPlayer->prctHP < 25) && (localPlayer->prctMana > 50) && !ManaShieldBuff && FunctionsLua::IsSpellReady("Mana Shield")) {
+			else if ((localPlayer->prctHP < 25) && (localPlayer->prctMana > 50) && !ManaShieldBuff && Functions::IsSpellReady("Mana Shield")) {
 				//Mana Shield
 				FunctionsLua::CastSpellByName("Mana Shield");
 			}
@@ -127,7 +126,7 @@ void ListAI::MageDps() {
 				//Mana Stone
 				UseManaStone();
 			}
-			else if (Combat && !localPlayer->isMoving && (localPlayer->prctMana < 15) && ((nbrCloseEnemy == 0) || (HasAggro[0].size() == 0)) && FunctionsLua::IsSpellReady("Evocation")) {
+			else if (Combat && !localPlayer->isMoving && (localPlayer->prctMana < 15) && ((nbrCloseEnemy == 0) || (HasAggro[0].size() == 0)) && Functions::IsSpellReady("Evocation")) {
 				//Evocation
 				FunctionsLua::CastSpellByName("Evocation");
 			}
@@ -135,13 +134,13 @@ void ListAI::MageDps() {
 				//Mana Potion
 				FunctionsLua::UseMPotion();
 			}
-			else if (nbrEnemyPlayer == 0 && FunctionsLua::GetUnitDispel("player", "Curse") && FunctionsLua::IsSpellReady("Remove Lesser Curse")) {
+			else if (nbrEnemyPlayer == 0 && FunctionsLua::GetUnitDispel("player", "Curse") && Functions::IsSpellReady("Remove Lesser Curse")) {
 				//Remove Lesser Curse (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Remove Lesser Curse");
 				if(Combat) Functions::LuaCall("TargetLastEnemy()");
 			}
-			else if (nbrEnemyPlayer == 0 && (RemoveCurseTarget != NULL) && FunctionsLua::IsSpellReady("Remove Lesser Curse")) {
+			else if (nbrEnemyPlayer == 0 && (RemoveCurseTarget != NULL) && Functions::IsSpellReady("Remove Lesser Curse")) {
 				//Remove Lesser Curse (group)
 				localPlayer->SetTarget(RemoveCurseTarget->Guid);
 				FunctionsLua::CastSpellByName("Remove Lesser Curse");
@@ -151,26 +150,26 @@ void ListAI::MageDps() {
 				bool targetPlayer = targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED;
 				bool targetStunned = targetUnit->flags & UNIT_FLAG_CONFUSED;
 				bool targetConfused = targetUnit->flags & UNIT_FLAG_CONFUSED;
-				if (Combat && targetPlayer && FunctionsLua::IsSpellReady("Cold Snap") && !FunctionsLua::IsSpellReady("Frost Nova") && !FunctionsLua::IsSpellReady("Ice Block")) {
+				if (Combat && targetPlayer && Functions::IsSpellReady("Cold Snap") && !Functions::IsSpellReady("Frost Nova") && !Functions::IsSpellReady("Ice Block")) {
 					FunctionsLua::CastSpellByName("Cold Snap");
 				}
-				else if (nbrCloseEnemy >= 1 && !targetUnit->resist(SpellSchool::Frost) && FunctionsLua::IsSpellReady("Frost Nova")) {
+				else if (nbrCloseEnemy >= 1 && !targetUnit->resist(SpellSchool::Frost) && Functions::IsSpellReady("Frost Nova")) {
 					//Frost Nova
 					FunctionsLua::CastSpellByName("Frost Nova");
 				}
-				else if ((nbrCloseEnemy >= 3 || (nbrCloseEnemyFacing >= 1 && targetPlayer) || (nbrCloseEnemy >= 1 && !IsInGroup)) && !targetUnit->resist(SpellSchool::Fire) && FunctionsLua::IsSpellReady("Blast Wave")) {
+				else if ((nbrCloseEnemy >= 3 || (nbrCloseEnemyFacing >= 1 && targetPlayer) || (nbrCloseEnemy >= 1 && !IsInGroup)) && !targetUnit->resist(SpellSchool::Fire) && Functions::IsSpellReady("Blast Wave")) {
 					//Blast Wave
 					FunctionsLua::CastSpellByName("Blast Wave");
 				}
-				else if ((nbrCloseEnemyFacing >= 3 || (nbrCloseEnemyFacing >= 1 && targetPlayer) || (nbrCloseEnemyFacing >= 1 && !IsInGroup)) && !targetUnit->resist(SpellSchool::Frost) && FunctionsLua::IsSpellReady("Cone of Cold")) {
+				else if ((nbrCloseEnemyFacing >= 3 || (nbrCloseEnemyFacing >= 1 && targetPlayer) || (nbrCloseEnemyFacing >= 1 && !IsInGroup)) && !targetUnit->resist(SpellSchool::Frost) && Functions::IsSpellReady("Cone of Cold")) {
 					//Cone of Cold
 					FunctionsLua::CastSpellByName("Cone of Cold");
 				}
-				else if (IsFacing && targetUnit->channelInfo > 0 && FunctionsLua::IsSpellReady("Counterspell")) {
+				else if (IsFacing && targetUnit->channelInfo > 0 && Functions::IsSpellReady("Counterspell")) {
 					//Counter Spell
 					FunctionsLua::CastSpellByName("Counterspell");
 				}
-				else if ((ccTarget != NULL) && (time(0) - PolymorphTimer) > 15.0f && ccTarget->getNbrDebuff() < 16 && !(ccTarget->flags & UNIT_FLAG_CONFUSED) && FunctionsLua::IsSpellReady("Polymorph")) {
+				else if ((ccTarget != NULL) && (time(0) - PolymorphTimer) > 15.0f && ccTarget->getNbrDebuff() < 16 && !(ccTarget->flags & UNIT_FLAG_CONFUSED) && Functions::IsSpellReady("Polymorph")) {
 					//Polymorph (second target)
 					WoWUnit* firstTarget = targetUnit;
 					localPlayer->SetTarget(ccTarget->Guid);
@@ -178,41 +177,41 @@ void ListAI::MageDps() {
 					if(localPlayer->isCasting()) PolymorphTimer = time(0);
 					localPlayer->SetTarget(firstTarget->Guid);
 				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && !targetUnit->resist(SpellSchool::Fire) && (playerSpec == 1 || localPlayer->level < 20 || targetUnit->resist(SpellSchool::Frost)) && FunctionsLua::IsSpellReady("Flamestrike")) {
+				else if (!localPlayer->isMoving && (cluster_unit >= 4) && !targetUnit->resist(SpellSchool::Fire) && (playerSpec == 1 || localPlayer->level < 20 || targetUnit->resist(SpellSchool::Frost)) && Functions::IsSpellReady("Flamestrike")) {
 					//Flamestrike
 					FunctionsLua::CastSpellByName("Flamestrike");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && !targetUnit->resist(SpellSchool::Frost) && FunctionsLua::IsSpellReady("Blizzard")) {
+				else if (!localPlayer->isMoving && (cluster_unit >= 4) && !targetUnit->resist(SpellSchool::Frost) && Functions::IsSpellReady("Blizzard")) {
 					//Blizzard
 					FunctionsLua::CastSpellByName("Blizzard");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if ((localPlayer->speed > 0 || localPlayer->level < 20) && !targetUnit->resist(SpellSchool::Arcane) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Arcane Explosion")) {
+				else if ((localPlayer->speed > 0 || localPlayer->level < 20) && !targetUnit->resist(SpellSchool::Arcane) && (nbrCloseEnemy >= 4) && Functions::IsSpellReady("Arcane Explosion")) {
 					//Arcane Explosion
 					FunctionsLua::CastSpellByName("Arcane Explosion");
 				}
-				else if (IsFacing && (localPlayer->speed > 0) && !targetUnit->resist(SpellSchool::Fire) && FunctionsLua::IsSpellReady("Fire Blast")) {
+				else if (IsFacing && (localPlayer->speed > 0) && !targetUnit->resist(SpellSchool::Fire) && Functions::IsSpellReady("Fire Blast")) {
 					//Fire Blast (Movement)
 					FunctionsLua::CastSpellByName("Fire Blast");
 				}
-				else if (IsFacing && !localPlayer->isMoving && (playerSpec == 1) && !targetUnit->resist(SpellSchool::Fire) && (FunctionsLua::GetStackDebuff("target", "Interface\\Icons\\Spell_Fire_Soulburn") < 5) && FunctionsLua::IsSpellReady("Scorch")) {
+				else if (IsFacing && !localPlayer->isMoving && (playerSpec == 1) && !targetUnit->resist(SpellSchool::Fire) && (FunctionsLua::GetStackDebuff("target", "Interface\\Icons\\Spell_Fire_Soulburn") < 5) && Functions::IsSpellReady("Scorch")) {
 					//Scorch
 					FunctionsLua::CastSpellByName("Scorch");
 				}
-				else if (FunctionsLua::UnitIsElite("target") && !targetUnit->resist(SpellSchool::Fire) && FunctionsLua::IsSpellReady("Combustion")) {
+				else if (FunctionsLua::UnitIsElite("target") && !targetUnit->resist(SpellSchool::Fire) && Functions::IsSpellReady("Combustion")) {
 					//Combustion
 					FunctionsLua::CastSpellByName("Combustion");
 				}
-				else if (localPlayer->hasBuff(11129) && !targetUnit->resist(SpellSchool::Fire) && FunctionsLua::IsSpellReady("Pyroblast")) {
+				else if (localPlayer->hasBuff(11129) && !targetUnit->resist(SpellSchool::Fire) && Functions::IsSpellReady("Pyroblast")) {
 					//Pyroblast
 					FunctionsLua::CastSpellByName("Pyroblast");
 				}
-				else if (IsFacing && !localPlayer->isMoving && !targetUnit->resist(SpellSchool::Frost) && FunctionsLua::IsSpellReady("Frostbolt")) {
+				else if (IsFacing && !localPlayer->isMoving && !targetUnit->resist(SpellSchool::Frost) && Functions::IsSpellReady("Frostbolt")) {
 					//Frostbolt
 					FunctionsLua::CastSpellByName("Frostbolt");
 				}
-				else if (IsFacing && !localPlayer->isMoving && !targetUnit->resist(SpellSchool::Fire) && FunctionsLua::IsSpellReady("Fireball")) {
+				else if (IsFacing && !localPlayer->isMoving && !targetUnit->resist(SpellSchool::Fire) && Functions::IsSpellReady("Fireball")) {
 					//Fireball
 					FunctionsLua::CastSpellByName("Fireball");
 				}

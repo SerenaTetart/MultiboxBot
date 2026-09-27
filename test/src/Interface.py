@@ -85,20 +85,8 @@ class Interface(tk.Tk):
         while len(self.KEYBIND_Info) < 4:
             self.KEYBIND_Info.append(("", ""))
 
-        # État toggle des keybinds, séparé par groupe de clients.
-        # Exemple : premier appui sur la keybind 1 => K1_1, deuxième appui => K1_0.
         self.keybind_states_by_group = {}
-
-        # Anti-répétition : Windows peut répéter on_press si une touche reste maintenue.
-        # on_release sert uniquement à débloquer le prochain appui, il n'envoie rien au client.
         self.pressed_key_codes = set()
-
-        self.MOVEMENT_KEY = [
-            win32con.VK_RIGHT,
-            win32con.VK_UP,
-            win32con.VK_DOWN,
-            win32con.VK_LEFT,
-        ]
 
         self.listCoord = []
         self.hwndACC = []
@@ -617,7 +605,6 @@ class Interface(tk.Tk):
         if keybind_index is None:
             return
 
-        # Empêche un maintien de touche de produire plusieurs toggles.
         if key_code in self.pressed_key_codes:
             return
 
@@ -901,13 +888,6 @@ class Interface(tk.Tk):
     # Bot
     # =========================
     def activateBot(self):
-        self.MOVEMENT_KEY = [
-            win32con.VK_RIGHT,
-            win32con.VK_UP,
-            win32con.VK_DOWN,
-            win32con.VK_LEFT,
-        ]
-
         if self.script_running:
             self.script_running = False
             self.serverthread.sendAllClients(b"Bot: OFF")

@@ -91,7 +91,6 @@ void Functions::EnumerateVisibleObjects(int filter) {
 	ListGameObjects.reserve(1024);
 	Leader = NULL;
 	targetUnit = NULL;
-	ccTarget = NULL;
 	if (localPlayer != NULL) {
 		delete(localPlayer);
 		localPlayer = NULL;
@@ -571,34 +570,131 @@ unsigned int Functions::GetMapID() {
 
 void Functions::CancelPlayerBuff(int buffID) {
 	using cancel_selected_buff_fn = void(__fastcall*)(int internalId);
-
 	auto CancelSelectedBuff = reinterpret_cast<cancel_selected_buff_fn>(CANCEL_PLAYER_BUFF_FUN_PTR);
+	if (localPlayer->hasBuff(buffID)) CancelSelectedBuff(buffID);
+}
 
-	if (localPlayer->hasBuff(buffID)) {
-		CancelSelectedBuff(buffID);
+constexpr std::uintptr_t PLAYER_SPELLBOOK_RVA = 0x7700F0;
+constexpr std::uintptr_t PET_SPELLBOOK_RVA = 0x76F098;
+constexpr std::uintptr_t SPELL_RECORDS_RVA = 0x80D788;
+constexpr std::uintptr_t SPELL_IS_USABLE_RVA = 0x2E3D60;
+constexpr std::uintptr_t AUTO_REPEAT_GET_SPELL_ID_RVA = 0x2E9FD0;
+constexpr std::uintptr_t MAX_SPELL_ID_RVA = 0x80D78C;
+constexpr std::uintptr_t LOCALE_INDEX_RVA = 0x80E080;
+constexpr int MAX_SPELLBOOK_SLOTS = 1024;
+
+SpellSlotData Functions::GetSpellDataFromSlot(int slot, bool pet) {
+	SpellSlotData result;
+	result.slot = slot;
+
+	if (slot < 0 || slot >= MAX_SPELLBOOK_SLOTS) return result;
+
+	const auto base = reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
+	const auto spellBook = reinterpret_cast<const int32_t*>(base + (pet ? PET_SPELLBOOK_RVA : PLAYER_SPELLBOOK_RVA));
+	const int32_t spellId = spellBook[slot];
+
+	if (spellId <= 0) return result;
+	result.id = spellId;
+
+	const int32_t maxSpellId = *reinterpret_cast<const int32_t*>(base + MAX_SPELL_ID_RVA);
+	if (spellId > maxSpellId) return result;
+
+	const auto spellRecords = *reinterpret_cast<SpellRecordPartial***>(base + SPELL_RECORDS_RVA);
+	if (!spellRecords) return result;
+
+	const SpellRecordPartial* spell = spellRecords[spellId];
+	if (!spell) return result;
+
+	const uint32_t locale = *reinterpret_cast<const uint32_t*>(base + LOCALE_INDEX_RVA);
+	if (locale >= 9) return result;
+
+	result.name = spell->name[locale];
+	result.rank = spell->rank[locale] ? std::atoi(spell->rank[locale] + 5) : -1;
+
+	return result;
+}
+
+void Functions::MakeVirtualSpellBook(std::vector<SpellSlotData>* spell_vector) {
+	// Retrieve every spells in the spellbook
+	spell_vector->clear();
+	for (unsigned int slot = 1; slot < MAX_SPELLBOOK_SLOTS; slot++) {
+		SpellSlotData spell_data = Functions::GetSpellDataFromSlot(slot, false);
+		if (spell_data.id == 0) continue;
+		spell_vector->push_back(spell_data);
 	}
 }
 
-Position Functions::RandomisePos(Position target_pos, float radius, Position away_from, float dist_away) {
-	float halfPI = acosf(0);
-	std::uniform_real_distribution<float> U01(0.0f, 1.0f);
-	std::uniform_real_distribution<float> Uang(0.0f, halfPI * 4); // 2π
+bool Functions::SpellIsUsable(int32_t spellId) {
+	if (spellId <= 0) return false;
 
-	Position candidate = target_pos;
-	int NUM_TRY = 0;
+	const auto base = reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
+	const int32_t maxSpellId = *reinterpret_cast<const int32_t*>(base + MAX_SPELL_ID_RVA);
+	if (spellId > maxSpellId) return false;
 
-	do {
-		auto& rng = RNG::engine();
-		float theta = Uang(rng);
-		float r = std::sqrt(U01(rng)) * radius;   // r = R * sqrt(u)
-		candidate.X = target_pos.X + r * std::cos(theta);
-		candidate.Y = target_pos.Y + r * std::sin(theta);
-		candidate.Z = target_pos.Z;
-		NUM_TRY += 1;
-	} while (NUM_TRY < 10 && ((dist_away > 0.0f && (candidate.DistanceTo(away_from) < dist_away)) || Functions::Intersect(target_pos, candidate) || (Functions::GetDepth(candidate, 2.0f) > 2.0f)));
+	const auto spellRecords = *reinterpret_cast<SpellRecordPartial***>(base + SPELL_RECORDS_RVA);
+	if (!spellRecords || !spellRecords[spellId]) return false;
 
-	if (NUM_TRY == 10) return target_pos;
-	else return candidate;
+	using Fn = uint8_t(__fastcall*)(const void*, uint32_t*);
+	const auto fn = reinterpret_cast<Fn>(base + SPELL_IS_USABLE_RVA);
+	uint32_t ignored = 0;
+
+	return fn(spellRecords[spellId], &ignored) != 0;
+}
+
+int Functions::GetAutoRepeatSpellId() {
+	const auto base = reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
+
+	using GetAutoRepeatSpellIdFn = int32_t(*)();
+	const auto fn = reinterpret_cast<GetAutoRepeatSpellIdFn>(base + AUTO_REPEAT_GET_SPELL_ID_RVA);
+
+	return fn();
+}
+
+bool Functions::IsCurrentAction(std::string spell_name) {
+	SpellSlotData spell = FunctionsLua::GetSpellData(spell_name);
+	int currentSpellID = Functions::GetAutoRepeatSpellId();
+	if (currentSpellID != 0 && spell.id == currentSpellID) return true;
+	else return false;
+}
+
+bool Functions::IsSpellReady(std::string spell_name) {
+	using GetSpellCooldownByID_t = void(__fastcall*)(uint32_t spellID, uint32_t isPetBook, uint32_t* cdDurationMS, uint32_t* cdStartMS, uint32_t* cdEnabled);
+	auto GetSpellCooldownByID = reinterpret_cast<GetSpellCooldownByID_t>(GET_SPELL_COOLDOWN_BY_ID);
+
+	SpellSlotData spell = FunctionsLua::GetSpellData(spell_name);
+	if (spell.id == 0) return false;
+
+	uint32_t cd_duration_ms = 0;
+	uint32_t cd_start_ms = 0;
+	uint32_t cd_enabled = 0;
+
+	GetSpellCooldownByID(static_cast<uint32_t>(spell.id), 0, &cd_duration_ms, &cd_start_ms, &cd_enabled);
+
+	const double cd_start = static_cast<double>(cd_start_ms) * 0.001;
+	const double cd_duration = static_cast<double>(cd_duration_ms) * 0.001;
+	double cd_left = cd_start + cd_duration - FunctionsLua::GetTime();
+	if (cd_left < 0.0) cd_left = 0.0;
+
+	return Functions::SpellIsUsable(spell.id) && cd_left < 1.25f;
+}
+
+WoWUnit* Functions::GetMissingBuff(int* IDs, int size, int hasmana, int noTank) {
+	//hasmana = 0 -> everyone | hasmana = 1 -> those who have mana | hamana = 2 those who don't have mana
+	for (int i = 1; i <= NumGroupMembers; i++) {
+		if ((GroupMember[i] != NULL) && (GroupMember[i]->unitReaction > Neutral)
+			&& (hasmana == 0 || (hasmana == 1 && GroupMember[i]->prctMana > 0) || (hasmana == 2 && GroupMember[i]->prctMana < 0))
+			&& !GroupMember[i]->isdead && (localPlayer->position.DistanceTo(GroupMember[i]->position) < 40.0f)
+			&& !GroupMember[i]->hasBuff(IDs, size) && !Functions::Intersect(localPlayer->position, GroupMember[i]->position)) {
+			if (noTank == 1 && GroupMember[i]->role == 0) {
+				return NULL;
+			}
+			else if (noTank == 2 && GroupMember[i]->role > 0) {
+				return NULL;
+			}
+			return GroupMember[i];
+		}
+	}
+	return NULL;
 }
 
 //======================================================================//
@@ -719,11 +815,9 @@ std::tuple<int, int, int, int> Functions::countEnemies() {
 	}
 	int nbr = 0, nbrClose = 0, nbrCloseFacing = 0, nbrEnemyPlayer = 0;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].flags & UNIT_FLAG_POSSESSED)
-			|| ListUnits[i].isFromGroup || ListUnits[i].unitReaction > Neutral || (ListUnits[i].creatureType == Totem)
-			|| (!(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
+		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].creatureType == Totem) || (!(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
 			continue;
-		else if (ListUnits[i].unitReaction == Neutral && ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) {
+		else if (ListUnits[i].isFromGroup || (ListUnits[i].flags & UNIT_FLAG_POSSESSED)) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
 			if (dist < 30.0f) ccTarget = &ListUnits[i];
 		}
@@ -824,22 +918,24 @@ WoWUnit* Functions::GetLeader() {
 	return NULL;
 }
 
-WoWUnit* Functions::GetMissingBuff(int* IDs, int size, int hasmana, int noTank) {
-	//Retourne le joueur auquel il manque le buff
-	//hasmana = 0 -> everyone | hasmana = 1 -> those who have mana | hamana = 2 those who don't have mana
-	for (int i = 1; i <= NumGroupMembers; i++) {
-		if ((GroupMember[i] != NULL) && (GroupMember[i]->unitReaction > Neutral)
-			&& (hasmana == 0 || (hasmana == 1 && GroupMember[i]->prctMana > 0) || (hasmana == 2 && GroupMember[i]->prctMana < 0))
-			&& !GroupMember[i]->isdead && (localPlayer->position.DistanceTo(GroupMember[i]->position) < 40.0f)
-			&& !GroupMember[i]->hasBuff(IDs, size) && !Functions::Intersect(localPlayer->position, GroupMember[i]->position)) {
-			if (noTank == 1 && GroupMember[i]->role == 0) {
-				return NULL;
-			}
-			else if (noTank == 2 && GroupMember[i]->role > 0) {
-				return NULL;
-			}
-			return GroupMember[i];
-		}
-	}
-	return NULL;
+Position Functions::RandomisePos(Position target_pos, float radius, Position away_from, float dist_away) {
+	float halfPI = acosf(0);
+	std::uniform_real_distribution<float> U01(0.0f, 1.0f);
+	std::uniform_real_distribution<float> Uang(0.0f, halfPI * 4); // 2π
+
+	Position candidate = target_pos;
+	int NUM_TRY = 0;
+
+	do {
+		auto& rng = RNG::engine();
+		float theta = Uang(rng);
+		float r = std::sqrt(U01(rng)) * radius;   // r = R * sqrt(u)
+		candidate.X = target_pos.X + r * std::cos(theta);
+		candidate.Y = target_pos.Y + r * std::sin(theta);
+		candidate.Z = target_pos.Z;
+		NUM_TRY += 1;
+	} while (NUM_TRY < 10 && ((dist_away > 0.0f && (candidate.DistanceTo(away_from) < dist_away)) || Functions::Intersect(target_pos, candidate) || (Functions::GetDepth(candidate, 2.0f) > 2.0f)));
+
+	if (NUM_TRY == 10) return target_pos;
+	else return candidate;
 }

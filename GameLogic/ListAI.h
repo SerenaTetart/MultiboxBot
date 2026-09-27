@@ -17,6 +17,6 @@ public:
 	static void WarlockDps();
 	static void WarriorTank();
 	
-	static void DPSTargeting();
-	static void TankTargeting();
+	static bool DPSTargeting();
+	static bool TankTargeting();
 };

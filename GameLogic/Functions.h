@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "WoWObject.h"
+#include "./Data/Spell.h"
 
 class Functions {
 	public:
@@ -26,6 +27,13 @@ class Functions {
 		static void MoveToLoS(Position target_pos, int MoveType);
 		static void CancelPlayerBuff(int buffID);
 		static unsigned int GetMapID();
+		static SpellSlotData GetSpellDataFromSlot(int slot, bool pet);
+		static bool SpellIsUsable(int32_t spellId);
+		static void MakeVirtualSpellBook(std::vector<SpellSlotData>*);
+		static bool IsSpellReady(std::string spell_name);
+		static WoWUnit* GetMissingBuff(int* IDs, int size, int hasmana = 0, int noTank = 0);
+		static int GetAutoRepeatSpellId();
+		static bool IsCurrentAction(std::string spell_name);
 		// === Non-memory Functions === //
 		static void ClassifyHeal();
 		static Position RandomisePos(Position target_pos, float radius, Position away_from = Position(0.0f, 0.0f, 0.0f), float dist_away = 0.0f);
@@ -36,7 +44,6 @@ class Functions {
         static bool PlayerIsRanged();
 		static WoWUnit* GetGroupDead(int mode = 0);
         static WoWUnit* GetLeader();
-		static WoWUnit* GetMissingBuff(int* IDs, int size, int hasmana=0, int noTank=0);
 
 	private:
 		const static uintptr_t GET_OBJECT_PTR_FUN_PTR = 0x00464870;
@@ -51,6 +58,9 @@ class Functions {
 		const static uintptr_t CANCEL_PLAYER_BUFF_FUN_PTR = 0x006E7040;
 		const static uintptr_t LUA_GET_TEXT_FUN_PTR = 0x00703bf0;
 		const static uintptr_t LUA_CALL_FUN_PTR = 0x00704CD0;
+		// Spells
+		const static uintptr_t GET_SPELL_TEXTURE_PATH = 0x004b3e50; // (int spell_slot, bool is_pet_book) -> return string
+		const static uintptr_t GET_SPELL_COOLDOWN_BY_ID = 0x006e2ea0;
 		// Offset
 		const static uintptr_t OBJECT_TYPE_OFFSET = 0x14;
 

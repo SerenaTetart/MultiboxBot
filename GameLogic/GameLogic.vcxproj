@@ -159,7 +159,10 @@
   <ItemGroup>
     <ClInclude Include="BossAI.h" />
     <ClInclude Include="Client.h" />
+    <ClInclude Include="Data\Inventory.h" />
     <ClInclude Include="Data\NPCResistance.h" />
+    <ClInclude Include="Data\Spell.h" />
+    <ClInclude Include="Data\SpellTrain.h" />
     <ClInclude Include="FactionTemplate.h" />
     <ClInclude Include="FunctionsLua.h" />
     <ClInclude Include="Game.h" />

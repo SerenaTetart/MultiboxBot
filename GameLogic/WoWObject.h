@@ -225,7 +225,7 @@ class WoWUnit : public WoWObject {
 class LocalPlayer : public WoWUnit {
     public:
         std::string className;
-        int castInfo, zoneID, bonusHealing = 0;
+        int castInfo, zoneID, bonusHealing = 0, money = 0;
         Position corpse_position;
 
         LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
@@ -274,6 +274,7 @@ const uintptr_t FACING_OFFSET = 0x9C4;
 const uintptr_t MOVEMENT_FLAG_OFFSET = 0x9E8;
 const uintptr_t SPEED_OFFSET = 0xA2C;
 const uintptr_t CREATURE_CACHE_OFFSET = 0xB30;
+const uintptr_t MONEY_OFFSET = 0x1260;
     //=== Name ===//
 const uintptr_t NAME_BASE_OFFSET = 0xC0E230;
 const uintptr_t NEXT_NAME_OFFSET = 0xC;
@@ -282,7 +283,7 @@ const uintptr_t PLAYER_NAME_OFFSET = 0x14;
 const uintptr_t GET_CREATURE_TYPE_FUN_PTR = 0x00605570;
 const uintptr_t GET_UNIT_REACTION_FUN_PTR = 0x006061E0;
 const uintptr_t CAN_ATTACK_UNIT_FUN_PTR = 0x00606980;
-const uintptr_t SET_TARGET_FUN_PTR = 0x00493540;
+const uintptr_t SET_TARGET_FUN_PTR = 0x00489A40; //0x00489A40 (new) || 0x00493540 (old)
 const uintptr_t CLICK_TO_MOVE_FUN_PTR = 0x00611130;
 const uintptr_t LOCKED_TARGET_STATIC_OFFSET = 0x00B4E2D8;
 const uintptr_t CASTING_STATIC_OFFSET = 0x00CECA88;

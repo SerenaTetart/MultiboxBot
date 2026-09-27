@@ -144,9 +144,7 @@ void Client::recvMessage() {
         }
 
         int keyId = buffer[1] - '0';
-        int state = buffer[3] - '0';
-
-        bool value = (state == 1);
+        int value = buffer[3] - '0';
 
         if (keyId == 1) {
             keybindTrigger = 1;
@@ -155,7 +153,7 @@ void Client::recvMessage() {
             keybindTrigger = 2;
         }
         else if (keyId == 3) {
-            autoLearnSpells = (autoLearnSpells + 1) % 4;
+            autoChores = value;
         }
         else if (keyId == 4) {
             passiveGroup = value;

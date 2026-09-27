@@ -67,28 +67,28 @@ void Game::UseMount() {
 	for (const auto& item : virtualInventory) {
 		// Fast
 		for (unsigned int z = 0; z < std::size(FastMountItemsID); z++) {
-			if (get<2>(item) == FastMountItemsID[z]) {
+			if (item.id == FastMountItemsID[z]) {
 				FunctionsLua::UseItem(FastMountItemsID[z]);
 				return;
 			}
 		}
 	}
 	if (localPlayer->className == "Paladin") {
-		if (FunctionsLua::IsSpellReady("Summon Charger")) {
+		if (Functions::IsSpellReady("Summon Charger")) {
 			FunctionsLua::CastSpellByName("Summon Charger");
 			return;
 		}
-		else if (FunctionsLua::IsSpellReady("Summon Warhorse")) {
+		else if (Functions::IsSpellReady("Summon Warhorse")) {
 			FunctionsLua::CastSpellByName("Summon Warhorse");
 			return;
 		}
 	}
 	else if (localPlayer->className == "Warlock") {
-		if (FunctionsLua::IsSpellReady("Summon Dreadsteed")) {
+		if (Functions::IsSpellReady("Summon Dreadsteed")) {
 			FunctionsLua::CastSpellByName("Summon Dreadsteed");
 			return;
 		}
-		else if (FunctionsLua::IsSpellReady("Summon Felsteed")) {
+		else if (Functions::IsSpellReady("Summon Felsteed")) {
 			FunctionsLua::CastSpellByName("Summon Felsteed");
 			return;
 		}
@@ -96,13 +96,13 @@ void Game::UseMount() {
 	for (const auto& item : virtualInventory) {
 		// Slow
 		for (unsigned int z = 0; z < std::size(SlowMountItemsID); z++) {
-			if (get<2>(item) == SlowMountItemsID[z]) {
+			if (item.id == SlowMountItemsID[z]) {
 				FunctionsLua::UseItem(SlowMountItemsID[z]);
 				return;
 			}
 		}
 	}
-	if (localPlayer->className == "Druid" && FunctionsLua::IsSpellReady("Travel Form")) {
+	if (localPlayer->className == "Druid" && Functions::IsSpellReady("Travel Form")) {
 		FunctionsLua::CastSpellByName("Travel Form");
 		return;
 	}

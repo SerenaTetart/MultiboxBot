@@ -44,50 +44,49 @@ void ListAI::WarlockDps() {
 			FunctionsLua::UseHPotion();
 		}
 		else if (localPlayer->castInfo == 0 && localPlayer->channelInfo == 0 && !localPlayer->isdead && !passiveGroup) {
-			ListAI::DPSTargeting();
-
 			int DemonSkinIDs[7] = { 687, 696, 706, 1086, 11733, 11734, 11735 }; //Demon Armor included
 			bool DemonSkinBuff = localPlayer->hasBuff(DemonSkinIDs, 7);
 			std::string RankCreateHealthstone = GetSpellRank("Create Healthstone");
 			std::string RankCreateSoulstone = GetSpellRank("Create Soulstone");
 			bool SoulLinkBuff = localPlayer->hasBuff(25228);
 			bool hasPet = FunctionsLua::HasPetUI();
-			if (Combat && (localPlayer->prctMana < 10.0f) && (FunctionsLua::GetMPotionCD() < 1.25)) {
+			if (ListAI::DPSTargeting()) {}
+			else if (Combat && (localPlayer->prctMana < 10.0f) && (FunctionsLua::GetMPotionCD() < 1.25)) {
 				//Mana Potion
 				FunctionsLua::UseMPotion();
 			}
-			else if (!DemonSkinBuff && FunctionsLua::IsSpellReady("Demon Armor")) {
+			else if (!DemonSkinBuff && Functions::IsSpellReady("Demon Armor")) {
 				//Demon Armor
 				FunctionsLua::CastSpellByName("Demon Armor");
 			}
-			else if (!DemonSkinBuff && !FunctionsLua::IsPlayerSpell("Demon Armor") && FunctionsLua::IsSpellReady("Demon Skin")) {
+			else if (!DemonSkinBuff && !FunctionsLua::IsPlayerSpell("Demon Armor") && Functions::IsSpellReady("Demon Skin")) {
 				//Demon Skin
 				FunctionsLua::CastSpellByName("Demon Skin");
 			}
-			else if (!SoulLinkBuff && hasPet && FunctionsLua::IsSpellReady("Soul Link")) {
+			else if (!SoulLinkBuff && hasPet && Functions::IsSpellReady("Soul Link")) {
 				// Soul Link
 				FunctionsLua::CastSpellByName("Soul Link");
 			}
-			else if (!hasPet && (nbrEnemyPlayer > 0) && (!Combat || FunctionsLua::IsSpellReady("Fel Domination")) && FunctionsLua::IsSpellReady("Summon Felhunter")) {
+			else if (!hasPet && (nbrEnemyPlayer > 0) && (!Combat || Functions::IsSpellReady("Fel Domination")) && Functions::IsSpellReady("Summon Felhunter")) {
 				//Summon Felhunter (PvP)
-				if (Combat && FunctionsLua::IsSpellReady("Fel Domination")) FunctionsLua::CastSpellByName("Fel Domination");
+				if (Combat && Functions::IsSpellReady("Fel Domination")) FunctionsLua::CastSpellByName("Fel Domination");
 				FunctionsLua::CastSpellByName("Summon Felhunter");
 			}
-			else if (IsInGroup && !hasPet && (!Combat || FunctionsLua::IsSpellReady("Fel Domination")) && FunctionsLua::IsSpellReady("Summon Imp")) {
+			else if (IsInGroup && !hasPet && (!Combat || Functions::IsSpellReady("Fel Domination")) && Functions::IsSpellReady("Summon Imp")) {
 				//Summon Imp (PvE)
-				if (Combat && FunctionsLua::IsSpellReady("Fel Domination")) FunctionsLua::CastSpellByName("Fel Domination");
+				if (Combat && Functions::IsSpellReady("Fel Domination")) FunctionsLua::CastSpellByName("Fel Domination");
 				FunctionsLua::CastSpellByName("Summon Imp");
 			}
-			else if (!IsInGroup && !hasPet && (!Combat || FunctionsLua::IsSpellReady("Fel Domination")) && FunctionsLua::IsSpellReady("Summon Voidwalker")) {
+			else if (!IsInGroup && !hasPet && (!Combat || Functions::IsSpellReady("Fel Domination")) && Functions::IsSpellReady("Summon Voidwalker")) {
 				//Summon Voidwalker (Solo)
-				if (Combat && FunctionsLua::IsSpellReady("Fel Domination")) FunctionsLua::CastSpellByName("Fel Domination");
+				if (Combat && Functions::IsSpellReady("Fel Domination")) FunctionsLua::CastSpellByName("Fel Domination");
 				FunctionsLua::CastSpellByName("Summon Voidwalker");
 			}
-			else if (!Combat && !localPlayer->isMoving && !FunctionsLua::HasHealthstone() && FunctionsLua::IsSpellReady(RankCreateHealthstone)) {
+			else if (!Combat && !localPlayer->isMoving && !FunctionsLua::HasHealthstone() && Functions::IsSpellReady(RankCreateHealthstone)) {
 				//Create Healthstone
 				FunctionsLua::CastSpellByName(RankCreateHealthstone + "()");
 			}
-			else if (!Combat && !localPlayer->isMoving && !HasSoulstone() && FunctionsLua::IsSpellReady(RankCreateSoulstone)) {
+			else if (!Combat && !localPlayer->isMoving && !HasSoulstone() && Functions::IsSpellReady(RankCreateSoulstone)) {
 				//Create Soulstone
 				FunctionsLua::CastSpellByName(RankCreateSoulstone + "()");
 			}
@@ -115,89 +114,89 @@ void ListAI::WarlockDps() {
 				if ((targetUnit->flags & UNIT_FLAG_IN_COMBAT) && hasPet) {
 					Functions::LuaCall("PetAttack()");
 				}
-				if ((localPlayer->prctHP < 40.0f) && targetPlayer && !targetUnit->isCrowdControlled() && FunctionsLua::IsSpellReady("Death Coil")) {
+				if ((localPlayer->prctHP < 40.0f) && targetPlayer && !targetUnit->isCrowdControlled() && Functions::IsSpellReady("Death Coil")) {
 					//Death Coil (PvP)
 					FunctionsLua::CastSpellByName("Death Coil");
 				}
-				else if (!localPlayer->isMoving && (nbrCloseEnemy >= 2) && FunctionsLua::IsSpellReady("Howl of Terror")) {
+				else if (!localPlayer->isMoving && (nbrCloseEnemy >= 2) && Functions::IsSpellReady("Howl of Terror")) {
 					//Howl of Terror
 					FunctionsLua::CastSpellByName("Howl of Terror");
 				}
-				else if (!CoTonguesDebuff && targetPlayer && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Curse of Tongues")) {
+				else if (!CoTonguesDebuff && targetPlayer && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::UnitIsCaster("target") && Functions::IsSpellReady("Curse of Tongues")) {
 					//Curse of Tongues (PvP -> Caster)
 					FunctionsLua::CastSpellByName("Curse of Tongues");
 					CurseGCD = time(0);
 				}
-				else if (!CoWeaknessDebuff && targetPlayer && (targetUnit->targetGuid == localPlayer->Guid) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && !FunctionsLua::UnitIsCaster("target") && FunctionsLua::IsSpellReady("Curse of Weakness")) {
+				else if (!CoWeaknessDebuff && targetPlayer && (targetUnit->targetGuid == localPlayer->Guid) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && !FunctionsLua::UnitIsCaster("target") && Functions::IsSpellReady("Curse of Weakness")) {
 					//Curse of Weakness (PvP -> Melee)
 					FunctionsLua::CastSpellByName("Curse of Weakness");
 					CurseGCD = time(0);
 				}
-				else if (!localPlayer->isMoving && targetPlayer && !targetUnit->isCrowdControlled() && (time(0) - FearTimer) >= 15.0f && FunctionsLua::IsSpellReady("Fear")) {
+				else if (!localPlayer->isMoving && targetPlayer && !targetUnit->isCrowdControlled() && (time(0) - FearTimer) >= 15.0f && Functions::IsSpellReady("Fear")) {
 					//Fear (PvP)
 					FunctionsLua::CastSpellByName("Fear");
 					if (localPlayer->isCasting()) FearTimer = time(0);
 				}
-				else if (!localPlayer->isMoving && targetPlayer && (targetUnit->level >= localPlayer->level-10) && !targetUnit->isCrowdControlled() && FunctionsLua::IsSpellReady("Inferno")) {
+				else if (!localPlayer->isMoving && targetPlayer && (targetUnit->level >= localPlayer->level-10) && !targetUnit->isCrowdControlled() && Functions::IsSpellReady("Inferno")) {
 					//Inferno (PvP)
 					if (hasPet) Functions::LuaCall("PetDismiss()");
 					FunctionsLua::CastSpellByName("Inferno");
 					Functions::ClickAOE(targetUnit->position);
 				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Inferno")) {
+				else if (!localPlayer->isMoving && (cluster_unit >= 4) && Functions::IsSpellReady("Inferno")) {
 					//Inferno (AoE)
 					if (hasPet) Functions::LuaCall("PetDismiss()");
 					FunctionsLua::CastSpellByName("Inferno");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!localPlayer->isMoving && (localPlayer->prctHP > 70.0f) && !targetUnit->resist(SpellSchool::Fire) && (nbrCloseEnemy >= 4) && FunctionsLua::IsSpellReady("Hellfire")) {
+				else if (!localPlayer->isMoving && (localPlayer->prctHP > 70.0f) && !targetUnit->resist(SpellSchool::Fire) && (nbrCloseEnemy >= 4) && Functions::IsSpellReady("Hellfire")) {
 					//Hellfire
 					FunctionsLua::CastSpellByName("Hellfire");
 				}
-				else if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Fire) && (cluster_unit >= 4) && FunctionsLua::IsSpellReady("Rain of Fire")) {
+				else if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Fire) && (cluster_unit >= 4) && Functions::IsSpellReady("Rain of Fire")) {
 					//Rain of Fire
 					FunctionsLua::CastSpellByName("Rain of Fire");
 					Functions::ClickAOE(cluster_center);
 				}
-				else if (!CoShadowDebuff && (targetUnit->level == -1) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::IsSpellReady("Curse of Shadow")) {
+				else if (!CoShadowDebuff && (targetUnit->level == -1) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && Functions::IsSpellReady("Curse of Shadow")) {
 					//Curse of Shadow (Boss)
 					FunctionsLua::CastSpellByName("Curse of Shadow");
 					CurseGCD = time(0);
 				}
-				else if (!CoAgonyDebuff && !targetUnit->resist(SpellSchool::Shadow) && targetUnit->getNbrDebuff() < 16 && !CoTonguesDebuff && targetPlayer && (time(0) - CurseGCD) >= 10.0f && FunctionsLua::IsSpellReady("Curse of Agony")) {
+				else if (!CoAgonyDebuff && !targetUnit->resist(SpellSchool::Shadow) && targetUnit->getNbrDebuff() < 16 && !CoTonguesDebuff && targetPlayer && (time(0) - CurseGCD) >= 10.0f && Functions::IsSpellReady("Curse of Agony")) {
 					//Curse of Agony (PvP)
 					FunctionsLua::CastSpellByName("Curse of Agony");
 					CurseGCD = time(0);
 				}
-				else if (!CorruptionDebuff && !targetUnit->resist(SpellSchool::Shadow) && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Corruption")) {
+				else if (!CorruptionDebuff && !targetUnit->resist(SpellSchool::Shadow) && targetUnit->getNbrDebuff() < 16 && targetPlayer && Functions::IsSpellReady("Corruption")) {
 					//Corruption (PvP)
 					FunctionsLua::CastSpellByName("Corruption");
 				}
-				else if (!SiphonLifeDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Siphon Life")) {
+				else if (!SiphonLifeDebuff && targetUnit->getNbrDebuff() < 16 && targetPlayer && Functions::IsSpellReady("Siphon Life")) {
 					//Siphon Life (PvP)
 					FunctionsLua::CastSpellByName("Siphon Life");
 				}
-				else if (!localPlayer->isMoving && !ImmolateDebuff && !targetUnit->resist(SpellSchool::Fire) && targetUnit->getNbrDebuff() < 16 && targetPlayer && FunctionsLua::IsSpellReady("Immolate")) {
+				else if (!localPlayer->isMoving && !ImmolateDebuff && !targetUnit->resist(SpellSchool::Fire) && targetUnit->getNbrDebuff() < 16 && targetPlayer && Functions::IsSpellReady("Immolate")) {
 					//Immolate (PvP)
 					FunctionsLua::CastSpellByName("Immolate");
 				}
-				else if (!localPlayer->isMoving && (localPlayer->prctHP < 40.0f) && ((HasAggro[0].size() == 0) || (FunctionsLua::GetTalentInfo(1, 8) > 0)) && FunctionsLua::IsSpellReady("Drain Life")) {
+				else if (!localPlayer->isMoving && (localPlayer->prctHP < 40.0f) && ((HasAggro[0].size() == 0) || (FunctionsLua::GetTalentInfo(1, 8) > 0)) && Functions::IsSpellReady("Drain Life")) {
 					//Drain Life
 					FunctionsLua::CastSpellByName("Drain Life");
 				}
-				else if (!localPlayer->isMoving && (nbrSoulShard < 6) && (targetUnit->prctHP < 15.0f) && FunctionsLua::IsSpellReady("Drain Soul")) {
+				else if (!localPlayer->isMoving && (nbrSoulShard < 6) && (targetUnit->prctHP < 15.0f) && Functions::IsSpellReady("Drain Soul")) {
 					//Drain Soul
 					FunctionsLua::CastSpellByName("Drain Soul");
 				}
-				else if (!localPlayer->isMoving && (targetUnit->prctMana > 33.0f) && targetPlayer && FunctionsLua::IsSpellReady("Drain Mana")) {
+				else if (!localPlayer->isMoving && (targetUnit->prctMana > 33.0f) && targetPlayer && Functions::IsSpellReady("Drain Mana")) {
 					//Drain Mana (PvP)
 					FunctionsLua::CastSpellByName("Drain Mana");
 				}
-				else if (IsFacing && !localPlayer->isMoving && !targetUnit->resist(SpellSchool::Shadow) && FunctionsLua::IsSpellReady("Shadow Bolt")) {
+				else if (IsFacing && !localPlayer->isMoving && !targetUnit->resist(SpellSchool::Shadow) && Functions::IsSpellReady("Shadow Bolt")) {
 					//Shadow Bolt
 					FunctionsLua::CastSpellByName("Shadow Bolt");
 				}
-				else if (!localPlayer->isMoving && (localPlayer->prctHP > 40.0f) && (localPlayer->prctMana < 10.0f) && FunctionsLua::IsSpellReady("Life Tap")) {
+				else if (!localPlayer->isMoving && (localPlayer->prctHP > 40.0f) && (localPlayer->prctMana < 10.0f) && Functions::IsSpellReady("Life Tap")) {
 					//Life Tap
 					FunctionsLua::CastSpellByName("Life Tap");
 				}
