@@ -1,5 +1,5 @@
 #pragma once
-#include "FunctionsLua.h"
+#include "./Functions/FunctionsLua.h"
 #include "Game.h"
 
 class ListAI {

@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
-#include "WoWObject.h"
-#include "./Data/Spell.h"
+#include "../WoWObject.h"
+#include "../Data/Spell.h"
 
 class Functions {
 	public:
@@ -33,7 +33,8 @@ class Functions {
 		static bool IsSpellReady(std::string spell_name);
 		static WoWUnit* GetMissingBuff(int* IDs, int size, int hasmana = 0, int noTank = 0);
 		static int GetAutoRepeatSpellId();
-		static bool IsCurrentAction(std::string spell_name);
+		static int GetActiveSpellId();
+		static bool IsCurrentAction(const std::string& spell_name);
 		// === Non-memory Functions === //
 		static void ClassifyHeal();
 		static Position RandomisePos(Position target_pos, float radius, Position away_from = Position(0.0f, 0.0f, 0.0f), float dist_away = 0.0f);
@@ -44,6 +45,8 @@ class Functions {
         static bool PlayerIsRanged();
 		static WoWUnit* GetGroupDead(int mode = 0);
         static WoWUnit* GetLeader();
+		static SpellSlotData GetSpellData(std::string spell_name);
+		static bool IsPlayerSpell(std::string spell_name);
 
 	private:
 		const static uintptr_t GET_OBJECT_PTR_FUN_PTR = 0x00464870;

@@ -19,7 +19,7 @@ static void DruidAttack() {
 			int ProwlIDs[3] = { 5215, 6783, 9913 };
 			bool ProwlBuff = localPlayer->hasBuff(ProwlIDs, 3);
 			int ComboPoints = FunctionsLua::GetComboPoints();
-			if (!ProwlBuff && !FunctionsLua::IsCurrentAction(FunctionsLua::GetSlot("Attack"))) Functions::InteractUnit(targetUnit->Pointer, 1);
+			if (!ProwlBuff && localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
 			if (!Combat && !ProwlBuff && Functions::IsSpellReady("Prowl")) {
 				// Prowl -> Not in PvE raids
 				FunctionsLua::CastSpellByName("Prowl");
@@ -76,7 +76,7 @@ static void DruidAttack() {
 			std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
 			int MoonfireIDs[10] = { 8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835 };
 			bool MoonfireDebuff = targetUnit->hasDebuff(MoonfireIDs, 10);
-			if (!Functions::IsCurrentAction("Attack")) FunctionsLua::CastSpellByName("Attack");
+			if (localPlayer->autoAttackGuid == 0) FunctionsLua::CastSpellByName("Attack");
 			if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Nature) && (cluster_unit >= 4) && Functions::IsSpellReady("Hurricane")) {
 				//Hurricane
 				FunctionsLua::CastSpellByName("Hurricane");

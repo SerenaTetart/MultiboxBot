@@ -9,7 +9,7 @@ static std::string GetSpellRank(std::string txt) {
 	std::string list[5] = { "Major", "Greater", "", "Lesser", "Minor" };
 	for (int i = 0; i < 5; i++) {
 		std::string tmp = txt + " (" + list[i] + ")";
-		if (FunctionsLua::IsPlayerSpell(tmp)) return tmp;
+		if (Functions::IsPlayerSpell(tmp)) return tmp;
 	}
 	return "";
 }
@@ -59,7 +59,7 @@ void ListAI::WarlockDps() {
 				//Demon Armor
 				FunctionsLua::CastSpellByName("Demon Armor");
 			}
-			else if (!DemonSkinBuff && !FunctionsLua::IsPlayerSpell("Demon Armor") && Functions::IsSpellReady("Demon Skin")) {
+			else if (!DemonSkinBuff && !Functions::IsPlayerSpell("Demon Armor") && Functions::IsSpellReady("Demon Skin")) {
 				//Demon Skin
 				FunctionsLua::CastSpellByName("Demon Skin");
 			}

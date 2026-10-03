@@ -20,8 +20,8 @@ static void PaladinAttack() {
 		//int SoLDebuffIDs[1] = { 20167 };
 		//bool SoLDebuff = targetUnit->hasDebuff(SoLDebuffIDs, 1);
 		bool SealBuff = (SoRBuff || SotCBuff || SoCBuff || SoLBuff);
-		if (!Functions::IsCurrentAction("Attack")) Functions::InteractUnit(targetUnit->Pointer, 1);
-		else if (!SealBuff && !SotCDebuff && targetUnit->isElite() && Functions::IsSpellReady("Seal of the Crusader")) {
+		if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
+		if (!SealBuff && !SotCDebuff && targetUnit->isElite() && Functions::IsSpellReady("Seal of the Crusader")) {
 			//Seal of the Crusader
 			FunctionsLua::CastSpellByName("Seal of the Crusader");
 		}
@@ -29,7 +29,7 @@ static void PaladinAttack() {
 			//Seal of Command
 			FunctionsLua::CastSpellByName("Seal of Command");
 		}
-		else if (!SealBuff && !FunctionsLua::IsPlayerSpell("Seal of Command") && Functions::IsSpellReady("Seal of Righteousness")) {
+		else if (!SealBuff && !Functions::IsPlayerSpell("Seal of Command") && Functions::IsSpellReady("Seal of Righteousness")) {
 			//Seal of Righteousness
 			FunctionsLua::CastSpellByName("Seal of Righteousness");
 		}
@@ -161,7 +161,7 @@ void ListAI::PaladinDps() {
 			return 0;
 		}
 		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
-			bool BoSanctuaryExist = FunctionsLua::IsPlayerSpell("Blessing of Sanctuary");
+			bool BoSanctuaryExist = Functions::IsPlayerSpell("Blessing of Sanctuary");
 			WoWUnit* BoSalvationTarget = NULL; WoWUnit* BoSanctuaryTarget = NULL;
 			if (BoSanctuaryExist) {
 				int BoSalvationIDs[1] = { 1038 };
@@ -170,7 +170,7 @@ void ListAI::PaladinDps() {
 				BoSanctuaryTarget = Functions::GetMissingBuff(BoSanctuaryIDs, 1, 0, 2);
 			}
 
-			bool BoKingsExist = FunctionsLua::IsPlayerSpell("Blessing of Kings");
+			bool BoKingsExist = Functions::IsPlayerSpell("Blessing of Kings");
 			WoWUnit* BoKingsTarget = NULL; bool BoKingsBuff = false;
 			if (BoKingsExist) {
 				int BoKingsIDs[1] = { 20217 };
@@ -207,15 +207,15 @@ void ListAI::PaladinDps() {
 			WoWUnit* PurifyTarget = FunctionsLua::GetGroupDispel("Disease", "Poison");
 			WoWUnit* CleanseTarget = FunctionsLua::GetGroupDispel("Disease", "Poison", "Magic");
 			WoWUnit* deadPlayer = Functions::GetGroupDead(1);
-			if (!SanctityAuraBuff && FunctionsLua::IsPlayerSpell("Sanctity Aura")) {
+			if (!SanctityAuraBuff && Functions::IsPlayerSpell("Sanctity Aura")) {
 				//Sanctity Aura
 				FunctionsLua::CastSpellByName("Sanctity Aura");
 			}
-			else if (!DevotionAuraBuff && index_paladin == 0 && !FunctionsLua::IsPlayerSpell("Sanctity Aura") && FunctionsLua::IsPlayerSpell("Devotion Aura")) {
+			else if (!DevotionAuraBuff && index_paladin == 0 && !Functions::IsPlayerSpell("Sanctity Aura") && Functions::IsPlayerSpell("Devotion Aura")) {
 				//Devotion Aura
 				FunctionsLua::CastSpellByName("Devotion Aura");
 			}
-			else if (!RetributionAuraBuff && index_paladin == 1 && !FunctionsLua::IsPlayerSpell("Sanctity Aura") && FunctionsLua::IsPlayerSpell("Retribution Aura")) {
+			else if (!RetributionAuraBuff && index_paladin == 1 && !Functions::IsPlayerSpell("Sanctity Aura") && Functions::IsPlayerSpell("Retribution Aura")) {
 				//Retribution Aura
 				FunctionsLua::CastSpellByName("Retribution Aura");
 			}

@@ -1,5 +1,5 @@
 #include "Game.h"
-#include "FunctionsLua.h"
+#include "./Functions/FunctionsLua.h"
 #include "Client.h"
 #include "MemoryManager.h"
 #include "ListAI.h"

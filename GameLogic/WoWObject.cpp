@@ -300,6 +300,7 @@ int GetSpellModifierFromSpellId(int spellId) {
 
 LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objType)
     : WoWUnit(pointer, guid, objType) {
+    autoAttackGuid = *(unsigned long long*)(Pointer + 0xC48);
     uintptr_t descriptor = GetDescriptorPtr(pointer);
     if (descriptor != NULL) {
         money = *(int*)(descriptor + MONEY_OFFSET);

@@ -14,9 +14,9 @@ static void GetSpellBonusHealing() {
 	float tmp3[11] = { 32, 56, 116, 180, 244, 304, 388, 488, 608, 756, 888 }; for (int i = 0; i < 11; i++) { RejuvenationValue[i] = tmp3[i]; }
 	int ImprovedRejuvenation = FunctionsLua::GetTalentInfo(3, 11);
 	int GiftOfNatureRank = FunctionsLua::GetTalentInfo(3, 11);
-	SpellSlotData spell_healing_touch = FunctionsLua::GetSpellData("Healing Touch");
-	SpellSlotData spell_regrowth = FunctionsLua::GetSpellData("Regrowth");
-	SpellSlotData spell_rejuvenation = FunctionsLua::GetSpellData("Rejuvenation");
+	SpellSlotData spell_healing_touch = Functions::GetSpellData("Healing Touch");
+	SpellSlotData spell_regrowth = Functions::GetSpellData("Regrowth");
+	SpellSlotData spell_rejuvenation = Functions::GetSpellData("Rejuvenation");
 	float bonusHealing = localPlayer->bonusHealing;
 	//====================================================//
 	float SubLevel20PENALTY = 1.0f;
@@ -38,7 +38,7 @@ static void DruidAttack() {
 		std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
 		int MoonfireIDs[10] = { 8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835 };
 		bool MoonfireDebuff = targetUnit->hasDebuff(MoonfireIDs, 10);
-		if (!Functions::IsCurrentAction("Attack")) Functions::InteractUnit(targetUnit->Pointer, 1);
+		if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
 		if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Nature) && (cluster_unit >= 4) && Functions::IsSpellReady("Hurricane")) {
 			//Hurricane
 			FunctionsLua::CastSpellByName("Hurricane");

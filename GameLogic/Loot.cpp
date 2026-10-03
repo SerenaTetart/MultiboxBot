@@ -1,8 +1,9 @@
 #include "Game.h"
-#include "Functions.h"
-#include "FunctionsLua.h"
+#include "./Functions/Functions.h"
+#include "./Functions/FunctionsLua.h"
 #include "MemoryManager.h"
 #include <time.h>
+#include <iostream>
 
 bool LootNodes() {
 	// Loot Mineral/Herbs

@@ -2,7 +2,7 @@
 #include "Game.h"
 #include "Navigation.h"
 #include "MemoryManager.h"
-#include "FunctionsLua.h"
+#include "./Functions/FunctionsLua.h"
 
 #include <time.h>
 

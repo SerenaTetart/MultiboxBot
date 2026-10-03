@@ -21,7 +21,7 @@ static void PaladinAttack(int index_paladin) {
 				break;
 			}
 		}
-		if (!Functions::IsCurrentAction("Attack")) Functions::InteractUnit(targetUnit->Pointer, 1);
+		if (localPlayer->autoAttackGuid == 0) FunctionsLua::CastSpellByName("Attack");
 		if (((nbrCloseEnemy >= 2) || (localPlayer->prctMana < 33)) && !SealBuff && !SoWDebuff && Functions::IsSpellReady("Seal of Wisdom")) {
 			// Seal of Wisdom
 			FunctionsLua::CastSpellByName("Seal of Wisdom");
@@ -156,7 +156,7 @@ void ListAI::PaladinTank() {
 			return 0;
 		}
 		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
-			bool BoSanctuaryExist = FunctionsLua::IsPlayerSpell("Blessing of Sanctuary");
+			bool BoSanctuaryExist = Functions::IsPlayerSpell("Blessing of Sanctuary");
 			WoWUnit* BoSalvationTarget = NULL; bool BoSanctuaryBuff = false;
 			if (BoSanctuaryExist) {
 				int BoSalvationIDs[1] = { 1038 };
@@ -165,7 +165,7 @@ void ListAI::PaladinTank() {
 				BoSanctuaryBuff = localPlayer->hasBuff(BoSanctuaryIDs, 4);
 			}
 
-			bool BoKingsExist = FunctionsLua::IsPlayerSpell("Blessing of Kings");
+			bool BoKingsExist = Functions::IsPlayerSpell("Blessing of Kings");
 			WoWUnit* BoKingsTarget = NULL; bool BoKingsBuff = false;
 			if (BoKingsExist) {
 				int BoKingsIDs[1] = { 20217 };
@@ -200,11 +200,11 @@ void ListAI::PaladinTank() {
 			WoWUnit* PurifyTarget = FunctionsLua::GetGroupDispel("Disease", "Poison");
 			WoWUnit* CleanseTarget = FunctionsLua::GetGroupDispel("Disease", "Poison", "Magic");
 			WoWUnit* deadPlayer = Functions::GetGroupDead(1);
-			if (!DevotionAuraBuff && index_paladin == 0 && FunctionsLua::IsPlayerSpell("Devotion Aura")) {
+			if (!DevotionAuraBuff && index_paladin == 0 && Functions::IsPlayerSpell("Devotion Aura")) {
 				// Devotion Aura
 				FunctionsLua::CastSpellByName("Devotion Aura");
 			}
-			else if (!RetributionAuraBuff && index_paladin == 1 && FunctionsLua::IsPlayerSpell("Retribution Aura")) {
+			else if (!RetributionAuraBuff && index_paladin == 1 && Functions::IsPlayerSpell("Retribution Aura")) {
 			    // Retribution Aura
 			    FunctionsLua::CastSpellByName("Retribution Aura");
 			}

@@ -8,7 +8,7 @@
 
 #include "Client.h"
 #include "Game.h"
-#include "Functions.h"
+#include "./Functions/Functions.h"
 
 #pragma comment(lib, "ws2_32.lib")
 

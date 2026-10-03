@@ -35,6 +35,7 @@ constexpr bool HasResistance(
 inline const std::unordered_map<int, ResistanceFlags> npcResistances = {
     { 3851, ResistanceFlags::Frost },
     { 3855, ResistanceFlags::Shadow },
+    { 4978, ResistanceFlags::Frost },
     // { 12348, ResistanceFlags::Nature | ResistanceFlags::Shadow }
 };
 

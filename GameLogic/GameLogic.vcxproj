@@ -164,11 +164,11 @@
     <ClInclude Include="Data\Spell.h" />
     <ClInclude Include="Data\SpellTrain.h" />
     <ClInclude Include="FactionTemplate.h" />
-    <ClInclude Include="FunctionsLua.h" />
+    <ClInclude Include="Functions\Functions.h" />
+    <ClInclude Include="Functions\FunctionsLua.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="ListAI.h" />
     <ClInclude Include="MemoryManager.h" />
-    <ClInclude Include="Functions.h" />
     <ClInclude Include="Navigation.h" />
     <ClInclude Include="rng.h" />
     <ClInclude Include="WoWObject.h" />
@@ -193,8 +193,9 @@
     <ClCompile Include="Client.cpp" />
     <ClCompile Include="FactionTemplate.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="Functions.cpp" />
-    <ClCompile Include="FunctionsLua.cpp" />
+    <ClCompile Include="Functions\Functions.cpp" />
+    <ClCompile Include="Functions\FunctionsLua.cpp" />
+    <ClCompile Include="Functions\FunctionsMovement.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Loot.cpp" />
     <ClCompile Include="Mount.cpp" />

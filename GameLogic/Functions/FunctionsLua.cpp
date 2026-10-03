@@ -1,5 +1,5 @@
 #include "FunctionsLua.h"
-#include "Game.h"
+#include "../Game.h"
 #include <iostream>
 
 //======================================================================//
@@ -97,7 +97,7 @@ float FunctionsLua::GetActionCooldownDuration(int slot) {
 }
 
 float FunctionsLua::GetSpellCooldownDuration(std::string spell_name) {
-	SpellSlotData spell = GetSpellData(spell_name);
+	SpellSlotData spell = Functions::GetSpellData(spell_name);
 	if (spell.id > 0) {
 		std::string command = "start, duration = GetSpellCooldown(" + std::to_string(spell.slot) + ", BOOKTYPE_SPELL)";
 		Functions::LuaCall(command.c_str());
@@ -564,28 +564,6 @@ std::tuple<std::string, std::string, int, int> FunctionsLua::GetSpellTabInfo(int
 	return std::make_tuple(name, texture, offset, numSpells);
 }
 
-SpellSlotData FunctionsLua::GetSpellData(std::string spell_name) {
-	SpellSlotData current_spell;
-    for (std::size_t i = 0; i < virtualSpellBook.size(); ++i) {
-        if (virtualSpellBook[i].name == spell_name) {
-            current_spell = virtualSpellBook[i];
-            while (i + 1 < virtualSpellBook.size() && virtualSpellBook[i + 1].name == spell_name) {
-                ++i;
-                current_spell = virtualSpellBook[i];
-            }
-            return current_spell;
-        }
-    }
-    return current_spell;
-}
-
-bool FunctionsLua::IsPlayerSpell(std::string spell_name) {
-	for (const auto& spell : virtualSpellBook) {
-		if (spell.name == spell_name) return true;
-	}
-	return false;
-}
-
 void FunctionsLua::CastSpellByName(std::string spell_name) {
 	Functions::LuaCall(("CastSpellByName(\"" + spell_name + "\")").c_str());
 }
@@ -658,7 +636,7 @@ void FunctionsLua::SpellStopTargeting() {
 int FunctionsLua::GetSlot(std::string spell_name, std::string slot_type) {
 	//Execution: 2ms
 	int slot = 0; int spell_id;
-	SpellSlotData spell = GetSpellData(spell_name);
+	SpellSlotData spell = Functions::GetSpellData(spell_name);
 	if (spell.id > 0) {
 		for (int i = 1; i < 120; i++) {
 			if (HasAction(i) && (GetSpellTexture(spell.slot) == GetActionTexture(i))

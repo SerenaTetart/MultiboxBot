@@ -7,7 +7,7 @@ static time_t PolymorphTimer = time(0);
 static std::string GetSpellRank(std::string txt) {
 	std::string list[4] = { "Ruby", "Citrine", "Jade", "Agate" };
 	for (int i = 0; i < 4; i++) {
-		if (FunctionsLua::IsPlayerSpell(txt + " " + list[i])) return (txt + " " + list[i]);
+		if (Functions::IsPlayerSpell(txt + " " + list[i])) return (txt + " " + list[i]);
 	}
 	return "";
 }
@@ -87,7 +87,7 @@ void ListAI::MageDps() {
 				//Blink
 				FunctionsLua::CastSpellByName("Blink");
 			}
-			else if (!FrostArmorBuff && (mapID == 489 || mapID == 529 || !FunctionsLua::IsPlayerSpell("Mage Armor")) && Functions::IsSpellReady("Frost Armor")) {
+			else if (!FrostArmorBuff && (mapID == 489 || mapID == 529 || !Functions::IsPlayerSpell("Mage Armor")) && Functions::IsSpellReady("Frost Armor")) {
 				//Frost|Ice Armor (PvP -> BG)
 				FunctionsLua::CastSpellByName("Ice Armor");
 				FunctionsLua::CastSpellByName("Frost Armor");

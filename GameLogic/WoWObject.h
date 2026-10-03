@@ -226,6 +226,7 @@ class LocalPlayer : public WoWUnit {
     public:
         std::string className;
         int castInfo, zoneID, bonusHealing = 0, money = 0;
+        unsigned long long autoAttackGuid = 0;
         Position corpse_position;
 
         LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objectType);

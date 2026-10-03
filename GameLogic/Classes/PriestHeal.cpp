@@ -21,11 +21,11 @@ static void GetSpellBonusHealing() {
 	int spirit = FunctionsLua::UnitStat("player", 5);
 	int SpiritualGuidance = FunctionsLua::GetTalentInfo(2, 14);
 	float bonusHealing = (spirit * 0.05f * SpiritualGuidance)+localPlayer->bonusHealing;
-	SpellSlotData spell_lesser_heal = FunctionsLua::GetSpellData("Lesser Heal");
-	SpellSlotData spell_renew = FunctionsLua::GetSpellData("Renew");
-	SpellSlotData spell_heal = FunctionsLua::GetSpellData("Heal");
-	SpellSlotData spell_greater_heal = FunctionsLua::GetSpellData("Greater Heal");
-	SpellSlotData spell_flash_heal = FunctionsLua::GetSpellData("Flash Heal");
+	SpellSlotData spell_lesser_heal = Functions::GetSpellData("Lesser Heal");
+	SpellSlotData spell_renew = Functions::GetSpellData("Renew");
+	SpellSlotData spell_heal = Functions::GetSpellData("Heal");
+	SpellSlotData spell_greater_heal = Functions::GetSpellData("Greater Heal");
+	SpellSlotData spell_flash_heal = Functions::GetSpellData("Flash Heal");
 	//====================================================//
 	float SubLevel20PENALTY = 1.0f;
 	if (RenewLevel[RenewRank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RenewLevel[spell_renew.rank]) * 0.0375f;
@@ -48,7 +48,7 @@ static void PriestAttack() {
 		bool ShadowWordPainDebuff = targetUnit->hasDebuff(ShadowWordPainIDs, 8);
 		int HolyFireIDs[8] = { 14914, 15262, 15263, 15264, 15265, 15266, 15267, 15261 };
 		bool HolyFireDebuff = targetUnit->hasDebuff(HolyFireIDs, 8);
-		if (!Functions::IsCurrentAction("Attack")) Functions::InteractUnit(targetUnit->Pointer, 1);
+		if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
 		if ((nbrCloseEnemy >= 4) && localPlayer->prctMana > 40 && Functions::IsSpellReady("Holy Nova")) {
 			//Holy Nova
 			FunctionsLua::CastSpellByName("Holy Nova");
@@ -217,11 +217,11 @@ void ListAI::PriestHeal() {
 				localPlayer->SetTarget(DivineSpiritTarget->Guid);
 				FunctionsLua::CastSpellByName("Prayer of Spirit");
 			}
-			else if (!InnerFireBuff && FunctionsLua::IsPlayerSpell("Inner Fire")) {
+			else if (!InnerFireBuff && Functions::IsPlayerSpell("Inner Fire")) {
 				//Inner Fire (self)
 				FunctionsLua::CastSpellByName("Inner Fire");
 			}
-			else if (!Combat && !PWFortitudeBuff && FunctionsLua::IsPlayerSpell("Power Word: Fortitude")) {
+			else if (!Combat && !PWFortitudeBuff && Functions::IsPlayerSpell("Power Word: Fortitude")) {
 				//Power Word: Fortitude (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Power Word: Fortitude");
@@ -231,7 +231,7 @@ void ListAI::PriestHeal() {
 				localPlayer->SetTarget(PWFortitudeTarget->Guid);
 				FunctionsLua::CastSpellByName("Power Word: Fortitude");
 			}
-			else if (!Combat && !DivineSpiritBuff && FunctionsLua::IsPlayerSpell("Divine Spirit")) {
+			else if (!Combat && !DivineSpiritBuff && Functions::IsPlayerSpell("Divine Spirit")) {
 				//Divine Spirit (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Divine Spirit");

@@ -1,6 +1,6 @@
 #pragma once
 #include "Functions.h"
-#include "./data/Inventory.h"
+#include "../data/Inventory.h"
 
 static int GetIntFromChar(const char* txt) {
 	//Obtient le !premier! nombre d'un char*
@@ -94,8 +94,6 @@ class FunctionsLua {
 	static std::string GetSpellName(int id);
 	static std::string GetSpellTexture(int spellID);
 	static std::tuple<std::string, std::string, int, int> GetSpellTabInfo(int index);
-	static SpellSlotData GetSpellData(std::string spell_name);
-	static bool IsPlayerSpell(std::string spell_name);
 	static bool IsSpellReady(std::string spell_name);
 	static void CastSpellByName(std::string spell_name);
 	static void UseAction(int slot, int self=0);
