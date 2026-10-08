@@ -1,9 +1,9 @@
 #include "Game.h"
-#include "FunctionsLua.h"
+#include "./Functions/FunctionsLua.h"
 #include "Client.h"
 #include "MemoryManager.h"
 #include "ListAI.h"
-#include "BossAI.h"
+#include "./BossAI/BossAI.h"
 #include "Navigation.h"
 #include "FactionTemplate.h"
 
@@ -90,6 +90,8 @@ void Game::MainLoop() {
 							FunctionsLua::MakeVirtualInventory(&virtualInventory);
 							Functions::MakeVirtualSpellBook(&virtualSpellBook);
 
+							FunctionsLua::UpdateTradeSkills();
+
 							if (FunctionsLua::GetRepairAllCost() > 0) Functions::LuaCall("RepairAllItems()");
 							if (FunctionsLua::GetMerchantNumItems() > 0) FunctionsLua::SellUselessItems();
 
@@ -101,10 +103,6 @@ void Game::MainLoop() {
 								UseMount();
 								keybindTrigger = 0;
 							}
-
-							skinningLevel = FunctionsLua::GetTradingSkill("Skinning");
-							miningLevel = FunctionsLua::GetTradingSkill("Mining");
-							herbalismLevel = FunctionsLua::GetTradingSkill("Herbalism");
 
 							if (FunctionsLua::SpellIsTargeting()) FunctionsLua::SpellStopTargeting();
 
@@ -232,7 +230,7 @@ void Game::MainLoop() {
 					if (targetUnit != NULL) {
 						los_target = !Functions::Intersect(localPlayer->position, targetUnit->position);
 						if (IsInGroup && (Leader != NULL) && (Leader->Guid != localPlayer->Guid) && targetUnit->attackable
-							&& !(targetUnit->flags & UNIT_FLAG_IN_COMBAT) && (targetUnit->Guid != Leader->targetGuid))
+							&& !(targetUnit->isInCombatOrEncounter()) && (targetUnit->Guid != Leader->targetGuid))
 							Functions::LuaCall("ClearTarget()");
 					}
 				});
@@ -448,7 +446,7 @@ std::vector<WoWUnit*> HasAggro[40]; std::vector<std::tuple<unsigned long long, t
 bool Combat = false, IsSitting = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
 los_target = false, passiveGroup = false, inInstance = false, inventoryFull = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
-skinningLevel = 0, miningLevel = 0, herbalismLevel = 0, mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoChores = 0;
+mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoChores = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0, autoAttackTimer = 0, breathTimer = 0;
 std::string tarType = "party";

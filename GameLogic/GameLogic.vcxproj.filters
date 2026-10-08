@@ -25,6 +25,9 @@
     <Filter Include="Header Files\Data">
       <UniqueIdentifier>{677a2085-179c-43db-9d9c-662dd1e87d2c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Functions">
+      <UniqueIdentifier>{cba44b4c-366e-41da-9d88-3c45b24be15c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h">
@@ -33,16 +36,10 @@
     <ClInclude Include="Game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Functions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MemoryManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WoWObject.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FunctionsLua.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ListAI.h">
@@ -72,12 +69,15 @@
     <ClInclude Include="Data\SpellTrain.h">
       <Filter>Header Files\Data</Filter>
     </ClInclude>
+    <ClInclude Include="Functions\Functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Functions\FunctionsLua.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Functions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WoWObject.cpp">
@@ -90,9 +90,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Game.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FunctionsLua.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Classes\DruidBalance.cpp">
@@ -157,6 +154,15 @@
     </ClCompile>
     <ClCompile Include="BossAI\ScarletMonastery.cpp">
       <Filter>Source Files\BossAI</Filter>
+    </ClCompile>
+    <ClCompile Include="Functions\Functions.cpp">
+      <Filter>Source Files\Functions</Filter>
+    </ClCompile>
+    <ClCompile Include="Functions\FunctionsLua.cpp">
+      <Filter>Source Files\Functions</Filter>
+    </ClCompile>
+    <ClCompile Include="Functions\FunctionsMovement.cpp">
+      <Filter>Source Files\Functions</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

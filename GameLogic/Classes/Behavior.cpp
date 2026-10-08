@@ -26,7 +26,7 @@ bool ListAI::DPSTargeting() {
 			WoWUnit* target = NULL; float minDist = INFINITY;
 			for (unsigned int i = 0; i < ListUnits.size(); i++) {
 				if (
-					(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || (ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))
+					(ListUnits[i].isInCombatOrEncounter() || (ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED))
 					&& ListUnits[i].attackable
 					&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
 					&& !ListUnits[i].isdead
@@ -48,7 +48,7 @@ bool ListAI::DPSTargeting() {
 		WoWUnit* target = NULL;
 		for (unsigned int i = 0; i < ListUnits.size(); i++) {
 			if (
-				((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) || ListUnits[i].creatureType == Totem)
+				(ListUnits[i].isInCombatOrEncounter() || ListUnits[i].creatureType == Totem)
 				&& ListUnits[i].attackable
 				&& (inInstance || (ListUnits[i].dynamic_flags & DYNAMICFLAG_TAPPEDBYME))
 				&& !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)

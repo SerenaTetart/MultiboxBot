@@ -194,7 +194,7 @@ class WoWUnit : public WoWObject {
         Position position; CreatureType creatureType = Null; UnitReaction unitReaction = Neutral;
         UnitFlags flags; MovementFlags movement_flags; DynamicFlags dynamic_flags;
         int buff[40] = { 0 }; int debuff[16] = {0}; float prctHP = 0.0f, prctMana = 0.0f, facing = 0.0f, speed = 0.0f, combatReach = 0.0f;
-        unsigned long long targetGuid = 0; char* name; bool attackable = false, isdead = false, isMoving = false, isFromGroup = false, isMounted = false;
+        unsigned long long targetGuid = 0; char* name; bool attackable = false, isdead = false, isMoving = false, isFromGroup = false, isMounted = false, isEncounterUnit = false;
         int rage = 0, energy = 0, level = 0, channelInfo = 0, hpLost = 0, factionTemplateID = 0, indexGroup = -1, role = -1, health = 0,
         createdBy = 0, entryID = 0, rank = 0, mountModelID = 0;
         std::array<bool, static_cast<std::size_t>(SpellSchool::Count)> spellResist {};
@@ -205,6 +205,10 @@ class WoWUnit : public WoWObject {
 
         bool resist(SpellSchool school) const {
             return spellResist[static_cast<std::size_t>(school)];
+        }
+
+        bool isInCombatOrEncounter() {
+            return (flags & UNIT_FLAG_IN_COMBAT) || isEncounterUnit;
         }
 
         WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType);
@@ -226,6 +230,12 @@ class LocalPlayer : public WoWUnit {
     public:
         std::string className;
         int castInfo, zoneID, bonusHealing = 0, money = 0;
+        // == Craft skills == //
+        int leatherworkingLevel = 0, tailoringLevel = 0, enchantingLevel = 0, blacksmithingLevel = 0, herbalismLevel = 0,
+            miningLevel = 0, skinningLevel = 0, engineeringLevel = 0, alchemyLevel = 0, cookingLevel = 0, fishingLevel = 0,
+            firstAidLevel = 0;
+
+        unsigned long long autoAttackGuid = 0;
         Position corpse_position;
 
         LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType objectType);

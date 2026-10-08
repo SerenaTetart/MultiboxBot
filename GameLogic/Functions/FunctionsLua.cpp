@@ -1,5 +1,5 @@
 #include "FunctionsLua.h"
-#include "Game.h"
+#include "../Game.h"
 #include <iostream>
 
 //======================================================================//
@@ -97,7 +97,7 @@ float FunctionsLua::GetActionCooldownDuration(int slot) {
 }
 
 float FunctionsLua::GetSpellCooldownDuration(std::string spell_name) {
-	SpellSlotData spell = GetSpellData(spell_name);
+	SpellSlotData spell = Functions::GetSpellData(spell_name);
 	if (spell.id > 0) {
 		std::string command = "start, duration = GetSpellCooldown(" + std::to_string(spell.slot) + ", BOOKTYPE_SPELL)";
 		Functions::LuaCall(command.c_str());
@@ -126,8 +126,8 @@ int FunctionsLua::GetRepairAllCost() {
 }
 
 void FunctionsLua::SellUselessItems() {
-	int craftItems[] = {2901 ,5956, 7005, };
-	for (const auto& item : virtualInventory) {
+	int craftItems[] = { 2901, 5956, 7005 };
+	for (const auto &item : virtualInventory) {
 		bool craftItem = false;
 		for (int i = 0; i < 3; i++) {
 			if (item.id == craftItems[i]) {
@@ -135,7 +135,15 @@ void FunctionsLua::SellUselessItems() {
 				break;
 			}
 		}
-		if (!craftItem && (item.quality == 0 || ((item.type == "Weapon" || item.type == "Armor") && item.quality <= 3 && item.minLevel < localPlayer->level))) {
+		if (
+			!craftItem &&
+			(item.quality == 0 ||
+				((item.type == "Weapon" || item.type == "Armor") && item.minLevel < localPlayer->level &&
+					((item.quality == 2 && localPlayer->enchantingLevel <= 0) ||
+					(item.quality <= 3 && item.quality != 2))
+				)
+			)
+		) {
 			// Sell grey items OR equipment under epic and under player's level
 			std::string command = "UseContainerItem(" + std::to_string(item.bag) + ", " + std::to_string(item.slot) + ")";
 			Functions::LuaCall(command.c_str());
@@ -158,7 +166,8 @@ std::string FunctionsLua::GetTradeTargetItemLink(int id) {
 	return itemLink;
 }
 
-int FunctionsLua::GetTradingSkill(std::string name) {
+void FunctionsLua::UpdateTradeSkills() {
+	std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
 	Functions::LuaCall("numSkill = GetNumSkillLines()");
 	int numSkill = GetIntFromChar((char*)Functions::GetText("numSkill"));
 	for (int i = 0; i < numSkill; i++) {
@@ -168,9 +177,19 @@ int FunctionsLua::GetTradingSkill(std::string name) {
 		if (h) continue;
 		//int m = GetIntFromChar((char*)Functions::GetText("m"));
 		std::string n = (char*)Functions::GetText("n");
-		if (!h && name == n) return GetIntFromChar((char*)Functions::GetText("r"));
+		if ("Skinning" == n) localPlayer->skinningLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Mining" == n) localPlayer->miningLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Herbalism" == n) localPlayer->herbalismLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Tailoring" == n) localPlayer->tailoringLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Leatherworking" == n) localPlayer->leatherworkingLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Blacksmithing" == n) localPlayer->blacksmithingLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Enchanting" == n) localPlayer->enchantingLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Alchemy" == n) localPlayer->alchemyLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Engineering" == n) localPlayer->engineeringLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Cooking" == n) localPlayer->cookingLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("Fishing" == n) localPlayer->fishingLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		else if ("First Aid" == n) localPlayer->firstAidLevel = GetIntFromChar((char*)Functions::GetText("r"));
 	}
-	return -1;
 }
 
 std::tuple<int, int> FunctionsLua::GetTradeSkillList(std::string names[], int size) {
@@ -185,7 +204,7 @@ std::tuple<int, int> FunctionsLua::GetTradeSkillList(std::string names[], int si
 		std::string n = (char*)Functions::GetText("n");
 		for (int y = 0; y < size; y++) {
 			if (z > 2) break;
-			else if (!h && names[y] == n) {
+			else if (names[y] == n) {
 				skills[z] = y+1;
 				z++;
 				break;
@@ -564,28 +583,6 @@ std::tuple<std::string, std::string, int, int> FunctionsLua::GetSpellTabInfo(int
 	return std::make_tuple(name, texture, offset, numSpells);
 }
 
-SpellSlotData FunctionsLua::GetSpellData(std::string spell_name) {
-	SpellSlotData current_spell;
-    for (std::size_t i = 0; i < virtualSpellBook.size(); ++i) {
-        if (virtualSpellBook[i].name == spell_name) {
-            current_spell = virtualSpellBook[i];
-            while (i + 1 < virtualSpellBook.size() && virtualSpellBook[i + 1].name == spell_name) {
-                ++i;
-                current_spell = virtualSpellBook[i];
-            }
-            return current_spell;
-        }
-    }
-    return current_spell;
-}
-
-bool FunctionsLua::IsPlayerSpell(std::string spell_name) {
-	for (const auto& spell : virtualSpellBook) {
-		if (spell.name == spell_name) return true;
-	}
-	return false;
-}
-
 void FunctionsLua::CastSpellByName(std::string spell_name) {
 	Functions::LuaCall(("CastSpellByName(\"" + spell_name + "\")").c_str());
 }
@@ -658,7 +655,7 @@ void FunctionsLua::SpellStopTargeting() {
 int FunctionsLua::GetSlot(std::string spell_name, std::string slot_type) {
 	//Execution: 2ms
 	int slot = 0; int spell_id;
-	SpellSlotData spell = GetSpellData(spell_name);
+	SpellSlotData spell = Functions::GetSpellData(spell_name);
 	if (spell.id > 0) {
 		for (int i = 1; i < 120; i++) {
 			if (HasAction(i) && (GetSpellTexture(spell.slot) == GetActionTexture(i))

@@ -9,7 +9,7 @@ static std::string GetSpellRank(std::string txt) {
 	std::string list[5] = { "Major", "Greater", "", "Lesser", "Minor" };
 	for (int i = 0; i < 5; i++) {
 		std::string tmp = txt + " (" + list[i] + ")";
-		if (FunctionsLua::IsPlayerSpell(tmp)) return tmp;
+		if (Functions::IsPlayerSpell(tmp)) return tmp;
 	}
 	return "";
 }
@@ -59,7 +59,7 @@ void ListAI::WarlockDps() {
 				//Demon Armor
 				FunctionsLua::CastSpellByName("Demon Armor");
 			}
-			else if (!DemonSkinBuff && !FunctionsLua::IsPlayerSpell("Demon Armor") && Functions::IsSpellReady("Demon Skin")) {
+			else if (!DemonSkinBuff && !Functions::IsPlayerSpell("Demon Armor") && Functions::IsSpellReady("Demon Skin")) {
 				//Demon Skin
 				FunctionsLua::CastSpellByName("Demon Skin");
 			}
@@ -111,7 +111,7 @@ void ListAI::WarlockDps() {
 				//Specific for Rain of Fire cast:
 				Position cluster_center = Position(0, 0, 0); int cluster_unit;
 				std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
-				if ((targetUnit->flags & UNIT_FLAG_IN_COMBAT) && hasPet) {
+				if (targetUnit->isInCombatOrEncounter() && hasPet) {
 					Functions::LuaCall("PetAttack()");
 				}
 				if ((localPlayer->prctHP < 40.0f) && targetPlayer && !targetUnit->isCrowdControlled() && Functions::IsSpellReady("Death Coil")) {

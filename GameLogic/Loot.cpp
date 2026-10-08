@@ -1,19 +1,20 @@
 #include "Game.h"
-#include "Functions.h"
-#include "FunctionsLua.h"
+#include "./Functions/Functions.h"
+#include "./Functions/FunctionsLua.h"
 #include "MemoryManager.h"
 #include <time.h>
+#include <iostream>
 
 bool LootNodes() {
 	// Loot Mineral/Herbs
-	if (herbalismLevel <= 0 && miningLevel <= 0) return false;
+	if (localPlayer->herbalismLevel <= 0 && localPlayer->miningLevel <= 0) return false;
 	float MIN_DIST = INFINITY; int indexGather = -1;
 	for (unsigned int i = 0; i < ListGameObjects.size(); i++) {
 		if (ListGameObjects[i].gatherType == 0) continue;
 		else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
 			continue;
 		else if (Functions::enemyClose(ListGameObjects[i].position)) continue;
-		int skillLevel = herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = miningLevel;
+		int skillLevel = localPlayer->herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = localPlayer->miningLevel;
 		if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)
 			|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 100)) {
 			float dist = ListGameObjects[i].position.DistanceTo(localPlayer->position);
@@ -103,12 +104,12 @@ bool LootNPC() {
 }
 
 bool SkinNPC() {
-	if (skinningLevel <= 0) return false;
+	if (localPlayer->skinningLevel <= 0) return false;
 	float MIN_DIST = INFINITY; int indexGather = -1;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		bool skinnable = (ListUnits[i].flags & UNIT_FLAG_SKINNABLE);
-		if (skinnable && (ListUnits[i].level <= 20 && ((ListUnits[i].level - 10) * 10 <= skinningLevel && !Functions::enemyClose(ListUnits[i].position))
-			|| (ListUnits[i].level > 20 && (ListUnits[i].level * 5 <= skinningLevel)))) {
+		if (skinnable && (ListUnits[i].level <= 20 && ((ListUnits[i].level - 10) * 10 <= localPlayer->skinningLevel && !Functions::enemyClose(ListUnits[i].position))
+			|| (ListUnits[i].level > 20 && (ListUnits[i].level * 5 <= localPlayer->skinningLevel)))) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
 			if (dist < MIN_DIST) {
 				MIN_DIST = dist;
@@ -239,7 +240,7 @@ bool Game::Trade() {
 }
 
 bool Game::Disenchant() {
-	if (get<2>(leaderInfos[localPlayer->indexGroup]) != 7 && get<3>(leaderInfos[localPlayer->indexGroup]) != 7) return false;
+	if (localPlayer->enchantingLevel <= 0) return false;
 	for (const auto& item : virtualInventory) {
 		if (item.quality == 2 && (item.type == "Armor" || item.type == "Weapon")) {
 			ThreadSynchronizer::RunOnMainThread([item]() {

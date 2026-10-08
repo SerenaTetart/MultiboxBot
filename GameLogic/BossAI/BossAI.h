@@ -1,8 +1,8 @@
 #pragma once
-#include "Game.h"
-#include "Navigation.h"
-#include "MemoryManager.h"
-#include "FunctionsLua.h"
+#include "../Game.h"
+#include "../Navigation.h"
+#include "../MemoryManager.h"
+#include "../Functions/FunctionsLua.h"
 
 #include <time.h>
 

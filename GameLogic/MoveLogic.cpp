@@ -1,5 +1,5 @@
 #include "Game.h"
-#include "FunctionsLua.h"
+#include "./Functions/FunctionsLua.h"
 #include "Client.h"
 #include "MemoryManager.h"
 #include "ListAI.h"
@@ -126,10 +126,10 @@ void SellItems() {
 	}
 	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
 		// Darnassus
-		Position dest = Position(9924.299805f, 2316.449951f, 1330.869995f);
+		Position dest = Position(9922.597656f, 2317.589111f, 1330.787964f);
 		if (localPlayer->position.DistanceTo(dest) < 2.0f) {
 			for (unsigned int i = 0; i < ListUnits.size(); i++) {
-				if (ListUnits[i].entryID == 1297) {
+				if (ListUnits[i].entryID == 4203) {
 					ThreadSynchronizer::RunOnMainThread([i]() {
 						Functions::InteractUnit(ListUnits[i].Pointer, 0);
 					});
@@ -157,15 +157,17 @@ void GoToTrainer(Position trainerPos, int trainerID) {
 	else MoveToMap(trainerPos);
 }
 
-void TrainSpell() {
+bool TrainSpell() {
 	// Train spells
 	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
 		// Stormwind
 		if (localPlayer->className == "Druid") {
 			GoToTrainer(Position(-8774.315430f, 1096.036255f, 92.540367f), 5504);
+			return true;
 		}
 		else if (localPlayer->className == "Hunter") {
 			GoToTrainer(Position(-8415.759766f, 552.697998f, 95.531700f), 5515);
+			return true;
 		}
 		else if (localPlayer->className == "Mage") {
 			Position trainerPos = Position(-9010.751953f, 868.493286f, 29.620701f);
@@ -183,132 +185,150 @@ void TrainSpell() {
 			}
 			else if(trainerPos.DistanceTo(localPlayer->position) < 20.0f) MoveToMap(trainerPos);
 			else MoveToMap(Position(-9015.769531f, 875.684570f, 148.616119f));
+			return true;
 		}
 		else if (localPlayer->className == "Paladin") {
 			GoToTrainer(Position(-8571.522461f, 863.083008f, 106.518623f), 5491);
+			return true;
 		}
 		else if (localPlayer->className == "Priest") {
 			GoToTrainer(Position(-8516.106445f, 859.622742f, 109.844681f), 376);
+			return true;
 		}
 		else if (localPlayer->className == "Rogue") {
 			GoToTrainer(Position(-8751.646484f, 380.214447f, 101.067060f), 918);
+			return true;
 		}
 		else if (localPlayer->className == "Warlock") {
 			GoToTrainer(Position(-8973.632813f, 1033.069702f, 101.404121f), 5495);
+			return true;
 		}
 		else if (localPlayer->className == "Warrior") {
 			GoToTrainer(Position(-8686.984375f, 323.889099f, 109.437485f), 5479);
+			return true;
 		}
 	}
 	else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
 		// Ironforge
 		if (localPlayer->className == "Hunter") {
 			GoToTrainer(Position(-5012.019043f, -1273.012085f, 507.753845f), 5116);
+			return true;
 		}
 		else if (localPlayer->className == "Mage") {
 			GoToTrainer(Position(-4613.083008f, -927.388550f, 501.068207f), 5144);
+			return true;
 		}
 		else if (localPlayer->className == "Paladin") {
 			GoToTrainer(Position(-4601.649902f, -896.468018f, 502.850006f), 5149);
+			return true;
 		}
 		else if (localPlayer->className == "Priest") {
 			GoToTrainer(Position(-4617.910645f, -907.910706f, 501.070557f), 5142);
+			return true;
 		}
 		else if (localPlayer->className == "Rogue") {
 			GoToTrainer(Position(-4649.279785f, -1124.449707f, 508.549927f), 5167);
+			return true;
 		}
 		else if (localPlayer->className == "Warlock") {
 			GoToTrainer(Position(-4602.515137f, -1111.653076f, 504.939484f), 5172);
+			return true;
 		}
 		else if (localPlayer->className == "Warrior") {
 			GoToTrainer(Position(-5042.364258f, -1243.405273f, 507.754944f), 1901);
+			return true;
 		}
 	}
 	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
 		// Darnassus
 		if (localPlayer->className == "Druid") {
 			GoToTrainer(Position(10183.007812f, 2568.764648f, 1325.966064f), 4218);
+			return true;
 		}
 		else if (localPlayer->className == "Hunter") {
 			GoToTrainer(Position(10176.217773f, 2511.905518f, 1342.807129f), 4146);
+			return true;
 		}
 		else if (localPlayer->className == "Priest") {
 			GoToTrainer(Position(9655.435547f, 2535.975586f, 1331.519043f), 4091);
+			return true;
 		}
 		else if (localPlayer->className == "Rogue") {
 			GoToTrainer(Position(10084.106445f, 2548.979492f, 1294.893555f), 4163);
+			return true;
 		}
 		else if (localPlayer->className == "Warrior") {
 			GoToTrainer(Position(9940.208008f, 2282.287842f, 1341.394409f), 4089);
+			return true;
 		}
 	}
+	return false;
 }
 
 void TrainTradingSkills() {
 	// Train trading skills
 	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
 		// Stormwind
-		if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 4 || get<3>(leaderInfos[localPlayer->indexGroup]) == 4)) {
+		if (localPlayer->tailoringLevel > 0) {
 			//Tailoring
 			MoveToMap(Position(-8942.839844f, 799.5440006f, 91.025101f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 5 || get<3>(leaderInfos[localPlayer->indexGroup]) == 5)) {
+		else if (localPlayer->leatherworkingLevel > 0) {
 			//Leatherworking
 			MoveToMap(Position(-8722.375977f, 473.982727f, 98.613373f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 6 || get<3>(leaderInfos[localPlayer->indexGroup]) == 6)) {
+		else if (localPlayer->blacksmithingLevel > 0) {
 			//Blacksmithing
 			MoveToMap(Position(-8425.0f, 608.796021f, 95.209000f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 7 || get<3>(leaderInfos[localPlayer->indexGroup]) == 7)) {
+		else if (localPlayer->enchantingLevel > 0) {
 			//Enchanting
-			int enchantingLevel = FunctionsLua::GetTradingSkill("Enchanting");
-			if (enchantingLevel < 150) MoveToMap(Position(-8858.309570f, 803.734985f, 96.517502f));
+			if (localPlayer->enchantingLevel < 150) MoveToMap(Position(-8858.309570f, 803.734985f, 96.517502f));
 			else MoveToMap(Position(-9574.972656f, -715.705505f, 99.157860f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 8 || get<3>(leaderInfos[localPlayer->indexGroup]) == 8)) {
+		else if (localPlayer->alchemyLevel > 0) {
 			//Alchemy
 			MoveToMap(Position(-8987.856445f, 756.198364f, 98.329971f));
 		}
 	}
 	else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
 		// Ironforge
-		if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 4 || get<3>(leaderInfos[localPlayer->indexGroup]) == 4)) {
+		if (localPlayer->tailoringLevel > 0) {
 			//Tailoring
 			MoveToMap(Position(-4720.207520f, -1057.395264f, 504.196350f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 5 || get<3>(leaderInfos[localPlayer->indexGroup]) == 5)) {
+		else if (localPlayer->leatherworkingLevel > 0) {
 			//Leatherworking
 			MoveToMap(Position(-4745.913574f, -1024.820313f, 504.428741f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 6 || get<3>(leaderInfos[localPlayer->indexGroup]) == 6)) {
+		else if (localPlayer->blacksmithingLevel > 0) {
 			//Blacksmithing
 			MoveToMap(Position(-4791.157227f, -1123.242920f, 498.806366f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 7 || get<3>(leaderInfos[localPlayer->indexGroup]) == 7)) {
+		else if (localPlayer->enchantingLevel > 0) {
 			//Enchanting
 			MoveToMap(Position(-4803.927246f, -1191.961060f, 505.815460f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 8 || get<3>(leaderInfos[localPlayer->indexGroup]) == 8)) {
+		else if (localPlayer->alchemyLevel > 0) {
 			//Alchemy
 			MoveToMap(Position(-4858.876465f, -1240.255371f, 501.255371f));
 		}
 	}
 	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
 		// Darnassus
-		if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 4 || get<3>(leaderInfos[localPlayer->indexGroup]) == 4)) {
+		if (localPlayer->tailoringLevel > 0) {
 			//Tailoring
 			MoveToMap(Position(10084.380859f, 2267.175049f, 1333.000732f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 5 || get<3>(leaderInfos[localPlayer->indexGroup]) == 5)) {
+		else if (localPlayer->leatherworkingLevel > 0) {
 			//Leatherworking
 			MoveToMap(Position(10084.359375f, 2257.949463f, 1343.310791f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 7 || get<3>(leaderInfos[localPlayer->indexGroup]) == 7)) {
+		else if (localPlayer->enchantingLevel > 0) {
 			//Enchanting
 			MoveToMap(Position(10145.700195f, 2320.280029f, 1333.079956f));
 		}
-		else if ((get<2>(leaderInfos[localPlayer->indexGroup]) == 8 || get<3>(leaderInfos[localPlayer->indexGroup]) == 8)) {
+		else if (localPlayer->alchemyLevel > 0) {
 			//Alchemy
 			MoveToMap(Position(10097.754883f, 2352.179199f, 1325.527954f));
 		}
@@ -353,8 +373,6 @@ void Game::DoChores() {
 	}
 	if (!Combat && Disenchant()) {}
 	else if (hasItemToSell) SellItems();
-	else if (HasSpellToTrain()) {
-		TrainSpell();
-	}
+	else if (HasSpellToTrain() && TrainSpell()) {}
 	else AssembleBack();
 }

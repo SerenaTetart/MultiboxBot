@@ -1,4 +1,4 @@
-#include "../BossAI.h"
+#include "BossAI.h"
 
 bool BossAI::BossAIAction() {
 	bool result = false;
@@ -9,6 +9,14 @@ bool BossAI::BossAIAction() {
 			ThreadSynchronizer::releaseKey(0x28);
 		}
 		return false;
+	}
+	else if (mapID == 90 && localPlayer->zoneID == 721) {
+		// Gnomeregan
+		for (auto& unit : ListUnits) {
+			if (unit.entryID == 7915) {
+				unit.isEncounterUnit = true;
+			}
+		}
 	}
 	else if (mapID == 189 && localPlayer->zoneID == 796) {
 		// Scarlet Armory

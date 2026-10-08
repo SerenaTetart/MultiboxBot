@@ -1,9 +1,13 @@
 #include "Functions.h"
 
-#include "MemoryManager.h"
-#include "Game.h"
+#include "../MemoryManager.h"
+#include "../Game.h"
 #include "FunctionsLua.h"
-#include "rng.h"
+#include "../rng.h"
+
+#include "../Navigation.h"
+
+#include "../FactionTemplate.h"
 
 #include <iostream>
 #include <algorithm>
@@ -13,10 +17,6 @@
 #include <tuple>
 #include <vector>
 #include <random>
-
-#include "Navigation.h"
-
-#include "FactionTemplate.h"
 
 bool Functions::Intersect(Position start, Position end, float z) {
 	//Need height variable because LOS is based on the position of the eyes of the char
@@ -242,326 +242,6 @@ void Functions::InteractObject(uintptr_t object_ptr, int autoloot) {
 	function(object_ptr, autoloot);
 }
 
-void Functions::MoveTo(Position target_pos, int MoveType, bool checkEnemyClose, bool targetSwim) {
-	if ((localPlayer->movement_flags & MOVEFLAG_SWIMMING)) {
-		if (!Functions::Intersect(localPlayer->position, target_pos)) {
-			localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
-			Moving = MoveType;
-		}
-		else if (Functions::MoveObstacleSwim(target_pos, checkEnemyClose)) {
-			Moving = MoveType;
-		}
-		else Moving = 0;
-	}
-	else if(Navigation::HasBlacklists() || (Functions::MoveObstacle(target_pos, checkEnemyClose) == false)) {
-		Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
-		if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !Functions::enemyClose(nextpos) && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
-			localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-			Moving = MoveType;
-		}
-		else Moving = 0;
-	}
-	else {
-		Moving = MoveType;
-	}
-}
-
-void Functions::MoveToLoS(Position target_pos, int MoveType) {
-	if ((localPlayer->movement_flags & MOVEFLAG_SWIMMING)) {
-		if (Functions::MoveLoSSwim(target_pos)) {
-			Moving = MoveType;
-		}
-	}
-	else if (Functions::MoveLoS(target_pos) == false) {
-		Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
-		if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !Functions::enemyClose(nextpos) && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
-			localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-			Moving = MoveType;
-		}
-	}
-	else Moving = MoveType;
-}
-
-void Functions::FollowMultibox(int placement) {
-	if (Leader == NULL) return;
-	float range = 2.0f; float cst = 0.30f;
-	if (placement == 1) cst = 0.30f;
-	else if (placement == 2) cst = -0.30f;
-	else if (placement == 3) {
-		range = 4.0f;
-		if (localPlayer->isMounted) cst = 0.45f;
-		else cst = 0.15f;
-	}
-	else if (placement == 4) {
-		range = 4.0f;
-		if (localPlayer->isMounted) cst = -0.45f;
-		else cst = -0.15f;
-	}
-	float halfPI = acosf(0);
-	Position target_pos = Position((cos(Leader->facing + (halfPI * 2) + cst) * range) + Leader->position.X
-		, (sin(Leader->facing + (halfPI * 2) + cst) * range) + Leader->position.Y, Leader->position.Z);
-	bool targetSwim = false; if (Leader->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
-	ThreadSynchronizer::RunOnMainThread([=]() {
-		if (!targetSwim && Functions::GetDepth(target_pos, 2.0f) > 3.0f) {
-			Moving = 0;
-			return;
-		}
-		Functions::MoveTo(target_pos, 4, true, targetSwim);
-	});
-}
-
-bool MoveObstacleSwim_tmp(const Position& target_pos, const Position& start_pos) {
-	constexpr float STEP = 2.5f;
-	constexpr int   MAX_STEPS = 16;
-
-	float dx = target_pos.X - start_pos.X;
-	float dy = target_pos.Y - start_pos.Y;
-	float base = std::atan2(dy, dx);
-
-	Position last = start_pos;
-
-	int i = 0;
-	while (i < MAX_STEPS) {
-		Position stepPos(last.X + std::cos(base) * STEP, last.Y + std::sin(base) * STEP, last.Z);
-
-		if (Functions::Intersect(last, stepPos)) return false;
-
-		if (stepPos.DistanceTo(last) < 1e-3f) return false;
-
-		last = stepPos;
-		if (last.DistanceTo(target_pos) <= STEP) return true;
-		++i;
-	}
-	return false;
-}
-
-bool Functions::MoveObstacleSwim(Position target_pos, bool checkEnemyClose) {
-	constexpr float STEP = 2.5f;
-	constexpr int   MAX_STEPS = 12;
-	constexpr float ANGLE_STEP = 3.14159265358979323846f / 8.0f;
-	constexpr std::array<int, 13> OFFSETS = { 0, +1, -1, +2, -2, +3, -3, +4, -4, +5, -5, +6, -6 };
-
-	float dx = target_pos.X - localPlayer->position.X;
-	float dy = target_pos.Y - localPlayer->position.Y;
-	float base = std::atan2(dy, dx);
-
-	for (int off : OFFSETS) {
-		float dir = base + off * ANGLE_STEP;
-
-		Position last = localPlayer->position;
-
-		for (int s = 0; s < MAX_STEPS; ++s) {
-			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
-
-			if (!Functions::Intersect(last, stepPos, 1.25f) && (!checkEnemyClose || !Functions::enemyClose(stepPos))) {
-				if (MoveObstacleSwim_tmp(target_pos, stepPos)) {
-					if (off == 0) localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
-					else localPlayer->ClickToMove(Move, localPlayer->Guid, stepPos);
-					return true;
-				}
-				last = stepPos;
-				continue;
-			}
-			break;
-		}
-	}
-
-	return false;
-}
-
-bool Functions::MoveLoSSwim(Position target_pos) {
-	constexpr float STEP = 2.5f;
-	constexpr int   MAX_STEPS = 12;
-	constexpr float ANGLE_STEP = 3.14159265358979323846f / 8.0f;
-	constexpr std::array<int, 13> OFFSETS = { 0, +1, -1, +2, -2, +3, -3, +4, -4, +5, -5, +6, -6 };
-
-	float dx = target_pos.X - localPlayer->position.X;
-	float dy = target_pos.Y - localPlayer->position.Y;
-	float base = std::atan2(dy, dx);
-
-	for (int off : OFFSETS) {
-		float dir = base + off * ANGLE_STEP;
-
-		Position last = localPlayer->position;
-
-		for (int s = 0; s < MAX_STEPS; ++s) {
-			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
-
-			if (!Functions::Intersect(last, stepPos, 1.25f) && !Functions::enemyClose(stepPos)) {
-				if (!Functions::Intersect(stepPos, target_pos)) {
-					localPlayer->ClickToMove(Move, localPlayer->Guid, stepPos);
-					return true;
-				}
-				last = stepPos;
-				continue;
-			}
-			break;
-		}
-	}
-	return false;
-}
-
-bool MoveObstacle_tmp(const Position& target_pos, const Position& start_pos) {
-	constexpr float STEP = 2.0f;
-	constexpr int   MAX_STEPS = 15;
-
-	float dx = target_pos.X - start_pos.X;
-	float dy = target_pos.Y - start_pos.Y;
-	float base = std::atan2(dy, dx); // radians
-
-	Position last = start_pos;
-
-	int i = 0;
-	while (i < MAX_STEPS) {
-		Position stepPos(last.X + std::cos(base) * STEP, last.Y + std::sin(base) * STEP, last.Z);
-		Position next = Functions::ProjectPos(stepPos);
-
-		// Reject if snap is too big or the segment hits something
-		if (next.DistanceTo(stepPos) > 2.0f) return false;
-		if (Functions::Intersect(last, next, 0.5f)) return false;
-
-		// Progress guard (avoid potential stalls on weird projections)
-		if (next.DistanceTo(last) < 1e-3f) return false;
-
-		last = next;
-		if (last.DistanceTo(target_pos) <= STEP) return true;
-		++i;
-	}
-	return false;
-}
-
-bool Functions::MoveObstacle(Position target_pos, bool checkEnemyClose) {
-	if (localPlayer->position.DistanceTo(target_pos) > 40.0f) return false;
-
-	constexpr float STEP = 2.0f;
-	constexpr int   MAX_STEPS = 15;
-	constexpr float ANGLE_STEP = 3.14159265358979323846f / 8.0f;
-	constexpr std::array<int, 13> OFFSETS = { 0, +1, -1, +2, -2, +3, -3, +4, -4, +5, -5, +6, -6 };
-
-	float dx = target_pos.X - localPlayer->position.X;
-	float dy = target_pos.Y - localPlayer->position.Y;
-	float base = std::atan2(dy, dx);
-
-	for (int off : OFFSETS) {
-		float dir = base + off * ANGLE_STEP;
-		Position last = localPlayer->position;
-		for (int s = 0; s < MAX_STEPS; ++s) {
-			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
-			Position next = Functions::ProjectPos(stepPos);
-
-			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(last, next, 0.5f) && (!checkEnemyClose || !Functions::enemyClose(next))) {
-				if (MoveObstacle_tmp(target_pos, next)) {
-					if (off == 0) localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
-					else localPlayer->ClickToMove(Move, localPlayer->Guid, next);
-					return true;
-				}
-				last = next;
-				continue;
-			}
-			break;
-		}
-	}
-	return false;
-}
-
-bool Functions::StepBack(WoWUnit* target, int move_type, float dist_away) {
-	if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving == move_type) {
-		Moving = move_type;
-		return true;
-	}
-	std::vector<Position> list_pos;
-	float halfPI = acosf(0);
-	float PI_4 = acosf(0)/2;
-	for (int i = 0; i < 32; i++) {
-		Position last_pos = target->position; //Take into account the difference in altitude at each point
-		for (int w = 0; w < 10; w++) { //Every 2.0 yards up to 20 yard check for LoS point
-			Position tmp_pos = Position((cos((i * halfPI / 8)) * 2.0f) + last_pos.X, (sin((i * halfPI / 8)) * 2.0f) + last_pos.Y, last_pos.Z);
-			Position next_pos = tmp_pos;
-			if (!(localPlayer->movement_flags & MOVEFLAG_SWIMMING)) {
-				next_pos = Functions::ProjectPos(tmp_pos);
-				if (!(next_pos.DistanceTo(tmp_pos) < 2.00f)) break;
-				// Test 8 points to check if close to an obstacle
-				bool depthCheck = true;
-				for (int z = 0; z < 8; z++) {
-					tmp_pos = Position((cos((z * PI_4)) * 2.0f) + next_pos.X, (sin((z * PI_4)) * 2.0f) + next_pos.Y, next_pos.Z);
-					Position tmp_pos2 = Functions::ProjectPos(tmp_pos);
-					if (!(tmp_pos2.DistanceTo(tmp_pos) < 1.00f) || Functions::Intersect(tmp_pos2, next_pos)) {
-						depthCheck = false;
-						break;
-					}
-				}
-				if (!depthCheck) break;
-			}
-			if (!Functions::Intersect(last_pos, next_pos)) {
-				if ((target->position.DistanceTo(next_pos) - localPlayer->combatReach - target->combatReach) >= dist_away && !Functions::enemyClose(next_pos) && !Functions::Intersect(next_pos, target->position)) {
-					list_pos.push_back(next_pos);
-					break;
-				}
-				else { last_pos = next_pos; continue; }
-			}
-			else break; //There is an obstacle on this path, we need to change
-		}
-	}
-	// Part2: Check for the closest point to player
-	float min_dist = 99999.0f; int min_dist_index = -1;
-	for (unsigned int i = 0; i < list_pos.size(); i++) {
-		float dist = list_pos[i].DistanceTo(localPlayer->position);
-		if (dist < min_dist) {
-			min_dist_index = i;
-			min_dist = dist;
-		}
-	}
-	if (min_dist_index > -1 && min_dist > 2.0f) {
-		Position candidate = Functions::RandomisePos(list_pos[min_dist_index], 3.0f, target->position, (dist_away+localPlayer->combatReach+target->combatReach));
-		localPlayer->ClickToMove(Move, target->Guid, candidate);
-		Moving = move_type;
-		return true;
-	}
-	else {
-		Moving = 0;
-		return false;
-	}
-}
-
-bool Functions::MoveLoS(Position target_pos) {
-	/*
-		Check every directions for a position where you have line of sight of target_pos,
-		if there is an obstacle on the path check a new direction
-	*/
-	constexpr float STEP = 2.5f;
-	constexpr int   MAX_STEPS = 12;
-	constexpr float ANGLE_STEP = 3.14159265358979323846f / 8.0f;
-	constexpr std::array<int, 13> OFFSETS = { 0, +1, -1, +2, -2, +3, -3, +4, -4, +5, -5, +6, -6 };
-
-	float dx = target_pos.X - localPlayer->position.X;
-	float dy = target_pos.Y - localPlayer->position.Y;
-	float base = std::atan2(dy, dx);
-
-	for (int off : OFFSETS) {
-		float dir = base + off * ANGLE_STEP;
-
-		Position last = localPlayer->position;
-
-		for (int s = 0; s < MAX_STEPS; ++s) {
-			Position stepPos(last.X + std::cos(dir) * STEP, last.Y + std::sin(dir) * STEP, last.Z);
-
-			Position next = Functions::ProjectPos(stepPos);
-
-			if ((next.DistanceTo(stepPos) < 2.0f) && !Functions::Intersect(last, next) && !Functions::enemyClose(next)) {
-				if (!Functions::Intersect(next, target_pos)) {
-					localPlayer->ClickToMove(Move, localPlayer->Guid, next);
-					return true;
-				}
-				last = next;
-				continue;
-			}
-			break;
-		}
-	}
-
-	return false;
-}
-
 unsigned int Functions::GetMapID() {
 	typedef int func();
 	func* function = (func*)GETMAPID_FUN_PTR;
@@ -578,7 +258,8 @@ constexpr std::uintptr_t PLAYER_SPELLBOOK_RVA = 0x7700F0;
 constexpr std::uintptr_t PET_SPELLBOOK_RVA = 0x76F098;
 constexpr std::uintptr_t SPELL_RECORDS_RVA = 0x80D788;
 constexpr std::uintptr_t SPELL_IS_USABLE_RVA = 0x2E3D60;
-constexpr std::uintptr_t AUTO_REPEAT_GET_SPELL_ID_RVA = 0x2E9FD0;
+constexpr std::uintptr_t ACTIVE_SPELL_GET_ID_RVA = 0x2E3D10;
+constexpr std::uintptr_t AUTO_REPEAT_GET_SPELL_ID_RVA = 0x2E48E0;
 constexpr std::uintptr_t MAX_SPELL_ID_RVA = 0x80D78C;
 constexpr std::uintptr_t LOCALE_INDEX_RVA = 0x80E080;
 constexpr int MAX_SPELLBOOK_SLOTS = 1024;
@@ -617,7 +298,7 @@ SpellSlotData Functions::GetSpellDataFromSlot(int slot, bool pet) {
 void Functions::MakeVirtualSpellBook(std::vector<SpellSlotData>* spell_vector) {
 	// Retrieve every spells in the spellbook
 	spell_vector->clear();
-	for (unsigned int slot = 1; slot < MAX_SPELLBOOK_SLOTS; slot++) {
+	for (unsigned int slot = 0; slot < MAX_SPELLBOOK_SLOTS; slot++) {
 		SpellSlotData spell_data = Functions::GetSpellDataFromSlot(slot, false);
 		if (spell_data.id == 0) continue;
 		spell_vector->push_back(spell_data);
@@ -641,7 +322,18 @@ bool Functions::SpellIsUsable(int32_t spellId) {
 	return fn(spellRecords[spellId], &ignored) != 0;
 }
 
-int Functions::GetAutoRepeatSpellId() {
+int Functions::GetActiveSpellId()
+{
+	const auto base = reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
+
+	using GetActiveSpellIdFn = int32_t(*)();
+	const auto fn = reinterpret_cast<GetActiveSpellIdFn>(base + ACTIVE_SPELL_GET_ID_RVA);
+
+	return fn();
+}
+
+int Functions::GetAutoRepeatSpellId()
+{
 	const auto base = reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
 
 	using GetAutoRepeatSpellIdFn = int32_t(*)();
@@ -650,18 +342,32 @@ int Functions::GetAutoRepeatSpellId() {
 	return fn();
 }
 
-bool Functions::IsCurrentAction(std::string spell_name) {
-	SpellSlotData spell = FunctionsLua::GetSpellData(spell_name);
-	int currentSpellID = Functions::GetAutoRepeatSpellId();
-	if (currentSpellID != 0 && spell.id == currentSpellID) return true;
-	else return false;
+bool Functions::IsCurrentAction(const std::string& spell_name)
+{
+	const SpellSlotData spell = Functions::GetSpellData(spell_name);
+
+	if (spell.id == 0)
+		return false;
+
+	const int activeSpellId = Functions::GetActiveSpellId();
+	const int autoRepeatSpellId = Functions::GetAutoRepeatSpellId();
+
+	const bool isActive =
+		activeSpellId != 0 &&
+		spell.id == activeSpellId;
+
+	const bool isAutoRepeat =
+		autoRepeatSpellId != 0 &&
+		spell.id == autoRepeatSpellId;
+
+	return isActive || isAutoRepeat;
 }
 
 bool Functions::IsSpellReady(std::string spell_name) {
 	using GetSpellCooldownByID_t = void(__fastcall*)(uint32_t spellID, uint32_t isPetBook, uint32_t* cdDurationMS, uint32_t* cdStartMS, uint32_t* cdEnabled);
 	auto GetSpellCooldownByID = reinterpret_cast<GetSpellCooldownByID_t>(GET_SPELL_COOLDOWN_BY_ID);
 
-	SpellSlotData spell = FunctionsLua::GetSpellData(spell_name);
+	SpellSlotData spell = Functions::GetSpellData(spell_name);
 	if (spell.id == 0) return false;
 
 	uint32_t cd_duration_ms = 0;
@@ -753,7 +459,7 @@ std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_r
 	std::vector<Position> clusters_center;
 	//1- Chaque position est un cluster
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)
+		if ((ListUnits[i].isInCombatOrEncounter() || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)
 			&& ListUnits[i].attackable && !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
 			&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
 			&& ListUnits[i].speed <= 4.5f && !(ListUnits[i].flags & UNIT_FLAG_CONFUSED)
@@ -815,7 +521,7 @@ std::tuple<int, int, int, int> Functions::countEnemies() {
 	}
 	int nbr = 0, nbrClose = 0, nbrCloseFacing = 0, nbrEnemyPlayer = 0;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].creatureType == Totem) || (!(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
+		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].creatureType == Totem) || (!(ListUnits[i].isInCombatOrEncounter()) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
 			continue;
 		else if (ListUnits[i].isFromGroup || (ListUnits[i].flags & UNIT_FLAG_POSSESSED)) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
@@ -844,10 +550,10 @@ bool Functions::enemyClose(Position pos) {
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		int level_difference = ListUnits[i].level - localPlayer->level;
 		if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
-			&& !(ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
+			&& !ListUnits[i].isInCombatOrEncounter() && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
 			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead && ListUnits[i].creatureType != Totem
-			&& (ListUnits[i].position.DistanceTo2D(pos) < (20.0f + (level_difference * 1.0f)))
-			&& (abs(ListUnits[i].position.Z - pos.Z) < 2.0f)) {
+			&& (ListUnits[i].position.DistanceTo(pos) < (20.0f + (level_difference * 1.0f)))
+			&& (abs(ListUnits[i].position.Z - pos.Z) < 15.0f)) {
 			return true;
 		}
 	}
@@ -938,4 +644,26 @@ Position Functions::RandomisePos(Position target_pos, float radius, Position awa
 
 	if (NUM_TRY == 10) return target_pos;
 	else return candidate;
+}
+
+SpellSlotData Functions::GetSpellData(std::string spell_name) {
+	SpellSlotData current_spell;
+    for (std::size_t i = 0; i < virtualSpellBook.size(); ++i) {
+        if (virtualSpellBook[i].name == spell_name) {
+            current_spell = virtualSpellBook[i];
+            while (i + 1 < virtualSpellBook.size() && virtualSpellBook[i + 1].name == spell_name) {
+                ++i;
+                current_spell = virtualSpellBook[i];
+            }
+            return current_spell;
+        }
+    }
+    return current_spell;
+}
+
+bool Functions::IsPlayerSpell(std::string spell_name) {
+	for (const auto& spell : virtualSpellBook) {
+		if (spell.name == spell_name) return true;
+	}
+	return false;
 }

@@ -14,8 +14,8 @@ static void PaladinAttack() {
 		int SoRIDs[9] = { 20154, 21084, 20287, 20288, 20289, 20290, 20291, 20292, 20293 };
 		bool SoRBuff = localPlayer->hasBuff(SoRIDs, 9);
 		bool SealBuff = (SoRBuff || SoLBuff);
-		if (!Functions::IsCurrentAction("Attack")) Functions::InteractUnit(targetUnit->Pointer, 1);
-		else if (!SealBuff && !SoLDebuff && FunctionsLua::UnitIsElite("target") && Functions::IsSpellReady("Seal of Light")) {
+		if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
+		if (!SealBuff && !SoLDebuff && FunctionsLua::UnitIsElite("target") && Functions::IsSpellReady("Seal of Light")) {
 			//Seal of Light
 			FunctionsLua::CastSpellByName("Seal of Light");
 		}
@@ -153,7 +153,7 @@ void ListAI::PaladinHeal() {
 			return 0;
 		}
 		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
-			bool BoSanctuaryExist = FunctionsLua::IsPlayerSpell("Blessing of Sanctuary");
+			bool BoSanctuaryExist = Functions::IsPlayerSpell("Blessing of Sanctuary");
 			WoWUnit* BoSalvationTarget = NULL; WoWUnit* BoSanctuaryTarget = NULL;
 			if (BoSanctuaryExist) {
 				int BoSalvationIDs[1] = { 1038 };
@@ -162,7 +162,7 @@ void ListAI::PaladinHeal() {
 				BoSanctuaryTarget = Functions::GetMissingBuff(BoSanctuaryIDs, 1, 0, 2);
 			}
 
-			bool BoKingsExist = FunctionsLua::IsPlayerSpell("Blessing of Kings");
+			bool BoKingsExist = Functions::IsPlayerSpell("Blessing of Kings");
 			WoWUnit* BoKingsTarget = NULL; bool BoKingsBuff = false;
 			if (BoKingsExist) {
 				int BoKingsIDs[1] = { 20217 };
@@ -196,11 +196,11 @@ void ListAI::PaladinHeal() {
 			WoWUnit* PurifyTarget = FunctionsLua::GetGroupDispel("Disease", "Poison");
 			WoWUnit* CleanseTarget = FunctionsLua::GetGroupDispel("Disease", "Poison", "Magic");
 			WoWUnit* deadPlayer = Functions::GetGroupDead();
-			if (!DevotionAuraBuff && index_paladin == 0 && FunctionsLua::IsPlayerSpell("Devotion Aura")) {
+			if (!DevotionAuraBuff && index_paladin == 0 && Functions::IsPlayerSpell("Devotion Aura")) {
 				//Devotion Aura
 				FunctionsLua::CastSpellByName("Devotion Aura");
 			}
-			else if (!RetributionAuraBuff && index_paladin == 1 && FunctionsLua::IsPlayerSpell("Retribution Aura")) {
+			else if (!RetributionAuraBuff && index_paladin == 1 && Functions::IsPlayerSpell("Retribution Aura")) {
 			        //Retribution Aura
 			        FunctionsLua::CastSpellByName("Retribution Aura");
 			}

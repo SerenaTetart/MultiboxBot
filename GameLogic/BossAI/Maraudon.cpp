@@ -1,4 +1,4 @@
-#include "../BossAI.h"
+#include "BossAI.h"
 
 bool BossAI::Maraudon() {
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {

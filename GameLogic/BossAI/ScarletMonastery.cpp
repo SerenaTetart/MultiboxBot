@@ -1,4 +1,4 @@
-#include "../BossAI.h"
+#include "BossAI.h"
 
 static time_t mechanicTimer = time(0);
 
@@ -10,7 +10,7 @@ bool BossAI::ScarletMonastery() {
 			Position(1966.446167f, -450.624084f, 11.272270f)
 	};
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if ((ListUnits[i].flags & UNIT_FLAG_IN_COMBAT) && ListUnits[i].entryID == 3975) {
+		if (ListUnits[i].isInCombatOrEncounter() && ListUnits[i].entryID == 3975) {
 			// Herod
 			ThreadSynchronizer::RunOnMainThread([]() {
 				const char* last_yell = (const char*)Functions::GetText("last_yell_monster");

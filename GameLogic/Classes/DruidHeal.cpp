@@ -4,30 +4,27 @@
 
 static time_t EntanglingRootsTimer = time(0);
 
-static int RegrowthRank = 0; static float RegrowthValue[9]; static int RegrowthLevel[9] = { 12, 18, 24, 30, 36, 42, 48, 54, 60 };
-static int HealingTouchRank = 0; static float HealingTouchValue[11]; static int HealingTouchLevel[11] = { 1, 8, 14, 20, 26, 32, 38, 44, 50, 56, 60 };
-static int RejuvenationRank = 0; static float RejuvenationValue[11]; static int RejuvenationLevel[11] = { 4, 10, 16, 22, 28, 34, 40, 46, 52, 58, 60 };
+static float RegrowthValue[9] = { 198, 364, 532, 700, 879, 1113, 1398, 1748, 2125 }; static int RegrowthLevel[9] = { 12, 18, 24, 30, 36, 42, 48, 54, 60 }; static float RegrowthComputed = 0;
+static float HealingTouchValue[11] = { 48, 107, 229, 418, 651, 838, 1051, 1339, 1686, 2087, 2472 }; static int HealingTouchLevel[11] = { 1, 8, 14, 20, 26, 32, 38, 44, 50, 56, 60 }; static float HealingTouchComputed = 0;
+static float RejuvenationValue[11] = { 32, 56, 116, 180, 244, 304, 388, 488, 608, 756, 888 }; static int RejuvenationLevel[11] = { 4, 10, 16, 22, 28, 34, 40, 46, 52, 58, 60 }; static float RejuvenationComputed = 0;
 
 static void GetSpellBonusHealing() {
-	float tmp[9] = { 198, 364, 532, 700, 879, 1113, 1398, 1748, 2125 }; for (int i = 0; i < 9; i++) { RegrowthValue[i] = tmp[i]; }
-	float tmp2[11] = { 48, 107, 229, 418, 651, 838, 1051, 1339, 1686, 2087, 2472 }; for (int i = 0; i < 11; i++) { HealingTouchValue[i] = tmp2[i]; }
-	float tmp3[11] = { 32, 56, 116, 180, 244, 304, 388, 488, 608, 756, 888 }; for (int i = 0; i < 11; i++) { RejuvenationValue[i] = tmp3[i]; }
 	int ImprovedRejuvenation = FunctionsLua::GetTalentInfo(3, 11);
 	int GiftOfNatureRank = FunctionsLua::GetTalentInfo(3, 11);
-	SpellSlotData spell_healing_touch = FunctionsLua::GetSpellData("Healing Touch");
-	SpellSlotData spell_regrowth = FunctionsLua::GetSpellData("Regrowth");
-	SpellSlotData spell_rejuvenation = FunctionsLua::GetSpellData("Rejuvenation");
+	SpellSlotData spell_healing_touch = Functions::GetSpellData("Healing Touch");
+	SpellSlotData spell_regrowth = Functions::GetSpellData("Regrowth");
+	SpellSlotData spell_rejuvenation = Functions::GetSpellData("Rejuvenation");
 	float bonusHealing = localPlayer->bonusHealing;
 	//====================================================//
 	float SubLevel20PENALTY = 1.0f;
-	if (RegrowthLevel[RegrowthRank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RegrowthLevel[spell_regrowth.rank]) * 0.0375f;
-	RegrowthValue[RegrowthRank] = (RegrowthValue[RegrowthRank] + (bonusHealing * 0.4114 * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank));
+	if (RegrowthLevel[spell_regrowth.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RegrowthLevel[spell_regrowth.rank]) * 0.0375f;
+	RegrowthComputed = (RegrowthValue[spell_regrowth.rank] + (bonusHealing * 0.4114 * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank));
 	SubLevel20PENALTY = 1.0f;
-	if (HealingTouchLevel[HealingTouchRank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - HealingTouchLevel[spell_healing_touch.rank]) * 0.0375f;
-	HealingTouchValue[HealingTouchRank] = (HealingTouchValue[HealingTouchRank] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank));
+	if (HealingTouchLevel[spell_healing_touch.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - HealingTouchLevel[spell_healing_touch.rank]) * 0.0375f;
+	HealingTouchComputed = (HealingTouchValue[spell_healing_touch.rank] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank));
 	SubLevel20PENALTY = 1.0f;
-	if (RejuvenationLevel[RejuvenationRank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RejuvenationLevel[spell_rejuvenation.rank]) * 0.0375f;
-	RejuvenationValue[RejuvenationRank] = (RejuvenationValue[RejuvenationRank] + (bonusHealing * (12.0f/15.0f) * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank)) * (1.0f + (0.05f * ImprovedRejuvenation));
+	if (RejuvenationLevel[spell_rejuvenation.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RejuvenationLevel[spell_rejuvenation.rank]) * 0.0375f;
+	RejuvenationComputed = (RejuvenationValue[spell_rejuvenation.rank] + (bonusHealing * (12.0f/15.0f) * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank)) * (1.0f + (0.05f * ImprovedRejuvenation));
 }
 
 static void DruidAttack() {
@@ -38,7 +35,7 @@ static void DruidAttack() {
 		std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
 		int MoonfireIDs[10] = { 8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835 };
 		bool MoonfireDebuff = targetUnit->hasDebuff(MoonfireIDs, 10);
-		if (!Functions::IsCurrentAction("Attack")) Functions::InteractUnit(targetUnit->Pointer, 1);
+		if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
 		if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Nature) && (cluster_unit >= 4) && Functions::IsSpellReady("Hurricane")) {
 			//Hurricane
 			FunctionsLua::CastSpellByName("Hurricane");
@@ -100,7 +97,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpLost > RegrowthValue[RegrowthRank]) && !localPlayer->isMoving && (distAlly < 40.0f) && !RegrowthBuff && Functions::IsSpellReady("Regrowth")) {
+	else if ((HpLost > RegrowthComputed) && !localPlayer->isMoving && (distAlly < 40.0f) && !RegrowthBuff && Functions::IsSpellReady("Regrowth")) {
 		//Regrowth
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Regrowth");
@@ -108,7 +105,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpLost > HealingTouchValue[HealingTouchRank]) && !localPlayer->isMoving && (distAlly < 40.0f) && Functions::IsSpellReady("Healing Touch")) {
+	else if ((HpLost > HealingTouchComputed) && !localPlayer->isMoving && (distAlly < 40.0f) && Functions::IsSpellReady("Healing Touch")) {
 		//Healing Touch
 		localPlayer->SetTarget(healGuid);
 		if(Functions::IsSpellReady("Nature's Swiftness")) FunctionsLua::CastSpellByName("Nature's Swiftness");
@@ -125,7 +122,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpRatio < 90) && (distAlly < 40.0f) && !RejuvenationBuff && Functions::IsSpellReady("Rejuvenation")) {
+	else if ((HpLost > RejuvenationComputed*0.5) && (distAlly < 40.0f) && !RejuvenationBuff && Functions::IsSpellReady("Rejuvenation")) {
 		//Rejuvenation
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Rejuvenation");

@@ -46,7 +46,7 @@ void ListAI::WarriorTank() {
 				bool DefensiveStance = FunctionsLua::GetShapeshiftFormInfo(2);
 				bool BerserkerStance = FunctionsLua::GetShapeshiftFormInfo(3);
 				int DemoralizingShoutIDs[5] = { 1160, 6190, 11554, 11555, 11556 }; bool DemoralizingShoutDebuff = targetUnit->hasDebuff(DemoralizingShoutIDs, 5);
-				if (!Functions::IsCurrentAction("Attack")) Functions::InteractUnit(targetUnit->Pointer, 1);
+				if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
 				if ((nbrCloseEnemy >= 3) && !DemoralizingShoutDebuff && Functions::IsSpellReady("Demoralizing Shout")) {
 					// Demoralizing Shout
 					FunctionsLua::CastSpellByName("Demoralizing Shout");

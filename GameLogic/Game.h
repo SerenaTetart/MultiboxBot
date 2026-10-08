@@ -3,8 +3,8 @@
 #include <string>
 
 #include "WoWObject.h"
-#include "./data/Inventory.h"
-#include "./data/Spell.h"
+#include "./Data/Inventory.h"
+#include "./Data/Spell.h"
 
 class Game {
 public:
@@ -26,7 +26,7 @@ extern std::vector<WoWUnit*> HasAggro[40];
 extern std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 extern std::vector<int> HealTargetArray;
 extern int AoEHeal, nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, Moving, NumGroupMembers, playerSpec, positionCircle,
-			skinningLevel, miningLevel, herbalismLevel, mapID, keybindTrigger, IsInGroup, autoChores;
+			mapID, keybindTrigger, IsInGroup, autoChores;
 extern unsigned int LastTarget;
 extern std::string tarType;
 extern std::vector<std::tuple<std::string, int, int, int>> leaderInfos; // Nom, role, trade skill1, trade skill2

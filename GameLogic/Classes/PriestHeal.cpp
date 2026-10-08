@@ -3,41 +3,36 @@
 #include <iostream>
 
 	//Local variables //
-static int LesserHealRank = 0; static float LesserHealValue[3]; static int LesserHealLevel[3] = {1, 4, 10};
-static int RenewRank = 0; static float RenewValue[10]; static int RenewLevel[10] = { 8, 14, 20, 26, 32, 38, 44, 50, 56, 60 };
-static int HealRank = 0; static float HealValue[4]; static int HealLevel[4] = { 16, 22, 28, 34 };
-static int GreaterHealRank = 0; static float GreaterHealValue[5]; static int GreaterHealLevel[5] = { 40, 46, 52, 58, 60 };
-static int FlashHealRank = 0; static float FlashHealValue[7]; static int FlashHealLevel[7] = { 20, 26, 32, 38, 44, 50, 56 };
+static float LesserHealValue[3] = { 53, 84, 154 }; static int LesserHealLevel[3] = { 1, 4, 10 }; static float LesserHealComputed = 0;
+static float RenewValue[10] = { 45, 100, 175, 245, 315, 400, 510, 650, 810, 970 }; static int RenewLevel[10] = { 8, 14, 20, 26, 32, 38, 44, 50, 56, 60 }; static float RenewComputed = 0;
+static float HealValue[4] = { 330, 476, 624, 781 }; static int HealLevel[4] = { 16, 22, 28, 34 }; static float HealComputed = 0;
+static float GreaterHealValue[5] = { 982, 1248, 1556, 1917, 2080 }; static int GreaterHealLevel[5] = { 40, 46, 52, 58, 60 }; static float GreaterHealComputed = 0;
+static float FlashHealValue[7] = { 224, 297, 372, 453, 583, 722, 885 }; static int FlashHealLevel[7] = { 20, 26, 32, 38, 44, 50, 56 }; static float FlashHealComputed = 0;
 	//================//
 
 static void GetSpellBonusHealing() {
-	float tmp[3] = { 53, 84, 154 }; for (int i = 0; i < 3; i++) { LesserHealValue[i] = tmp[i]; }
-	float tmp2[10] = { 45, 100, 175, 245, 315, 400, 510, 650, 810, 970 }; for (int i = 0; i < 10; i++) { RenewValue[i] = tmp2[i]; }
-	float tmp3[4] = { 330, 476, 624, 781 }; for (int i = 0; i < 4; i++) { HealValue[i] = tmp3[i]; }
-	float tmp4[5] = { 982, 1248, 1556, 1917, 2080 }; for (int i = 0; i < 5; i++) { GreaterHealValue[i] = tmp4[i]; }
-	float tmp5[7] = { 224, 297, 372, 453, 583, 722, 885 }; for (int i = 0; i < 7; i++) { FlashHealValue[i] = tmp5[i]; }
 	int RenewTalentRank = FunctionsLua::GetTalentInfo(2, 2);
 	int SpiritualHealingRank = FunctionsLua::GetTalentInfo(2, 15);
 	int spirit = FunctionsLua::UnitStat("player", 5);
 	int SpiritualGuidance = FunctionsLua::GetTalentInfo(2, 14);
 	float bonusHealing = (spirit * 0.05f * SpiritualGuidance)+localPlayer->bonusHealing;
-	SpellSlotData spell_lesser_heal = FunctionsLua::GetSpellData("Lesser Heal");
-	SpellSlotData spell_renew = FunctionsLua::GetSpellData("Renew");
-	SpellSlotData spell_heal = FunctionsLua::GetSpellData("Heal");
-	SpellSlotData spell_greater_heal = FunctionsLua::GetSpellData("Greater Heal");
-	SpellSlotData spell_flash_heal = FunctionsLua::GetSpellData("Flash Heal");
+	SpellSlotData spell_lesser_heal = Functions::GetSpellData("Lesser Heal");
+	SpellSlotData spell_renew = Functions::GetSpellData("Renew");
+	SpellSlotData spell_heal = Functions::GetSpellData("Heal");
+	SpellSlotData spell_greater_heal = Functions::GetSpellData("Greater Heal");
+	SpellSlotData spell_flash_heal = Functions::GetSpellData("Flash Heal");
 	//====================================================//
 	float SubLevel20PENALTY = 1.0f;
-	if (RenewLevel[RenewRank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RenewLevel[spell_renew.rank]) * 0.0375f;
-	RenewValue[spell_renew.rank] = (RenewValue[spell_renew.rank] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank)) * (1.0f + (0.05f * RenewTalentRank));
+	if (RenewLevel[spell_renew.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RenewLevel[spell_renew.rank]) * 0.0375f;
+	RenewComputed = (RenewValue[spell_renew.rank] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank)) * (1.0f + (0.05f * RenewTalentRank));
 
 	SubLevel20PENALTY = 1.0f - (20.0f - LesserHealLevel[spell_lesser_heal.rank]) * 0.0375f;
-	LesserHealValue[spell_lesser_heal.rank] = (LesserHealValue[spell_lesser_heal.rank] + (bonusHealing * (2.5f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
+	LesserHealComputed = (LesserHealValue[spell_lesser_heal.rank] + (bonusHealing * (2.5f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
 	SubLevel20PENALTY = 1.0f;
 	if (HealLevel[spell_heal.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - HealLevel[spell_heal.rank]) * 0.0375f;
-	HealValue[spell_heal.rank] = (HealValue[spell_heal.rank] + (bonusHealing * (3.0f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
-	GreaterHealValue[spell_greater_heal.rank] = (GreaterHealValue[spell_greater_heal.rank] + (bonusHealing * (3.0f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
-	FlashHealValue[spell_flash_heal.rank] = (FlashHealValue[spell_flash_heal.rank] + (bonusHealing * (1.5f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
+	HealComputed = (HealValue[spell_heal.rank] + (bonusHealing * (3.0f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
+	GreaterHealComputed = (GreaterHealValue[spell_greater_heal.rank] + (bonusHealing * (3.0f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
+	FlashHealComputed = (FlashHealValue[spell_flash_heal.rank] + (bonusHealing * (1.5f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
 }
 
 static void PriestAttack() {
@@ -48,7 +43,7 @@ static void PriestAttack() {
 		bool ShadowWordPainDebuff = targetUnit->hasDebuff(ShadowWordPainIDs, 8);
 		int HolyFireIDs[8] = { 14914, 15262, 15263, 15264, 15265, 15266, 15267, 15261 };
 		bool HolyFireDebuff = targetUnit->hasDebuff(HolyFireIDs, 8);
-		if (!Functions::IsCurrentAction("Attack")) Functions::InteractUnit(targetUnit->Pointer, 1);
+		if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
 		if ((nbrCloseEnemy >= 4) && localPlayer->prctMana > 40 && Functions::IsSpellReady("Holy Nova")) {
 			//Holy Nova
 			FunctionsLua::CastSpellByName("Holy Nova");
@@ -124,7 +119,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpRatio < 90) && !RenewBuff && (distAlly < 40.0f) && Functions::IsSpellReady("Renew")) {
+	else if ((HpLost > RenewComputed*0.5) && !RenewBuff && (distAlly < 40.0f) && Functions::IsSpellReady("Renew")) {
 		//Renew
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Renew");
@@ -132,7 +127,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpLost > GreaterHealValue[GreaterHealRank]) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Greater Heal")) {
+	else if ((HpLost > GreaterHealComputed) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Greater Heal")) {
 		//Greater Heal
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Greater Heal");
@@ -140,7 +135,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((HpLost > HealValue[HealRank]) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Heal")) {
+	else if ((HpLost > HealComputed) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Heal")) {
 		//Heal
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Heal");
@@ -148,7 +143,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if ((localPlayer->level < 40) && (HpLost > LesserHealValue[LesserHealRank]) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Lesser Heal")) {
+	else if ((localPlayer->level < 40) && (HpLost > LesserHealComputed) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Lesser Heal")) {
 		//Lesser Heal
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Lesser Heal");
@@ -162,9 +157,9 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 void ListAI::PriestHeal() {
 	int LesserHealIDs[3] = { 2050, 2052, 2053 }; int FlashHealIDs[7] = { 2061, 9472, 9473, 9474, 10915, 10916, 10917 };
 	int GreaterHealIDs[5] = { 2060, 10963, 10964, 10965, 25314 }; int HealIDs[4] = { 2054, 2055, 6093, 6064 };
-	if ((ListUnits.size() > LastTarget) && ((localPlayer->isCasting(LesserHealIDs, 3) && (ListUnits[LastTarget].hpLost < LesserHealValue[LesserHealRank] * 0.9))
-		|| (localPlayer->isCasting(HealIDs, 4) && (ListUnits[LastTarget].hpLost < HealValue[HealRank] * 0.9))
-		|| (localPlayer->isCasting(GreaterHealIDs, 5) && (ListUnits[LastTarget].hpLost < GreaterHealValue[GreaterHealRank] * 0.9))
+	if ((ListUnits.size() > LastTarget) && ((localPlayer->isCasting(LesserHealIDs, 3) && (ListUnits[LastTarget].hpLost < LesserHealComputed * 0.9))
+		|| (localPlayer->isCasting(HealIDs, 4) && (ListUnits[LastTarget].hpLost < HealComputed * 0.9))
+		|| (localPlayer->isCasting(GreaterHealIDs, 5) && (ListUnits[LastTarget].hpLost < GreaterHealComputed * 0.9))
 		|| (localPlayer->isCasting(FlashHealIDs, 7) && (ListUnits[LastTarget].prctHP > 80)))) {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
@@ -217,11 +212,11 @@ void ListAI::PriestHeal() {
 				localPlayer->SetTarget(DivineSpiritTarget->Guid);
 				FunctionsLua::CastSpellByName("Prayer of Spirit");
 			}
-			else if (!InnerFireBuff && FunctionsLua::IsPlayerSpell("Inner Fire")) {
+			else if (!InnerFireBuff && Functions::IsPlayerSpell("Inner Fire")) {
 				//Inner Fire (self)
 				FunctionsLua::CastSpellByName("Inner Fire");
 			}
-			else if (!Combat && !PWFortitudeBuff && FunctionsLua::IsPlayerSpell("Power Word: Fortitude")) {
+			else if (!Combat && !PWFortitudeBuff && Functions::IsPlayerSpell("Power Word: Fortitude")) {
 				//Power Word: Fortitude (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Power Word: Fortitude");
@@ -231,7 +226,7 @@ void ListAI::PriestHeal() {
 				localPlayer->SetTarget(PWFortitudeTarget->Guid);
 				FunctionsLua::CastSpellByName("Power Word: Fortitude");
 			}
-			else if (!Combat && !DivineSpiritBuff && FunctionsLua::IsPlayerSpell("Divine Spirit")) {
+			else if (!Combat && !DivineSpiritBuff && Functions::IsPlayerSpell("Divine Spirit")) {
 				//Divine Spirit (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Divine Spirit");

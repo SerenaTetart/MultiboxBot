@@ -1,6 +1,6 @@
 #include "Game.h"
-#include "Functions.h"
-#include "FunctionsLua.h"
+#include "./Functions/Functions.h"
+#include "./Functions/FunctionsLua.h"
 #include <iostream>
 
 static const int FastMountItemsID[38] = {
