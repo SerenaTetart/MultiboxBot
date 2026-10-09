@@ -6,6 +6,7 @@ static time_t transformCD = time(0), EntanglingRootsTimer = time(0);
 
 static void DruidAttack() {
 	bool CatFormBuff = localPlayer->hasBuff(768);
+	bool BearFormBuff = (localPlayer->hasBuff(5487) || localPlayer->hasBuff(9634));
 	if (ListAI::DPSTargeting()) {}
 	else if (targetUnit != NULL && targetUnit->attackable && !targetUnit->isdead) {
 		if (CatFormBuff) {
@@ -24,7 +25,7 @@ static void DruidAttack() {
 				// Prowl -> Not in PvE raids
 				FunctionsLua::CastSpellByName("Prowl");
 			}
-			else if (Combat && (distTarget > 20) && (localPlayer->speed < 7) && (targetUnit->speed > 0) && Functions::IsSpellReady("Dash")) {
+			else if (Combat && (distTarget > 30) && (targetUnit->speed > 0) && Functions::IsSpellReady("Dash")) {
 				// Dash
 				FunctionsLua::CastSpellByName("Dash");
 			}
@@ -64,6 +65,38 @@ static void DruidAttack() {
 				// Claw
 				FunctionsLua::CastSpellByName("Claw");
 			}
+		}
+		else if (BearFormBuff) {
+			// Bear Logic
+			int DemoralizingRoarIDs[5] = { 99, 1735, 9490, 9747, 9898 };
+			bool DemoralizingRoarDebuff = targetUnit->hasDebuff(DemoralizingRoarIDs, 5);
+			bool FrenziedRegenerationBuff = (localPlayer->hasBuff(22842) || localPlayer->hasBuff(22895) || localPlayer->hasBuff(22896));
+			if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
+			if (Combat && localPlayer->rage < 50 && Functions::IsSpellReady("Enrage")) {
+				// Enrage
+				FunctionsLua::CastSpellByName("Enrage");
+			}
+			else if (Combat && localPlayer->prctHP < 70 && localPlayer->rage > 50 && Functions::IsSpellReady("Frenzied Regeneration")) {
+				// Frenzied Regeneration
+				FunctionsLua::CastSpellByName("Frenzied Regeneration");
+			} else if (nbrCloseEnemy > 3 && !DemoralizingRoarDebuff && Functions::IsSpellReady("Demoralizing Roar")) {
+				// Demoralizing Roar
+				FunctionsLua::CastSpellByName("Demoralizing Roar");
+			} else if (Functions::IsSpellReady("Bash")) {
+				// Bash
+				FunctionsLua::CastSpellByName("Bash");
+			} else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && nbrCloseEnemyFacing > 2 && Functions::IsSpellReady("Swipe")) {
+				// Swipe
+				FunctionsLua::CastSpellByName("Swipe");
+			} else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && Functions::IsSpellReady("Maul")) {
+				// Maul
+				FunctionsLua::CastSpellByName("Maul");
+			}
+		}
+		else if (!BearFormBuff && HasAggro[0].size() > 2 && Functions::IsSpellReady("Bear Form")) {
+			// Bear Form
+			if(Functions::IsPlayerSpell("Dire Bear Form")) FunctionsLua::CastSpellByName("Dire Bear Form");
+			else FunctionsLua::CastSpellByName("Bear Form");
 		}
 		else if (!CatFormBuff && Functions::IsSpellReady("Cat Form")) {
 			// Kitty Form
@@ -120,24 +153,34 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 	bool RejuvenationBuff = ListUnits[indexP].hasBuff(RejuvenationIDs, 11);
 	int RegrowthIDs[9] = { 8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858 };
 	bool RegrowthBuff = ListUnits[indexP].hasBuff(RegrowthIDs, 9);
+	// Druid Forms
 	bool CatFormBuff = localPlayer->hasBuff(768);
+	bool BearFormBuff = (localPlayer->hasBuff(5487) || localPlayer->hasBuff(9634));
+	bool inAnimalForm = (CatFormBuff || BearFormBuff);
 	if (CatFormBuff && (HpRatio < 70.0f) && (localPlayer->prctMana > 50.0f) && (localPlayer->energy < 20.0f) && (time(0) - transformCD) > 10.0f) {
 		//Disable Cat Form
-		FunctionsLua::CastSpellByName("Cat Form");
+		Functions::CancelPlayerBuff(768);
 		transformCD = time(0);
 		return 0;
 	}
-	else if (!CatFormBuff && isPlayer && Combat && (HasAggro[0].size() > 0) && (localPlayer->prctHP < 70) && Functions::IsSpellReady("Barkskin")) {
+	else if (BearFormBuff && (HasAggro[0].size() < 2) && (time(0) - transformCD) > 10.0f) {
+		//Disable Bear Form
+		if (localPlayer->hasBuff(5487)) Functions::CancelPlayerBuff(5487);
+		else Functions::CancelPlayerBuff(9634);
+		transformCD = time(0);
+		return 0;
+	}
+	else if (!inAnimalForm && isPlayer && Combat && (HasAggro[0].size() > 0) && (localPlayer->prctHP < 70) && Functions::IsSpellReady("Barkskin")) {
 		//Barkskin
 		FunctionsLua::CastSpellByName("Barkskin");
 		return 0;
 	}
-	else if (!CatFormBuff && !localPlayer->isMoving && Combat && (AoEHeal >= 4) && (distAlly < 40.0f) && Functions::IsSpellReady("Tranquility")) {
+	else if (!inAnimalForm && !localPlayer->isMoving && Combat && (AoEHeal >= 4) && (distAlly < 40.0f) && Functions::IsSpellReady("Tranquility")) {
 		//Tranquility
 		FunctionsLua::CastSpellByName("Tranquility");
 		return 0;
 	}
-	else if ((HpRatio < 40) && (distAlly < 40.0f) && (RegrowthBuff || RejuvenationBuff) && Functions::IsSpellReady("Swiftmend")) {
+	else if (!inAnimalForm && (HpRatio < 40) && (distAlly < 40.0f) && (RegrowthBuff || RejuvenationBuff) && Functions::IsSpellReady("Swiftmend")) {
 		//Swiftmend
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Swiftmend");
@@ -145,7 +188,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if (!CatFormBuff && !localPlayer->isMoving && (HpRatio < 60) && (distAlly < 40.0f) && !RegrowthBuff && Functions::IsSpellReady("Regrowth")) {
+	else if (!inAnimalForm && !localPlayer->isMoving && (HpRatio < 60) && (distAlly < 40.0f) && !RegrowthBuff && Functions::IsSpellReady("Regrowth")) {
 		//Regrowth
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Regrowth");
@@ -153,7 +196,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if (!CatFormBuff && !localPlayer->isMoving && (HpRatio < 40) && (distAlly < 40.0f) && Functions::IsSpellReady("Healing Touch")) {
+	else if (!inAnimalForm && !localPlayer->isMoving && (HpRatio < 40) && (distAlly < 40.0f) && Functions::IsSpellReady("Healing Touch")) {
 		//Healing Touch
 		localPlayer->SetTarget(healGuid);
 		if (Functions::IsSpellReady("Nature's Swiftness")) FunctionsLua::CastSpellByName("Nature's Swiftness");
@@ -162,7 +205,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if (!CatFormBuff && Combat && (ListUnits[indexP].prctMana < 20) && ListUnits[indexP].role == 3 && Functions::IsSpellReady("Innervate")) {
+	else if (!inAnimalForm && Combat && (ListUnits[indexP].prctMana < 20) && ListUnits[indexP].role == 3 && Functions::IsSpellReady("Innervate")) {
 		//Innervate
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Innervate");
@@ -170,7 +213,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (!los_heal) Moving = 5;
 		return 0;
 	}
-	else if (!CatFormBuff && (HpRatio < 90) && (localPlayer->prctMana > 33) && (distAlly < 40.0f) && !RejuvenationBuff && Functions::IsSpellReady("Rejuvenation")) {
+	else if (!inAnimalForm && (HpRatio < 90) && (localPlayer->prctMana > 33) && (distAlly < 40.0f) && !RejuvenationBuff && Functions::IsSpellReady("Rejuvenation")) {
 		//Rejuvenation
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Rejuvenation");
