@@ -29,7 +29,7 @@ bool LootNodes() {
 		if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
 			ThreadSynchronizer::pressKey(0x28);
 			ThreadSynchronizer::releaseKey(0x28);
-			Moving = 0;
+			Moving = MoveTypes::NotMoving;
 		}
 		ThreadSynchronizer::RunOnMainThread([indexGather]() {
 			if (localPlayer->isMounted) Game::Dismount();
@@ -39,11 +39,12 @@ bool LootNodes() {
 	}
 	else if (!localPlayer->isMoving) {
 		ThreadSynchronizer::RunOnMainThread([indexGather]() {
-			Functions::MoveTo(ListGameObjects[indexGather].position, 11);
+			Functions::MoveTo(ListGameObjects[indexGather].position, MoveTypes::Looting);
 		});
-		if (Moving != 0) return true;
+		if (Moving != MoveTypes::NotMoving) return true;
+		else return false;
 	}
-	else if (Moving == 11) return true;
+	else if (Moving == MoveTypes::Looting) return true;
 	else return false;
 }
 
@@ -80,7 +81,7 @@ bool LootNPC() {
 				if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
 					ThreadSynchronizer::pressKey(0x28);
 					ThreadSynchronizer::releaseKey(0x28);
-					Moving = 0;
+					Moving = MoveTypes::NotMoving;
 				}
 				else if (localPlayer->speed == 0.0f) {
 					ThreadSynchronizer::RunOnMainThread([i]() {
@@ -93,11 +94,11 @@ bool LootNPC() {
 			}
 			else if (!Functions::enemyClose(ListUnits[i].position)) {
 				ThreadSynchronizer::RunOnMainThread([i]() {
-					Functions::MoveTo(ListUnits[i].position, 11);
+					Functions::MoveTo(ListUnits[i].position, MoveTypes::Looting);
 					});
-				if (Moving != 0) return true;
+				if (Moving != MoveTypes::NotMoving) return true;
 			}
-			else if (Moving == 11) return true;
+			else if (Moving == MoveTypes::Looting) return true;
 		}
 	}
 	return false;
@@ -122,7 +123,7 @@ bool SkinNPC() {
 		if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
 			ThreadSynchronizer::pressKey(0x28);
 			ThreadSynchronizer::releaseKey(0x28);
-			Moving = 0;
+			Moving = MoveTypes::NotMoving;
 		}
 		else if (localPlayer->speed == 0.0f) {
 			ThreadSynchronizer::RunOnMainThread([indexGather]() {
@@ -134,11 +135,12 @@ bool SkinNPC() {
 	}
 	else if (!Functions::enemyClose(ListUnits[indexGather].position)) {
 		ThreadSynchronizer::RunOnMainThread([indexGather]() {
-			Functions::MoveTo(ListUnits[indexGather].position, 11);
+			Functions::MoveTo(ListUnits[indexGather].position, MoveTypes::Looting);
 		});
-		if (Moving != 0) return true;
+		if (Moving != MoveTypes::NotMoving) return true;
+		else return false;
 	}
-	else if (Moving == 11) return true;
+	else if (Moving == MoveTypes::Looting) return true;
 	else return false;
 }
 
@@ -146,6 +148,7 @@ bool Game::Loot() {
 	if (LootNodes()) return true;
 	else if (LootNPC()) return true;
 	else if (SkinNPC()) return true;
+	else return false;
 }
 
 bool Game::Trade() {

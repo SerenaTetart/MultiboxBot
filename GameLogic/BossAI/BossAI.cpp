@@ -3,8 +3,8 @@
 bool BossAI::BossAIAction() {
 	bool result = false;
 	if (!Combat) {
-		if (Moving == 10) {
-			Moving = 0;
+		if (Moving == MoveTypes::BossMechanic) {
+			Moving = MoveTypes::NotMoving;
 			ThreadSynchronizer::pressKey(0x28);
 			ThreadSynchronizer::releaseKey(0x28);
 		}
@@ -27,8 +27,8 @@ bool BossAI::BossAIAction() {
 		result = BossAI::Maraudon();
 	}
 
-	if (result == false && Moving == 10) {
-		Moving = 0;
+	if (result == false && Moving == MoveTypes::BossMechanic) {
+		Moving = MoveTypes::NotMoving;
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}

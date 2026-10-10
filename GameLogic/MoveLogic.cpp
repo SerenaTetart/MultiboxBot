@@ -16,10 +16,10 @@ void MoveToMap(Position targetpos) {
 		ThreadSynchronizer::RunOnMainThread([nextpos]() {
 			localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
 		});
-		Moving = 8;
+		Moving = MoveTypes::Journey;
 	}
 	else if (dist < 2.0f) {
-		Moving = 0;
+		Moving = MoveTypes::NotMoving;
 	}
 }
 
@@ -86,7 +86,7 @@ void Game::CorpseRun() {
 				ThreadSynchronizer::RunOnMainThread([nextpos]() {
 				    localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
 				});
-				Moving = 8;
+				Moving = MoveTypes::Journey;
 			}
 		}
 	}

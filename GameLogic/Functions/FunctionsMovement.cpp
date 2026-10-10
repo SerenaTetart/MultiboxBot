@@ -68,11 +68,11 @@ namespace {
         if ((localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
             ThreadSynchronizer::pressKey(0x28);
             ThreadSynchronizer::releaseKey(0x28);
-            Moving = 0;
+            Moving = MoveTypes::NotMoving;
         }
         else if (localPlayer->movement_flags & MOVEFLAG_BACKWARD) {
             ThreadSynchronizer::releaseKey(0x28);
-            Moving = 0;
+            Moving = MoveTypes::NotMoving;
         }
     }
 
@@ -140,9 +140,9 @@ namespace {
     }
 }
 
-bool Functions::StepBack(WoWUnit* target, int move_type, float dist_away) {
-    if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving == move_type) {
-        Moving = move_type;
+bool Functions::StepBack(WoWUnit* target, MoveTypes MoveType, float dist_away) {
+    if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving == MoveType) {
+        Moving = MoveType;
         return true;
     }
 
@@ -197,7 +197,7 @@ bool Functions::StepBack(WoWUnit* target, int move_type, float dist_away) {
         }
 
         localPlayer->ClickToMove(Move, target->Guid, candidate);
-        Moving = move_type;
+        Moving = MoveType;
         return true;
     }
 
@@ -238,11 +238,11 @@ void Functions::FollowMultibox(int placement) {
             return;
         }
 
-        Functions::MoveTo(projected_pos, 4, true, targetSwim);
+        Functions::MoveTo(projected_pos, MoveTypes::Follow, true, targetSwim);
     });
 }
 
-void Functions::MoveTo(Position target_pos, int MoveType, bool checkEnemyClose, bool targetSwim) {
+void Functions::MoveTo(Position target_pos, MoveTypes MoveType, bool checkEnemyClose, bool targetSwim) {
     const bool swimming = localPlayer->movement_flags & MOVEFLAG_SWIMMING;
 
     if (swimming) {
@@ -274,7 +274,7 @@ void Functions::MoveTo(Position target_pos, int MoveType, bool checkEnemyClose, 
 // ===== LoS ===== //
 // =============== //
 
-void Functions::MoveToLoS(Position target_pos, int MoveType) {
+void Functions::MoveToLoS(Position target_pos, MoveTypes MoveType) {
     if (localPlayer->movement_flags & MOVEFLAG_SWIMMING) {
         if (Functions::MoveLoSSwim(target_pos)) Moving = MoveType;
         else resetMovement();

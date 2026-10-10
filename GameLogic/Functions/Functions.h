@@ -2,6 +2,7 @@
 #include <cstdint>
 #include "../WoWObject.h"
 #include "../Data/Spell.h"
+#include "../Data/Movement.h"
 
 class Functions {
 	public:
@@ -19,12 +20,12 @@ class Functions {
 		static void InteractObject(uintptr_t object_ptr, int autoloot);
 		static bool MoveLoS(Position target_pos);
 		static bool MoveLoSSwim(Position target_pos);
-		static bool StepBack(WoWUnit* target, int move_type, float dist_away=15.0f);
+		static bool StepBack(WoWUnit* target, MoveTypes MoveType, float dist_away=15.0f);
 		static bool MoveObstacle(Position target_pos, bool checkEnemyClose=true);
 		static bool MoveObstacleSwim(Position target_pos, bool checkEnemyClose);
 		static void FollowMultibox(int placement = 0);
-		static void MoveTo(Position target_pos, int MoveType, bool checkEnemyClose=true, bool targetSwim=false);
-		static void MoveToLoS(Position target_pos, int MoveType);
+		static void MoveTo(Position target_pos, MoveTypes MoveType, bool checkEnemyClose=true, bool targetSwim=false);
+		static void MoveToLoS(Position target_pos, MoveTypes MoveType);
 		static void CancelPlayerBuff(int buffID);
 		static unsigned int GetMapID();
 		static SpellSlotData GetSpellDataFromSlot(int slot, bool pet);
@@ -39,7 +40,7 @@ class Functions {
 		static void ClassifyHeal();
 		static Position RandomisePos(Position target_pos, float radius, Position away_from = Position(0.0f, 0.0f, 0.0f), float dist_away = 0.0f);
 		static std::tuple<Position, int> getAOETargetPos(float range, float range2);
-        static std::tuple<int, int, int, int> countEnemies();
+		static void countEnemies(int& nbr, int& nbrClose, int& nbrCloseFacing, int& nbrEnemyPlayer, WoWUnit* enemyCC);
 		static bool enemyClose(Position pos);
         static int getNbrCreatureType(int range, CreatureType type1, CreatureType type2=Null, CreatureType type3=Null);
         static bool PlayerIsRanged();

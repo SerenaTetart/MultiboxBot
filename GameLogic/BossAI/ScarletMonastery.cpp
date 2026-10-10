@@ -33,7 +33,7 @@ bool BossAI::ScarletMonastery() {
 					}
 					// Run to the point furthest from Herod
 					ThreadSynchronizer::RunOnMainThread([listAwayPoints, pointIndex]() {
-						Functions::MoveTo(listAwayPoints[pointIndex], 10, false, false);
+						Functions::MoveTo(listAwayPoints[pointIndex], MoveTypes::BossMechanic, false, false);
 					});
 					return true;
 				}

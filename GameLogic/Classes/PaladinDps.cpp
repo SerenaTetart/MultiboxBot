@@ -87,7 +87,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::CastSpellByName("Lay on Hands");
 		LastTarget = indexP;
 		bool los_heal = !Functions::Intersect(localPlayer->position, ListUnits[indexP].position);
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (Combat && (distAlly < 30.0f) && isParty && !isTank && (HpRatio < 33) && !ForbearanceDebuff && Functions::IsSpellReady("Blessing of Protection")) {
@@ -96,7 +96,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::CastSpellByName("Blessing of Protection");
 		LastTarget = indexP;
 		bool los_heal = !Functions::Intersect(localPlayer->position, ListUnits[indexP].position);
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (Combat && (distAlly < 30.0f) && isParty && (HpRatio < 40) && !BoSacrificeBuff && Functions::IsSpellReady("Blessing of Sacrifice")) {
@@ -105,7 +105,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::CastSpellByName("Blessing of Sacrifice");
 		LastTarget = indexP;
 		bool los_heal = !Functions::Intersect(localPlayer->position, ListUnits[indexP].position);
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if ((HpRatio < 50) && (distAlly < 40.0f) && (localPlayer->prctMana > 33 || DivineProtectionBuff) && !localPlayer->isMoving && Functions::IsSpellReady("Holy Light")) {
@@ -114,7 +114,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::CastSpellByName("Holy Light");
 		LastTarget = indexP;
 		bool los_heal = !Functions::Intersect(localPlayer->position, ListUnits[indexP].position);
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if ((HpRatio < 85) && (distAlly < 40.0f) && localPlayer->prctMana > 33 && (DivineProtectionBuff || !Combat || autoAttackTimer > 1.5f) && !localPlayer->isMoving && Functions::IsSpellReady("Flash of Light")) {
@@ -123,7 +123,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::CastSpellByName("Flash of Light");
 		LastTarget = indexP;
 		bool los_heal = !Functions::Intersect(localPlayer->position, ListUnits[indexP].position);
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	return 1;
