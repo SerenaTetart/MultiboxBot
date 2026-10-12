@@ -9,6 +9,7 @@
 class BossAI {
 public:
 	static bool BossAIAction();
-	static bool ScarletMonastery();
+	static bool Gnomeregan();
 	static bool Maraudon();
+	static bool ScarletMonastery();
 };

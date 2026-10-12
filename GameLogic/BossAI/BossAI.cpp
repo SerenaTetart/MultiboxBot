@@ -12,11 +12,7 @@ bool BossAI::BossAIAction() {
 	}
 	else if (mapID == 90 && localPlayer->zoneID == 721) {
 		// Gnomeregan
-		for (auto& unit : ListUnits) {
-			if (unit.entryID == 7915 || unit.entryID == 8035) {
-				unit.isEncounterUnit = true;
-			}
-		}
+		result = BossAI::Gnomeregan();
 	}
 	else if (mapID == 189 && localPlayer->zoneID == 796) {
 		// Scarlet Armory

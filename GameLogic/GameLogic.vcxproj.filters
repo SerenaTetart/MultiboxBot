@@ -54,9 +54,6 @@
     <ClInclude Include="FactionTemplate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BossAI.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Data\NPCResistance.h">
       <Filter>Header Files\Data</Filter>
     </ClInclude>
@@ -77,6 +74,9 @@
     </ClInclude>
     <ClInclude Include="Data\Movement.h">
       <Filter>Header Files\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="BossAI\BossAI.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -166,6 +166,9 @@
     </ClCompile>
     <ClCompile Include="Functions\FunctionsMovement.cpp">
       <Filter>Source Files\Functions</Filter>
+    </ClCompile>
+    <ClCompile Include="BossAI\Gnomeregan.cpp">
+      <Filter>Source Files\BossAI</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

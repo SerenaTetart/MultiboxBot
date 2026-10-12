@@ -157,7 +157,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="BossAI.h" />
+    <ClInclude Include="BossAI\BossAI.h" />
     <ClInclude Include="Client.h" />
     <ClInclude Include="Data\Inventory.h" />
     <ClInclude Include="Data\Movement.h" />
@@ -176,6 +176,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BossAI\BossAI.cpp" />
+    <ClCompile Include="BossAI\Gnomeregan.cpp" />
     <ClCompile Include="BossAI\Maraudon.cpp" />
     <ClCompile Include="BossAI\ScarletMonastery.cpp" />
     <ClCompile Include="Classes\Behavior.cpp" />
