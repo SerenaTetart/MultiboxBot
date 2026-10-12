@@ -410,7 +410,7 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
     displayID = *(int*)((char*)Pointer  + descriptor + 0x8);
     level = 0; gatherType = 0;
         // === Mining === //
-    if (displayID == 310) gatherType = 1; // Copper
+    if (displayID == 310) { level = 1; gatherType = 1; } // Copper
     else if (displayID == 315) { level = 65; gatherType = 1; } // Tin
     else if (displayID == 312) { level = 125; gatherType = 1; } // Iron
     else if (displayID == 311) { level = 155; gatherType = 1; } // Gold
@@ -421,8 +421,8 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
     else if (displayID == 3952) { level = 275; gatherType = 1; } // Rich Thorium
     else if (displayID == 6650) { level = 305; gatherType = 1; } // Obsidian
         // === Herbalism === //
-    else if (displayID == 269) { level = 0; gatherType = 2; }
-    else if (displayID == 270) { level = 0; gatherType = 2; }
+    else if (displayID == 269) { level = 1; gatherType = 2; }
+    else if (displayID == 270) { level = 1; gatherType = 2; }
     else if (displayID == 414) { level = 15; gatherType = 2; }
     else if (displayID == 268) { level = 50; gatherType = 2; }
     else if (displayID == 271) { level = 70; gatherType = 2; }

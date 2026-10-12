@@ -188,7 +188,7 @@ void Game::MainLoop() {
 
 			if(!Combat && Navigation::HasBlacklists()) Navigation::ClearBlacklists();
 			Functions::ClassifyHeal();
-			std::tie(nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer) = Functions::countEnemies();
+			Functions::countEnemies(nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, ccTarget);
 
 			Combat = (localPlayer->flags & UNIT_FLAG_IN_COMBAT) == UNIT_FLAG_IN_COMBAT;
 
@@ -247,55 +247,66 @@ void Game::MainLoop() {
 					// Go chores: train spells, train trading skills, sell/repair, etc...
 					DoChores();
 				}
-				else if (!passiveGroup && !(localPlayer->isCrowdControlled()) && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
-					if (Functions::PlayerIsRanged()) {
+				else if (!passiveGroup && (Moving != MoveTypes::BossMechanic) && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
+					if (localPlayer->movement_flags & MOVEFLAG_ROOT) {
+						Moving == MoveTypes::NotMoving;
+						// Nothing to do => face target
+						if (!IsFacing && !localPlayer->isMoving) {
+							ThreadSynchronizer::RunOnMainThread([]() {
+								if (localPlayer->isMounted) Dismount();
+								localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
+							});
+						}
+					}
+					else if (Functions::PlayerIsRanged()) {
 						float maxRange = 30.0f;
 						if (localPlayer->className == "Hunter") maxRange = 35.0f;
-						if ((Moving == 4 || Moving == 2 || Moving == 5) && distTarget < maxRange) {
+						if ((Moving == MoveTypes::Follow || Moving == MoveTypes::GoToTarget || Moving == MoveTypes::MoveLoSAlly) && distTarget < maxRange) {
 							// Running and (target < 30 yard) => stop
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
-							Moving = 0;
+							Moving = MoveTypes::NotMoving;
 						}
-						else if ((Moving == 0 || (Moving == 6 && localPlayer->isMoving)) && !los_target) {
+						else if ((Moving == MoveTypes::NotMoving || (Moving == MoveTypes::MoveLoS && localPlayer->isMoving)) && !los_target) {
 							// !LoS => Find LoS
 							ThreadSynchronizer::RunOnMainThread([]() {
-								Functions::MoveToLoS(targetUnit->position, 6);
+								Functions::MoveToLoS(targetUnit->position, MoveTypes::MoveLoS);
 							});
 						}
-						else if (distTarget > maxRange && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
+						else if (distTarget > maxRange && !IsSitting) {
 							// Target > 30 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
-								Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
+								Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget, true, targetSwim);
 							});
 						}
-						else if (Moving == 6 && los_target) {
+						else if (Moving == MoveTypes::MoveLoS && los_target) {
 							// Looking for LoS, found it => stop
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
-							Moving = 0;
+							Moving = MoveTypes::NotMoving;
 						}
-						else if (Moving == 3 && (distTarget > 15.0f || ((!(targetUnit->flags & UNIT_FLAG_STUNNED) && !(targetUnit->movement_flags & MOVEFLAG_ROOT))
+						else if (Moving == MoveTypes::RunAway && (distTarget > 15.0f || ((!(targetUnit->flags & UNIT_FLAG_STUNNED) && !(targetUnit->movement_flags & MOVEFLAG_ROOT))
 							&& ((!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && hasTargetAggro) || ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed > 4.5))))) {
 							// Walking backward and (target > 12 yard || Creature aggro || target running)
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
-							Moving = 0;
+							Moving = MoveTypes::NotMoving;
 						}
-						else if ((Moving == 0 || Moving == 3) && distTarget < 15.0f
+						else if ((Moving == MoveTypes::NotMoving || Moving == MoveTypes::RunAway) && (distTarget < 15.0f
 							&& ((targetUnit->flags & UNIT_FLAG_STUNNED) || (targetUnit->movement_flags & MOVEFLAG_ROOT)
 								|| (!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !hasTargetAggro)
-								|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0))) {
-							// (Creature not aggro || Player slowed) && < 12 yard => Walk backward
+								|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0)))) {
+							// Walk backward
 							ThreadSynchronizer::RunOnMainThread([]() {
-								if (Functions::StepBack(targetUnit, 3) == false) {
+								if (Functions::StepBack(targetUnit, MoveTypes::RunAway) == false) {
 									localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 								}
 							});
 						}
-						else if ((Moving == 0) && !IsFacing) {
+						else if ((Moving == MoveTypes::NotMoving) && !IsFacing && !localPlayer->isMoving) {
 							// Nothing to do => face target
+							Moving = MoveTypes::NotMoving;
 							ThreadSynchronizer::RunOnMainThread([]() {
 								if (localPlayer->isMounted) Dismount();
 								localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
@@ -308,43 +319,45 @@ void Game::MainLoop() {
 						}
 					}
 					else {
-						if (distTarget > 1.5f && !IsSitting && (Moving == 0 || Moving == 2 || Moving == 4 || (Moving == 6 && localPlayer->speed == 0))) {
+						if (distTarget > 1.5f && !IsSitting) {
 							// Target > 1.5 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
-								if (Leader != NULL && (Leader->Guid == localPlayer->Guid) && Leader->indexGroup != 0) Functions::MoveTo(targetUnit->position, 2, false, targetSwim);
-								else Functions::MoveTo(targetUnit->position, 2, true, targetSwim);
+								if (Leader != NULL && (Leader->Guid == localPlayer->Guid) && Leader->indexGroup != 0) Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget, false, targetSwim);
+								else Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget, true, targetSwim);
 							});
 						}
-						else if (Moving == 0 && !IsFacing) ThreadSynchronizer::RunOnMainThread([]() {
+						else if (Moving == MoveTypes::NotMoving && !IsFacing && !localPlayer->isMoving) ThreadSynchronizer::RunOnMainThread([]() {
+							Moving = MoveTypes::NotMoving;
 							if (localPlayer->isMounted) Dismount();
 							localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 						});
 						else if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
 							ThreadSynchronizer::pressKey(0x28);
 							ThreadSynchronizer::releaseKey(0x28);
-							Moving = 0;
+							Moving = MoveTypes::NotMoving;
 						}
 						else if (localPlayer->isMounted) {
 							ThreadSynchronizer::RunOnMainThread([]() {
 								Dismount();
 							});
 						}
-						else Moving = 0;
+						else Moving = MoveTypes::NotMoving;
 					}
 				}
-				else if (Moving == 5 && !localPlayer->isMoving && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
+				else if (Moving == MoveTypes::MoveLoSAlly && !localPlayer->isMoving && !los_target && (targetUnit != NULL) && (targetUnit->unitReaction >= Friendly)) {
 					// Find LoS (ally)
 					ThreadSynchronizer::RunOnMainThread([=]() {
-						Functions::MoveToLoS(targetUnit->position, 5);
+						Functions::MoveToLoS(targetUnit->position, MoveTypes::MoveLoSAlly);
 					});
 				}
-				else if (Moving == 5 && (targetUnit == NULL || (targetUnit->unitReaction < Friendly) || ((targetUnit->unitReaction >= Friendly) && los_target))) {
+				else if (Moving == MoveTypes::MoveLoSAlly && (targetUnit == NULL || (targetUnit->unitReaction < Friendly) || ((targetUnit->unitReaction >= Friendly) && los_target))) {
+					// Found LoS (ally)
 					if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
 						ThreadSynchronizer::pressKey(0x28);
 						ThreadSynchronizer::releaseKey(0x28);
 					}
-					Moving = 0;
+					Moving = MoveTypes::NotMoving;
 				}
 				else if (
 					(!Combat || passiveGroup) && !localPlayer->isdead && !IsSitting && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
@@ -359,25 +372,25 @@ void Game::MainLoop() {
 							UseMount();
 						});
 					}
-					else if (Moving != 8 && Leader != NULL && Leader->Guid != localPlayer->Guid && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
+					else if (Moving != MoveTypes::Journey && Leader != NULL && Leader->Guid != localPlayer->Guid && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
 						// Follow
 						Functions::FollowMultibox(positionCircle);
-						Moving = 4;
+						Moving = MoveTypes::Follow;
 					}
 				}
-				else if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving != 5 && Moving != 4 && Moving != 0) {
+				else if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving != MoveTypes::MoveLoSAlly && Moving != MoveTypes::Follow && Moving != MoveTypes::NotMoving) {
 					ThreadSynchronizer::pressKey(0x28);
 					ThreadSynchronizer::releaseKey(0x28);
-					Moving = 0;
+					Moving = MoveTypes::NotMoving;
 				}
-				else if (localPlayer->movement_flags & MOVEFLAG_BACKWARD && Moving != 0) {
+				else if (localPlayer->movement_flags & MOVEFLAG_BACKWARD && Moving != MoveTypes::NotMoving) {
 					ThreadSynchronizer::releaseKey(0x28);
-					Moving = 0;
+					Moving = MoveTypes::NotMoving;
 				}
-				else if (!localPlayer->isMoving && Moving != 4 && Moving != 0 && Moving != 5) {
-					Moving = 0;
+				else if (!localPlayer->isMoving && Moving != MoveTypes::Follow && Moving != MoveTypes::NotMoving && Moving != MoveTypes::MoveLoSAlly) {
+					Moving = MoveTypes::NotMoving;
 				}
-				if (localPlayer->speed > 0 && Moving > 0 && (Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) && (playerLastPos.DistanceTo(localPlayer->position) < 0.5f)) {
+				if (localPlayer->speed > 0 && Moving != MoveTypes::NotMoving && (Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) && (playerLastPos.DistanceTo(localPlayer->position) < 0.5f)) {
 					// Jump
 					ThreadSynchronizer::pressKey(0x20);
 					ThreadSynchronizer::releaseKey(0x20);
@@ -399,7 +412,7 @@ void Game::MainLoop() {
 				IsSitting = false;
 				ThreadSynchronizer::pressKey(0x28);
 				ThreadSynchronizer::releaseKey(0x28);
-				Moving = 0;
+				Moving = MoveTypes::NotMoving;
 			}
 			else if (localPlayer != NULL && !IsSitting && !localPlayer->isMounted) {
 				if (!Combat && (localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0) && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && (localPlayer->prctMana < 33 && localPlayer->prctMana > 0) && (FunctionsLua::HasDrink() > 0)) {
@@ -435,7 +448,7 @@ void Game::MainLoop() {
 		if (Moving > 0) {
 			if (Moving < 3) ThreadSynchronizer::pressKey(0x28);
 			ThreadSynchronizer::releaseKey(0x28);
-			Moving = 0;
+			Moving = MoveTypes::NotMoving;
 		}
 		Sleep(500);
 	}
@@ -445,10 +458,11 @@ void Game::MainLoop() {
 std::vector<WoWUnit*> HasAggro[40]; std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 bool Combat = false, IsSitting = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
 los_target = false, passiveGroup = false, inInstance = false, inventoryFull = false;
-int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, Moving = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
+int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoChores = 0;
 unsigned int LastTarget = 0;
 float distTarget = 0, autoAttackTimer = 0, breathTimer = 0;
+MoveTypes Moving;
 std::string tarType = "party";
 std::vector<std::tuple<std::string, int, int, int>> leaderInfos;
 std::vector<InventoryItem> virtualInventory;

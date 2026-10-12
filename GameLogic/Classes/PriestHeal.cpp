@@ -100,7 +100,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Prayer of Healing");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (((isPlayer && Combat && (HasAggro[0].size() > 0)) || (HpRatio < 35)) && !PWShieldBuff && !WeakenedSoulDebuff && (distAlly < 40.0f) && Functions::IsSpellReady("Power Word: Shield")) {
@@ -108,7 +108,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Power Word: Shield");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (Combat && (HpRatio < 30) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Flash Heal")) {
@@ -116,7 +116,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Flash Heal");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if ((HpLost > RenewComputed*0.5) && !RenewBuff && (distAlly < 40.0f) && Functions::IsSpellReady("Renew")) {
@@ -124,7 +124,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Renew");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if ((HpLost > GreaterHealComputed) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Greater Heal")) {
@@ -132,7 +132,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Greater Heal");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if ((HpLost > HealComputed) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Heal")) {
@@ -140,7 +140,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Heal");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if ((localPlayer->level < 40) && (HpLost > LesserHealComputed) && (distAlly < 40.0f) && !localPlayer->isMoving && Functions::IsSpellReady("Lesser Heal")) {
@@ -148,7 +148,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Lesser Heal");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	return 1;

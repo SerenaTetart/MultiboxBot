@@ -5,6 +5,7 @@
 #include "WoWObject.h"
 #include "./Data/Inventory.h"
 #include "./Data/Spell.h"
+#include "./Data/Movement.h"
 
 class Game {
 public:
@@ -25,9 +26,10 @@ extern float distTarget, autoAttackTimer, breathTimer;
 extern std::vector<WoWUnit*> HasAggro[40];
 extern std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 extern std::vector<int> HealTargetArray;
-extern int AoEHeal, nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, Moving, NumGroupMembers, playerSpec, positionCircle,
+extern int AoEHeal, nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, NumGroupMembers, playerSpec, positionCircle,
 			mapID, keybindTrigger, IsInGroup, autoChores;
 extern unsigned int LastTarget;
+extern MoveTypes Moving;
 extern std::string tarType;
 extern std::vector<std::tuple<std::string, int, int, int>> leaderInfos; // Nom, role, trade skill1, trade skill2
 extern std::vector<InventoryItem> virtualInventory;

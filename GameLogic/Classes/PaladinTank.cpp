@@ -2,7 +2,7 @@
 #include "../MemoryManager.h"
 #include <iostream>
 
-static void PaladinAttack(int index_paladin) {
+static void PaladinAttack() {
 	if (ListAI::TankTargeting()) {}
 	else if (targetUnit != NULL && targetUnit->attackable && !targetUnit->isdead) {
 		bool targetStunned = targetUnit->flags & UNIT_FLAG_STUNNED;
@@ -119,6 +119,12 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 	return 1;
 }
 
+static enum class BlessingMode {
+	WisdomMight,
+	SalvationSanctuary,
+	Kings
+};
+
 void ListAI::PaladinTank() {
 	int FoLIDs[6] = { 19750, 19939, 19940, 19941, 19942, 19943 };
 	int holyLightIDs[9] = { 635, 639, 647, 1026, 1042, 3472, 10328, 10329, 25292 };
@@ -156,25 +162,24 @@ void ListAI::PaladinTank() {
 			return 0;
 		}
 		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
-			bool BoSanctuaryExist = Functions::IsPlayerSpell("Blessing of Sanctuary");
+			BlessingMode blessingMode = BlessingMode::WisdomMight;
 			WoWUnit* BoSalvationTarget = NULL; bool BoSanctuaryBuff = false;
-			if (BoSanctuaryExist) {
+			WoWUnit* BoKingsTarget = NULL; bool BoKingsBuff = false;
+			WoWUnit* BoMightTarget = NULL; WoWUnit* BoWisdomTarget = NULL; bool BoWisdomBuff = false;
+			if (Functions::IsPlayerSpell("Blessing of Kings")) {
+				blessingMode = BlessingMode::Kings;
+				int BoKingsIDs[1] = { 20217 };
+				BoKingsBuff = localPlayer->hasBuff(BoKingsIDs, 1);
+				BoKingsTarget = Functions::GetMissingBuff(BoKingsIDs, 1);
+			}
+			else if (Functions::IsPlayerSpell("Blessing of Salvation")) {
+				blessingMode = BlessingMode::SalvationSanctuary;
 				int BoSalvationIDs[1] = { 1038 };
 				BoSalvationTarget = Functions::GetMissingBuff(BoSalvationIDs, 1, 0, 1);
 				int BoSanctuaryIDs[4] = { 20911, 20912, 20913, 20914 };
 				BoSanctuaryBuff = localPlayer->hasBuff(BoSanctuaryIDs, 4);
 			}
-
-			bool BoKingsExist = Functions::IsPlayerSpell("Blessing of Kings");
-			WoWUnit* BoKingsTarget = NULL; bool BoKingsBuff = false;
-			if (BoKingsExist) {
-				int BoKingsIDs[1] = { 20217 };
-				BoKingsBuff = localPlayer->hasBuff(BoKingsIDs, 1);
-				BoKingsTarget = Functions::GetMissingBuff(BoKingsIDs, 1);
-			}
-
-			bool BoWisdomBuff = false; WoWUnit* BoMightTarget = NULL; WoWUnit* BoWisdomTarget = NULL;
-			if (!BoSanctuaryExist && !BoKingsExist) {
+			else {
 				int BoWisdomIDs[6] = { 19742, 19850, 19852, 19853, 19854, 25290 };
 				BoWisdomBuff = localPlayer->hasBuff(BoWisdomIDs, 6);
 				BoWisdomTarget = Functions::GetMissingBuff(BoWisdomIDs, 6, 1);
@@ -182,14 +187,6 @@ void ListAI::PaladinTank() {
 				BoMightTarget = Functions::GetMissingBuff(BoMightIDs, 7, 2);
 			}
 			int BoSIDs[2] = { 6940, 20729 };
-			
-			unsigned int index_paladin = 0;
-			for (int i = 1; i <= NumGroupMembers; i++) {
-				if (GroupMember[i] != NULL && localPlayer->indexGroup > GroupMember[i]->indexGroup && FunctionsLua::UnitClass(tarType+std::to_string(i)) == "Paladin") {
-					index_paladin = index_paladin + 1;
-					break;
-				}
-			}
 			
 			int DevotionAuraIDs[7] = { 465, 10290, 643, 10291, 1032, 10292, 10293 };
 			bool DevotionAuraBuff = localPlayer->hasBuff(DevotionAuraIDs, 7);
@@ -200,13 +197,9 @@ void ListAI::PaladinTank() {
 			WoWUnit* PurifyTarget = FunctionsLua::GetGroupDispel("Disease", "Poison");
 			WoWUnit* CleanseTarget = FunctionsLua::GetGroupDispel("Disease", "Poison", "Magic");
 			WoWUnit* deadPlayer = Functions::GetGroupDead(1);
-			if (!DevotionAuraBuff && index_paladin == 0 && Functions::IsPlayerSpell("Devotion Aura")) {
+			if (!DevotionAuraBuff && Functions::IsPlayerSpell("Devotion Aura")) {
 				// Devotion Aura
 				FunctionsLua::CastSpellByName("Devotion Aura");
-			}
-			else if (!RetributionAuraBuff && index_paladin == 1 && Functions::IsPlayerSpell("Retribution Aura")) {
-			    // Retribution Aura
-			    FunctionsLua::CastSpellByName("Retribution Aura");
 			}
 			else if (!RighteousFuryBuff && Functions::IsSpellReady("Righteous Fury")) {
 				// Righteous Fury
@@ -217,39 +210,39 @@ void ListAI::PaladinTank() {
 				localPlayer->SetTarget(deadPlayer->Guid);
 				FunctionsLua::CastSpellByName("Redemption");
 			}
-			else if (!BoKingsBuff && BoKingsExist && Functions::IsSpellReady("Blessing of Kings")) {
+			else if (blessingMode == BlessingMode::Kings && !localPlayer->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Kings")) {
 				// Blessing of Kings (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Blessing of Kings");
 			}
-			else if ((BoKingsTarget != NULL) && BoKingsExist && (!Combat || autoAttackTimer > 1.5f) && !BoKingsTarget->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Kings")) {
+			else if ((BoKingsTarget != NULL) && blessingMode == BlessingMode::Kings && (!Combat || autoAttackTimer > 1.5f) && !BoKingsTarget->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Kings")) {
 				// Blessing of Kings (Group)
 				localPlayer->SetTarget(BoKingsTarget->Guid);
 				FunctionsLua::CastSpellByName("Blessing of Kings");
 			}
-			else if (!BoSanctuaryBuff && BoSanctuaryExist && Functions::IsSpellReady("Blessing of Sanctuary")) {
+			else if (!BoSanctuaryBuff && blessingMode == BlessingMode::SalvationSanctuary && !localPlayer->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Sanctuary")) {
 				// Blessing of Sanctuary (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Blessing of Sanctuary");
 				if (Combat) Functions::LuaCall("TargetLastEnemy()");
 			}
-			else if ((BoSalvationTarget != NULL) && BoSanctuaryExist && (!Combat || autoAttackTimer > 1.5f) && !BoSalvationTarget->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Salvation")) {
+			else if ((BoSalvationTarget != NULL) && blessingMode == BlessingMode::SalvationSanctuary && (!Combat || autoAttackTimer > 1.5f) && !BoSalvationTarget->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Salvation")) {
 				// Blessing of Salvation (Group)
 				localPlayer->SetTarget(BoSalvationTarget->Guid);
 				FunctionsLua::CastSpellByName("Blessing of Salvation");
 				if (Combat) Functions::LuaCall("TargetLastEnemy()");
 			}
-			else if (!BoWisdomBuff && !BoKingsExist && !BoSanctuaryExist && Functions::IsSpellReady("Blessing of Wisdom")) {
+			else if (!BoWisdomBuff && blessingMode == BlessingMode::WisdomMight && !localPlayer->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Wisdom")) {
 				// Blessing of Wisdom (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Blessing of Wisdom");
 			}
-			else if ((BoWisdomTarget != NULL) && !BoKingsExist && !BoSanctuaryExist && (!Combat || autoAttackTimer > 1.5f) && !BoWisdomTarget->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Wisdom")) {
+			else if ((BoWisdomTarget != NULL) && blessingMode == BlessingMode::WisdomMight && (!Combat || autoAttackTimer > 1.5f) && !BoWisdomTarget->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Wisdom")) {
 				// Blessing of Wisdom (Group)
 				localPlayer->SetTarget(BoWisdomTarget->Guid);
 				FunctionsLua::CastSpellByName("Blessing of Wisdom");
 			}
-			else if ((BoMightTarget != NULL) && !BoKingsExist && !BoSanctuaryExist && (!Combat || autoAttackTimer > 1.5f) && !BoMightTarget->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Might")) {
+			else if ((BoMightTarget != NULL) && blessingMode == BlessingMode::WisdomMight && (!Combat || autoAttackTimer > 1.5f) && !BoMightTarget->hasBuff(BoSIDs, 2) && Functions::IsSpellReady("Blessing of Might")) {
 				// Blessing of Might (Group)
 				localPlayer->SetTarget(BoMightTarget->Guid);
 				FunctionsLua::CastSpellByName("Blessing of Might");
@@ -288,7 +281,7 @@ void ListAI::PaladinTank() {
 					tmp = HealGroup(HealTargetArray[index]);
 					index = index + 1;
 				}
-				if (tmp == 1 && !passiveGroup) PaladinAttack(index_paladin);
+				if (tmp == 1 && !passiveGroup) PaladinAttack();
 			}
 		}
 	});

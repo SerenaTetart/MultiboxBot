@@ -133,7 +133,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Regrowth");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (!inAnimalForm && (HpRatio < 40) && !localPlayer->isMoving && (distAlly < 40.0f) && Functions::IsSpellReady("Healing Touch")) {
@@ -141,7 +141,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Healing Touch");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (!inAnimalForm && Combat && (ListUnits[indexP].prctMana < 20) && ListUnits[indexP].role == 3 && Functions::IsSpellReady("Innervate")) {
@@ -149,7 +149,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Innervate");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (!inAnimalForm && (HpRatio < 70) && (distAlly < 40.0f) && !RejuvenationBuff && Functions::IsSpellReady("Rejuvenation")) {
@@ -157,7 +157,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Rejuvenation");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	return 1;

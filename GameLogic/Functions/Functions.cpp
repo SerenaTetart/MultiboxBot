@@ -514,18 +514,18 @@ std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_r
 	else return std::make_tuple(Position(0, 0, 0), 0);
 }
 
-std::tuple<int, int, int, int> Functions::countEnemies() {
-	ccTarget = NULL;
+void Functions::countEnemies(int& nbr, int& nbrClose, int& nbrCloseFacing, int& nbrEnemyPlayer, WoWUnit* enemyCC) {
+	enemyCC = NULL;
 	for (int i = 0; i < 40; i++) {
 		HasAggro[i].clear();
 	}
-	int nbr = 0, nbrClose = 0, nbrCloseFacing = 0, nbrEnemyPlayer = 0;
+	nbr = 0; nbrClose = 0; nbrCloseFacing = 0; nbrEnemyPlayer = 0;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].creatureType == Totem) || (!(ListUnits[i].isInCombatOrEncounter()) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
 			continue;
 		else if (ListUnits[i].isFromGroup || (ListUnits[i].flags & UNIT_FLAG_POSSESSED)) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
-			if (dist < 30.0f) ccTarget = &ListUnits[i];
+			if (dist < 30.0f) enemyCC = &ListUnits[i];
 		}
 		else {
 			nbr++;
@@ -542,7 +542,6 @@ std::tuple<int, int, int, int> Functions::countEnemies() {
 			}
 		}
 	}
-	return std::make_tuple(nbr, nbrClose, nbrCloseFacing, nbrEnemyPlayer);
 }
 
 bool Functions::enemyClose(Position pos) {
@@ -552,8 +551,8 @@ bool Functions::enemyClose(Position pos) {
 		if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
 			&& !ListUnits[i].isInCombatOrEncounter() && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
 			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead && ListUnits[i].creatureType != Totem
-			&& (ListUnits[i].position.DistanceTo(pos) < (20.0f + (level_difference * 1.0f)))
-			&& (abs(ListUnits[i].position.Z - pos.Z) < 15.0f)) {
+			&& (ListUnits[i].position.DistanceTo(pos) < (22.0f + (level_difference * 1.0f)))
+			&& (abs(ListUnits[i].position.Z - pos.Z) < 20.0f)) {
 			return true;
 		}
 	}

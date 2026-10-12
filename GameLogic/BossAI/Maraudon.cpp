@@ -7,7 +7,7 @@ bool BossAI::Maraudon() {
 			Navigation::AddBlacklist(mapID, "creeping_sludge_" + std::to_string(ListUnits[i].Guid), ListUnits[i].position, 10.0f, 55);
 			if (Moving != 10 && localPlayer->position.DistanceTo(ListUnits[i].position) < 10.0f) {
 				ThreadSynchronizer::RunOnMainThread([i]() {
-					Functions::StepBack(&ListUnits[i], 10, 15.0f);
+					Functions::StepBack(&ListUnits[i], MoveTypes::BossMechanic, 15.0f);
 				});
 				return true;
 			}
@@ -17,7 +17,7 @@ bool BossAI::Maraudon() {
 			Navigation::AddBlacklist(mapID, "noxious_slime_" + std::to_string(ListUnits[i].Guid), ListUnits[i].position, 7.0f, 55);
 			if (Moving != 10 && localPlayer->position.DistanceTo(ListUnits[i].position) < 10.0f) {
 				ThreadSynchronizer::RunOnMainThread([i]() {
-					Functions::StepBack(&ListUnits[i], 10, 15.0f);
+					Functions::StepBack(&ListUnits[i], MoveTypes::BossMechanic, 15.0f);
 				});
 				return true;
 			}

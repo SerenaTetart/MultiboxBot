@@ -185,7 +185,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Swiftmend");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (!inAnimalForm && !localPlayer->isMoving && (HpRatio < 60) && (distAlly < 40.0f) && !RegrowthBuff && Functions::IsSpellReady("Regrowth")) {
@@ -193,7 +193,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Regrowth");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (!inAnimalForm && !localPlayer->isMoving && (HpRatio < 40) && (distAlly < 40.0f) && Functions::IsSpellReady("Healing Touch")) {
@@ -202,7 +202,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		if (Functions::IsSpellReady("Nature's Swiftness")) FunctionsLua::CastSpellByName("Nature's Swiftness");
 		FunctionsLua::CastSpellByName("Healing Touch");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (!inAnimalForm && Combat && (ListUnits[indexP].prctMana < 20) && ListUnits[indexP].role == 3 && Functions::IsSpellReady("Innervate")) {
@@ -210,7 +210,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Innervate");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	else if (!inAnimalForm && (HpRatio < 90) && (localPlayer->prctMana > 33) && (distAlly < 40.0f) && !RejuvenationBuff && Functions::IsSpellReady("Rejuvenation")) {
@@ -218,7 +218,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Rejuvenation");
 		LastTarget = indexP;
-		if (!los_heal) Moving = 5;
+		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
 	return 1;
