@@ -3,6 +3,8 @@
 You need to extract and place the **MMAPS** inside **test/src/mmaps/**, and the **DBC** files inside **test/src/dbc/**.
 Why? Because the program now reads various kinds of data to handle pathfinding and compute specific information.
 
+The client **must** be in English (enUS)!
+
 ## General Infos
 
 *The project is still under development*
