@@ -109,8 +109,7 @@ bool SkinNPC() {
 	float MIN_DIST = INFINITY; int indexGather = -1;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		bool skinnable = (ListUnits[i].flags & UNIT_FLAG_SKINNABLE);
-		if (skinnable && (ListUnits[i].level <= 20 && ((ListUnits[i].level - 10) * 10 <= localPlayer->skinningLevel && !Functions::enemyClose(ListUnits[i].position))
-			|| (ListUnits[i].level > 20 && (ListUnits[i].level * 5 <= localPlayer->skinningLevel)))) {
+		if (skinnable && !Functions::enemyClose(ListUnits[i].position) && (ListUnits[i].level*5 > (localPlayer->skinningLevel-75)) && (ListUnits[i].level <= 10 || (ListUnits[i].level <= 20 && (((ListUnits[i].level - 10) * 10) <= localPlayer->skinningLevel)) || (ListUnits[i].level * 5 <= localPlayer->skinningLevel))) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
 			if (dist < MIN_DIST) {
 				MIN_DIST = dist;

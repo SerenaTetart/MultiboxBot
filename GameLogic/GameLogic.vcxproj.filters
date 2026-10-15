@@ -78,6 +78,9 @@
     <ClInclude Include="BossAI\BossAI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Data\CraftTrain.h">
+      <Filter>Header Files\Data</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

@@ -159,6 +159,7 @@
   <ItemGroup>
     <ClInclude Include="BossAI\BossAI.h" />
     <ClInclude Include="Client.h" />
+    <ClInclude Include="Data\CraftTrain.h" />
     <ClInclude Include="Data\Inventory.h" />
     <ClInclude Include="Data\Movement.h" />
     <ClInclude Include="Data\NPCResistance.h" />

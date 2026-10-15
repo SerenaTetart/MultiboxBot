@@ -25,7 +25,7 @@ static void DruidAttack() {
 				// Prowl -> Not in PvE raids
 				FunctionsLua::CastSpellByName("Prowl");
 			}
-			else if (Combat && (distTarget > 30) && (targetUnit->speed > 0) && Functions::IsSpellReady("Dash")) {
+			else if (Combat && (distTarget > 30) && (localPlayer->movement_flags & MOVEFLAG_FORWARD) && (targetUnit->speed > 0) && Functions::IsSpellReady("Dash")) {
 				// Dash
 				FunctionsLua::CastSpellByName("Dash");
 			}

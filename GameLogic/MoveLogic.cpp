@@ -6,6 +6,7 @@
 #include "Navigation.h"
 
 #include "./Data/SpellTrain.h"
+#include "./Data/CraftTrain.h"
 
 #include <iostream>
 
@@ -265,74 +266,27 @@ bool TrainSpell() {
 	return false;
 }
 
-void TrainTradingSkills() {
-	// Train trading skills
+bool BuyItem(int item_id, int item_quantity) {
 	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
 		// Stormwind
-		if (localPlayer->tailoringLevel > 0) {
-			//Tailoring
-			MoveToMap(Position(-8942.839844f, 799.5440006f, 91.025101f));
-		}
-		else if (localPlayer->leatherworkingLevel > 0) {
-			//Leatherworking
-			MoveToMap(Position(-8722.375977f, 473.982727f, 98.613373f));
-		}
-		else if (localPlayer->blacksmithingLevel > 0) {
-			//Blacksmithing
-			MoveToMap(Position(-8425.0f, 608.796021f, 95.209000f));
-		}
-		else if (localPlayer->enchantingLevel > 0) {
-			//Enchanting
-			if (localPlayer->enchantingLevel < 150) MoveToMap(Position(-8858.309570f, 803.734985f, 96.517502f));
-			else MoveToMap(Position(-9574.972656f, -715.705505f, 99.157860f));
-		}
-		else if (localPlayer->alchemyLevel > 0) {
-			//Alchemy
-			MoveToMap(Position(-8987.856445f, 756.198364f, 98.329971f));
-		}
+
 	}
-	else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
-		// Ironforge
-		if (localPlayer->tailoringLevel > 0) {
-			//Tailoring
-			MoveToMap(Position(-4720.207520f, -1057.395264f, 504.196350f));
-		}
-		else if (localPlayer->leatherworkingLevel > 0) {
-			//Leatherworking
-			MoveToMap(Position(-4745.913574f, -1024.820313f, 504.428741f));
-		}
-		else if (localPlayer->blacksmithingLevel > 0) {
-			//Blacksmithing
-			MoveToMap(Position(-4791.157227f, -1123.242920f, 498.806366f));
-		}
-		else if (localPlayer->enchantingLevel > 0) {
-			//Enchanting
-			MoveToMap(Position(-4803.927246f, -1191.961060f, 505.815460f));
-		}
-		else if (localPlayer->alchemyLevel > 0) {
-			//Alchemy
-			MoveToMap(Position(-4858.876465f, -1240.255371f, 501.255371f));
-		}
+}
+
+bool CraftItem(int item_id) {
+
+}
+
+inline bool MakeCraft() {
+	auto plan = GetCraftPlan();
+
+	if (!plan) return false;
+
+	for (const auto& item : plan->to_buy) {
+		if (!BuyItem(item.item_id, item.item_quantity)) return false;
 	}
-	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
-		// Darnassus
-		if (localPlayer->tailoringLevel > 0) {
-			//Tailoring
-			MoveToMap(Position(10084.380859f, 2267.175049f, 1333.000732f));
-		}
-		else if (localPlayer->leatherworkingLevel > 0) {
-			//Leatherworking
-			MoveToMap(Position(10084.359375f, 2257.949463f, 1343.310791f));
-		}
-		else if (localPlayer->enchantingLevel > 0) {
-			//Enchanting
-			MoveToMap(Position(10145.700195f, 2320.280029f, 1333.079956f));
-		}
-		else if (localPlayer->alchemyLevel > 0) {
-			//Alchemy
-			MoveToMap(Position(10097.754883f, 2352.179199f, 1325.527954f));
-		}
-	}
+
+	return CraftItem(plan->crafted_id);
 }
 
 void AssembleBack() {
@@ -374,5 +328,6 @@ void Game::DoChores() {
 	if (!Combat && Disenchant()) {}
 	else if (hasItemToSell) SellItems();
 	else if (HasSpellToTrain() && TrainSpell()) {}
+	else if (MakeCraft()) {}
 	else AssembleBack();
 }

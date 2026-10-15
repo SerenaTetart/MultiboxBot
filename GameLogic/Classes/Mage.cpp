@@ -47,7 +47,7 @@ void ListAI::MageDps() {
 			// Cancel Ice Block
 			Functions::CancelPlayerBuff(11958);
 		}
-		if ((IsConfused || (localPlayer->prctHP < 20 && (HasAggro[0].size() > 0)) || (HasAggro[0].size() >= 4 && nbrCloseEnemy >= 4) || (IsStunned && nbrEnemyPlayer > 0) || localPlayer->getNbrDebuff() >= 4) && Functions::IsSpellReady("Ice Block")) {
+		if ((IsConfused || (localPlayer->prctHP < 30 && (HasAggro[0].size() > 0)) || (HasAggro[0].size() >= 4 && nbrCloseEnemy >= 4) || (IsStunned && nbrEnemyPlayer > 0) || localPlayer->getNbrDebuff() >= 4) && Functions::IsSpellReady("Ice Block")) {
 			// Ice Block
 			FunctionsLua::CastSpellByName("Ice Block");
 		}
