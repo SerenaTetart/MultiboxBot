@@ -24,8 +24,9 @@ class Functions {
 		static bool MoveObstacle(Position target_pos, bool checkEnemyClose=true);
 		static bool MoveObstacleSwim(Position target_pos, bool checkEnemyClose);
 		static void FollowMultibox(int placement = 0);
-		static void MoveTo(Position target_pos, MoveTypes MoveType, bool checkEnemyClose=true, bool targetSwim=false);
-		static void MoveToLoS(Position target_pos, MoveTypes MoveType);
+		static void MoveTo(Position target_pos, MoveTypes moveType, bool checkEnemyClose=true, bool targetSwim=false);
+		static void MoveToFast(Position target_pos, MoveTypes moveType);
+		static void MoveToLoS(Position target_pos, MoveTypes moveType);
 		static void CancelPlayerBuff(int buffID);
 		static unsigned int GetMapID();
 		static SpellSlotData GetSpellDataFromSlot(int slot, bool pet);

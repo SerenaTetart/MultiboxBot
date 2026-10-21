@@ -25,7 +25,7 @@ static void DruidAttack() {
 				// Prowl -> Not in PvE raids
 				FunctionsLua::CastSpellByName("Prowl");
 			}
-			else if (Combat && (distTarget > 30) && (targetUnit->speed > 0) && Functions::IsSpellReady("Dash")) {
+			else if (Combat && (distTarget > 30) && (localPlayer->movement_flags & MOVEFLAG_FORWARD) && (targetUnit->speed > 0) && Functions::IsSpellReady("Dash")) {
 				// Dash
 				FunctionsLua::CastSpellByName("Dash");
 			}
@@ -232,17 +232,15 @@ void ListAI::DruidFeralCat() {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
-	ThreadSynchronizer::RunOnMainThread([=]() {
+	ThreadSynchronizer::RunOnMainThread([]() {
 		bool CatFormBuff = localPlayer->hasBuff(768);
 		if (!CatFormBuff && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
 			//Healthstone
 			FunctionsLua::UseHealthstone();
-			return 0;
 		}
 		else if (!CatFormBuff && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
 			//Healing Potion
 			FunctionsLua::UseHPotion();
-			return 0;
 		}
 		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 			int MotWIDs[9] = { 1126, 5232, 6756, 5234, 8907, 9884, 9885, 21849, 21850 }; //GotW included

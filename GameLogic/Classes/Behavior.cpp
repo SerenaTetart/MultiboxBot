@@ -3,7 +3,8 @@
 #include <iostream>
 
 static int getCreaturePriority(WoWUnit* unit) {
-	if (unit->creatureType == Totem) return 0; //Guardian
+	if (Functions::enemyClose(unit->position)) return 999; // Avoid enemies not aggro
+	else if (unit->creatureType == Totem) return 0; //Guardian
 	else if (unit->rank == 0 || unit->rank == 4) return 1; //Normal
 	else if (unit->rank == 1 || unit->rank == 2) return 2; //Elite
 	else if (unit->rank == 3) return 3; //Boss

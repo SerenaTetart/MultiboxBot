@@ -129,10 +129,11 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 	return 1;
 }
 
-static enum class BlessingMode {
+enum class BlessingMode {
 	WisdomMight,
 	SalvationSanctuary,
-	Kings
+	Kings,
+	Light
 };
 
 void ListAI::PaladinDps() {
@@ -143,28 +144,24 @@ void ListAI::PaladinDps() {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
-	ThreadSynchronizer::RunOnMainThread([=]() {
+	ThreadSynchronizer::RunOnMainThread([]() {
 		int ForbearanceID[1] = { 25771 };
 		bool ForbearanceDebuff = localPlayer->hasDebuff(ForbearanceID, 1);
 		if (Combat && (localPlayer->prctHP < 20) && !ForbearanceDebuff && Functions::IsSpellReady("Divine Protection")) {
 			//Divine Protection
 			FunctionsLua::CastSpellByName("Divine Protection");
-			return 0;
 		}
 		else if (Combat && (localPlayer->prctHP < 20) && !ForbearanceDebuff && Functions::IsSpellReady("Divine Shield")) {
 			//Divine Shield
 			FunctionsLua::CastSpellByName("Divine Shield");
-			return 0;
 		}
 		else if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
 			//Healthstone
 			FunctionsLua::UseHealthstone();
-			return 0;
 		}
 		else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
 			//Healing Potion
 			FunctionsLua::UseHPotion();
-			return 0;
 		}
 		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 			BlessingMode blessingMode = BlessingMode::WisdomMight;

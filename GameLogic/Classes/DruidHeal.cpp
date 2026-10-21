@@ -189,16 +189,14 @@ void ListAI::DruidHeal() {
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
-	ThreadSynchronizer::RunOnMainThread([=]() {
+	ThreadSynchronizer::RunOnMainThread([]() {
 		if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
 			//Healthstone
 			FunctionsLua::UseHealthstone();
-			return 0;
 		}
 		else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
 			//Healing Potion
 			FunctionsLua::UseHPotion();
-			return 0;
 		}
 		else if ((localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) && !localPlayer->isdead) {
 			float SpellCalculTimer = 30.0f - (time(0) - current_time);

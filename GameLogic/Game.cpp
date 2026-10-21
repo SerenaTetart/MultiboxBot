@@ -93,7 +93,7 @@ void Game::MainLoop() {
 							FunctionsLua::UpdateTradeSkills();
 
 							if (FunctionsLua::GetRepairAllCost() > 0) Functions::LuaCall("RepairAllItems()");
-							if (FunctionsLua::GetMerchantNumItems() > 0) FunctionsLua::SellUselessItems();
+							if ((localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0) && FunctionsLua::GetMerchantNumItems() > 0) FunctionsLua::SellUselessItems();
 
 							if (keybindTrigger == 1) {
 								FunctionsLua::UseItem(6948);

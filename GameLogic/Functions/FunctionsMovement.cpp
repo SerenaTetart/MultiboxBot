@@ -238,27 +238,32 @@ void Functions::FollowMultibox(int placement) {
             return;
         }
 
-        Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
-
-        if (nextpos.DistanceTo(localPlayer->position) >= MIN_MOVE_DISTANCE && !Functions::enemyClose(nextpos)) {
-            localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-            Moving = MoveTypes::Follow;
-        }
-        else resetMovement();
+        Functions::MoveToFast(target_pos, MoveTypes::Follow);
     });
 }
 
-void Functions::MoveTo(Position target_pos, MoveTypes MoveType, bool checkEnemyClose, bool targetSwim) {
+void Functions::MoveToFast(Position target_pos, MoveTypes moveType) {
+    // Less accurate but useful in a hurry
+    Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
+
+    if (nextpos.DistanceTo(localPlayer->position) >= MIN_MOVE_DISTANCE && !Functions::enemyClose(nextpos)) {
+        localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
+        Moving = moveType;
+    }
+    else resetMovement();
+}
+
+void Functions::MoveTo(Position target_pos, MoveTypes moveType, bool checkEnemyClose, bool targetSwim) {
     const bool swimming = localPlayer->movement_flags & MOVEFLAG_SWIMMING;
 
     if (swimming) {
-        if (MoveObstacleSwimInternal(target_pos, checkEnemyClose)) Moving = MoveType;
+        if (MoveObstacleSwimInternal(target_pos, checkEnemyClose)) Moving = moveType;
         else resetMovement();
         return;
     }
 
     if (targetSwim) {
-        if (TryWaterEntryStep(target_pos, checkEnemyClose)) Moving = MoveType;
+        if (TryWaterEntryStep(target_pos, checkEnemyClose)) Moving = moveType;
         else resetMovement();
         return;
     }
@@ -269,20 +274,20 @@ void Functions::MoveTo(Position target_pos, MoveTypes MoveType, bool checkEnemyC
         if (nextpos.DistanceTo(localPlayer->position) >= MIN_MOVE_DISTANCE && !Functions::enemyClose(nextpos)) {
             if ((localPlayer->movement_flags & MOVEFLAG_FORWARD)) return;
             localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-            Moving = MoveType;
+            Moving = moveType;
         }
         else resetMovement();
     }
-    else Moving = MoveType;
+    else Moving = moveType;
 }
 
 // =============== //
 // ===== LoS ===== //
 // =============== //
 
-void Functions::MoveToLoS(Position target_pos, MoveTypes MoveType) {
+void Functions::MoveToLoS(Position target_pos, MoveTypes moveType) {
     if (localPlayer->movement_flags & MOVEFLAG_SWIMMING) {
-        if (Functions::MoveLoSSwim(target_pos)) Moving = MoveType;
+        if (Functions::MoveLoSSwim(target_pos)) Moving = moveType;
         else resetMovement();
         return;
     }
@@ -293,11 +298,11 @@ void Functions::MoveToLoS(Position target_pos, MoveTypes MoveType) {
         if (nextpos.DistanceTo(localPlayer->position) >= MIN_MOVE_DISTANCE && !Functions::enemyClose(nextpos)) {
             if ((localPlayer->movement_flags & MOVEFLAG_FORWARD)) return;
             localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-            Moving = MoveType;
+            Moving = moveType;
         }
         else resetMovement();
     }
-    else Moving = MoveType;
+    else Moving = moveType;
 }
 
 bool Functions::MoveLoS(Position target_pos) {

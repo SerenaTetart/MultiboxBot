@@ -57,7 +57,16 @@ class FunctionsLua {
 	static int GetRepairAllCost();
 	static void UpdateTradeSkills();
 	static std::tuple<int, int> GetTradeSkillList(std::string names[], int size);
-        static void SellUselessItems();
+	static std::string GetMerchantItemLink(int index);
+	static void BuyMerchantItem(int index, int quantity);
+	static int GetNumTradeSkills();
+	static std::string GetTradeSkillItemLink(int index);
+	static void DoTradeSkill(int index, int amount);
+    static void SellUselessItems();
+	static std::string GetCraftName();
+	static int GetNumCrafts();
+	static std::string GetCraftItemLink(int index);
+	static bool EnchantCraft(int spell_id, int slot);
         // === Items === //
 	static int GetContainerNumSlots(int slot);
 	static std::tuple<int, std::string, std::string> GetItemInfo(int item_id);

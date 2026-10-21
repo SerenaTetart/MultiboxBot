@@ -7,14 +7,14 @@
 
 bool LootNodes() {
 	// Loot Mineral/Herbs
-	if (localPlayer->herbalismLevel <= 0 && localPlayer->miningLevel <= 0) return false;
+	if (localPlayer->herbalismLevel[0] <= 0 && localPlayer->miningLevel[0] <= 0) return false;
 	float MIN_DIST = INFINITY; int indexGather = -1;
 	for (unsigned int i = 0; i < ListGameObjects.size(); i++) {
 		if (ListGameObjects[i].gatherType == 0) continue;
 		else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
 			continue;
 		else if (Functions::enemyClose(ListGameObjects[i].position)) continue;
-		int skillLevel = localPlayer->herbalismLevel; if (ListGameObjects[i].gatherType == 1) skillLevel = localPlayer->miningLevel;
+		int skillLevel = localPlayer->herbalismLevel[0]; if (ListGameObjects[i].gatherType == 1) skillLevel = localPlayer->miningLevel[0];
 		if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)
 			|| (ListGameObjects[i].gatherType == 2 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 100)) {
 			float dist = ListGameObjects[i].position.DistanceTo(localPlayer->position);
@@ -105,12 +105,11 @@ bool LootNPC() {
 }
 
 bool SkinNPC() {
-	if (localPlayer->skinningLevel <= 0) return false;
+	if (localPlayer->skinningLevel[0] <= 0) return false;
 	float MIN_DIST = INFINITY; int indexGather = -1;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		bool skinnable = (ListUnits[i].flags & UNIT_FLAG_SKINNABLE);
-		if (skinnable && (ListUnits[i].level <= 20 && ((ListUnits[i].level - 10) * 10 <= localPlayer->skinningLevel && !Functions::enemyClose(ListUnits[i].position))
-			|| (ListUnits[i].level > 20 && (ListUnits[i].level * 5 <= localPlayer->skinningLevel)))) {
+		if (skinnable && !Functions::enemyClose(ListUnits[i].position) && (ListUnits[i].level*5 > (localPlayer->skinningLevel[0] - 75)) && (ListUnits[i].level <= 10 || (ListUnits[i].level <= 20 && (((ListUnits[i].level - 10) * 10) <= localPlayer->skinningLevel[0])) || (ListUnits[i].level * 5 <= localPlayer->skinningLevel[0]))) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
 			if (dist < MIN_DIST) {
 				MIN_DIST = dist;
@@ -243,9 +242,18 @@ bool Game::Trade() {
 }
 
 bool Game::Disenchant() {
-	if (localPlayer->enchantingLevel <= 0) return false;
+	if (localPlayer->enchantingLevel[0] <= 0) return false;
+	int exceptions[] = { 11287, 11288 };
 	for (const auto& item : virtualInventory) {
-		if (item.quality == 2 && (item.type == "Armor" || item.type == "Weapon")) {
+		bool skip = false;
+		for (const auto& exceptionID : exceptions) {
+			if (item.id == exceptionID) {
+				skip = true;
+				break;
+			}
+		}
+		if (skip) continue;
+		else if (item.quality == 2 && (item.type == "Armor" || item.type == "Weapon")) {
 			ThreadSynchronizer::RunOnMainThread([item]() {
 				FunctionsLua::CloseLoot();
 				FunctionsLua::CastSpellByName("Disenchant");

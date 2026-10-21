@@ -1,6 +1,8 @@
 #include "FunctionsLua.h"
 #include "../Game.h"
 #include <iostream>
+#include <cstdint>
+#include <cstring>
 
 //======================================================================//
 //========================   Group Functions   =========================//
@@ -31,7 +33,7 @@ int FunctionsLua::GetPetHappiness() {
 WoWUnit* FunctionsLua::GetHealer() {
 	for (int i = 1; i <= NumGroupMembers; i++) {
 		if (GroupMember[i] == NULL) continue;
-		std::string grClass = UnitClass(tarType+std::to_string(i));
+		std::string grClass = UnitClass(tarType + std::to_string(i));
 		if (grClass == "Priest" || grClass == "Paladin" || grClass == "Shaman") return GroupMember[i];
 	}
 	return NULL;
@@ -106,7 +108,8 @@ float FunctionsLua::GetSpellCooldownDuration(std::string spell_name) {
 		float cdLeft = start + duration - GetTime();
 		if (cdLeft < 0) cdLeft = 0;
 		return cdLeft;
-	} else return 999;
+	}
+	else return 999;
 }
 
 //======================================================================//
@@ -127,7 +130,7 @@ int FunctionsLua::GetRepairAllCost() {
 
 void FunctionsLua::SellUselessItems() {
 	int craftItems[] = { 2901, 5956, 7005 };
-	for (const auto &item : virtualInventory) {
+	for (const auto& item : virtualInventory) {
 		bool craftItem = false;
 		for (int i = 0; i < 3; i++) {
 			if (item.id == craftItems[i]) {
@@ -135,15 +138,7 @@ void FunctionsLua::SellUselessItems() {
 				break;
 			}
 		}
-		if (
-			!craftItem &&
-			(item.quality == 0 ||
-				((item.type == "Weapon" || item.type == "Armor") && item.minLevel < localPlayer->level &&
-					((item.quality == 2 && localPlayer->enchantingLevel <= 0) ||
-					(item.quality <= 3 && item.quality != 2))
-				)
-			)
-		) {
+		if (!craftItem && (item.quality == 0 || ((item.type == "Weapon" || item.type == "Armor") && item.minLevel < localPlayer->level && item.quality <= 3))) {
 			// Sell grey items OR equipment under epic and under player's level
 			std::string command = "UseContainerItem(" + std::to_string(item.bag) + ", " + std::to_string(item.slot) + ")";
 			Functions::LuaCall(command.c_str());
@@ -177,18 +172,54 @@ void FunctionsLua::UpdateTradeSkills() {
 		if (h) continue;
 		//int m = GetIntFromChar((char*)Functions::GetText("m"));
 		std::string n = (char*)Functions::GetText("n");
-		if ("Skinning" == n) localPlayer->skinningLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Mining" == n) localPlayer->miningLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Herbalism" == n) localPlayer->herbalismLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Tailoring" == n) localPlayer->tailoringLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Leatherworking" == n) localPlayer->leatherworkingLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Blacksmithing" == n) localPlayer->blacksmithingLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Enchanting" == n) localPlayer->enchantingLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Alchemy" == n) localPlayer->alchemyLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Engineering" == n) localPlayer->engineeringLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Cooking" == n) localPlayer->cookingLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("Fishing" == n) localPlayer->fishingLevel = GetIntFromChar((char*)Functions::GetText("r"));
-		else if ("First Aid" == n) localPlayer->firstAidLevel = GetIntFromChar((char*)Functions::GetText("r"));
+		if ("Skinning" == n) {
+			localPlayer->skinningLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->skinningLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Mining" == n) {
+			localPlayer->miningLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->miningLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Herbalism" == n) {
+			localPlayer->herbalismLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->herbalismLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Tailoring" == n) {
+			localPlayer->tailoringLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->tailoringLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Leatherworking" == n) {
+			localPlayer->leatherworkingLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->leatherworkingLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Blacksmithing" == n) {
+			localPlayer->blacksmithingLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->blacksmithingLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Enchanting" == n) {
+			localPlayer->enchantingLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->enchantingLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Alchemy" == n) {
+			localPlayer->alchemyLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->alchemyLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Engineering" == n) {
+			localPlayer->engineeringLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->engineeringLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Cooking" == n) {
+			localPlayer->cookingLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->cookingLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("Fishing" == n) {
+			localPlayer->fishingLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->fishingLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
+		else if ("First Aid" == n) {
+			localPlayer->firstAidLevel[0] = GetIntFromChar((char*)Functions::GetText("r"));
+			localPlayer->firstAidLevel[1] = GetIntFromChar((char*)Functions::GetText("m"));
+		}
 	}
 }
 
@@ -205,7 +236,7 @@ std::tuple<int, int> FunctionsLua::GetTradeSkillList(std::string names[], int si
 		for (int y = 0; y < size; y++) {
 			if (z > 2) break;
 			else if (names[y] == n) {
-				skills[z] = y+1;
+				skills[z] = y + 1;
 				z++;
 				break;
 			}
@@ -213,6 +244,86 @@ std::tuple<int, int> FunctionsLua::GetTradeSkillList(std::string names[], int si
 		if (z > 2) break;
 	}
 	return std::make_tuple(skills[0], skills[1]);
+}
+
+int FunctionsLua::GetNumTradeSkills() {
+	Functions::LuaCall("numTradeSkill = GetNumTradeSkills()");
+	int numTradeSkill = GetIntFromChar((char*)Functions::GetText("numTradeSkill"));
+	return numTradeSkill;
+}
+
+std::string FunctionsLua::GetTradeSkillItemLink(int index) {
+	std::string command = "itemLink = GetTradeSkillItemLink(" + std::to_string(index) + ")";
+	Functions::LuaCall(command.c_str());
+	char* itemLink = (char*)Functions::GetText("itemLink");
+	return itemLink;
+}
+
+void FunctionsLua::DoTradeSkill(int index, int amount) {
+	std::string command = "DoTradeSkill(" + std::to_string(index) + ", " + std::to_string(amount) + ")";
+	Functions::LuaCall(command.c_str());
+}
+
+std::string FunctionsLua::GetCraftName() {
+	Functions::LuaCall("_botCraftName = GetCraftName() or ''");
+	return (char*)Functions::GetText("_botCraftName");
+}
+
+int FunctionsLua::GetNumCrafts() {
+	Functions::LuaCall("_botNumCrafts = GetNumCrafts() or 0");
+	return GetIntFromChar((char*)Functions::GetText("_botNumCrafts"));
+}
+
+std::string FunctionsLua::GetCraftItemLink(int index) {
+	std::string command = "_botCraftLink = GetCraftItemLink(" + std::to_string(index) + ") or ''";
+	Functions::LuaCall(command.c_str());
+	return (char*)Functions::GetText("_botCraftLink");
+}
+
+bool FunctionsLua::EnchantCraft(int spell_id, int slot) {
+	if (!localPlayer || spell_id <= 0 || slot < 0 || slot > 19 ||
+		localPlayer->castInfo != 0 || localPlayer->channelInfo != 0) return false;
+	if (*reinterpret_cast<volatile std::uint16_t*>(0x00CECAC0) != 0 ||
+		*reinterpret_cast<volatile std::uint32_t*>(0x00CECA88) != 0) return false;
+
+	using GetObjectFn = void* (__fastcall*)(std::uint32_t, std::uint32_t, std::uint64_t, std::uint32_t);
+	using CastSpellFn = std::uint8_t(__fastcall*)(std::uint32_t, void*, std::uint64_t);
+	using BindTargetFn = std::uint8_t(__thiscall*)(void*);
+	const auto getObject = reinterpret_cast<GetObjectFn>(0x00468460);
+	const auto castSpell = reinterpret_cast<CastSpellFn>(0x006E5A90);
+	const auto bindTarget = reinterpret_cast<BindTargetFn>(0x006E5B40);
+
+	void* item = nullptr;
+	if (slot > 0) {
+		const auto playerGuid = static_cast<std::uint64_t>(localPlayer->Guid);
+		void* player = getObject(0x8, 0, playerGuid, 0);
+		if (!player) return false;
+		const auto* desc = *reinterpret_cast<const std::uint8_t* const*>(
+			reinterpret_cast<const std::uint8_t*>(player) + 0x8);
+		if (!desc) return false;
+		std::uint64_t itemGuid = 0;
+		std::memcpy(&itemGuid, desc + 0x798 + (slot - 1) * sizeof(itemGuid), sizeof(itemGuid));
+		if (!itemGuid) return false;
+		item = getObject(0x2, 0, itemGuid, 0);
+		if (!item) return false;
+	}
+
+	if (!castSpell(static_cast<std::uint32_t>(spell_id), nullptr, 0)) return false;
+	if (!item) return true;
+	if ((*reinterpret_cast<volatile std::uint16_t*>(0x00CECAC0) & 0x4010) == 0) return false;
+	return bindTarget(item) != 0 && *reinterpret_cast<volatile std::uint16_t*>(0x00CECAC0) == 0;
+}
+
+std::string FunctionsLua::GetMerchantItemLink(int index) {
+	std::string command = "itemLink = GetMerchantItemLink(" + std::to_string(index) + ")";
+	Functions::LuaCall(command.c_str());
+	char* itemLink = (char*)Functions::GetText("itemLink");
+	return itemLink;
+}
+
+void FunctionsLua::BuyMerchantItem(int index, int quantity) {
+	std::string command = "BuyMerchantItem(" + std::to_string(index) + ", " + std::to_string(quantity) + ")";
+	Functions::LuaCall(command.c_str());
 }
 
 //======================================================================//
@@ -282,7 +393,7 @@ void FunctionsLua::MakeVirtualInventory(std::vector<InventoryItem>* listItems) {
 				item_min_level,
 				item_type,
 				item_subtype
-			});
+				});
 		}
 	}
 }
@@ -302,7 +413,7 @@ std::string FunctionsLua::GetContainerItemLink(int bag, int slot) {
 }
 
 std::tuple<std::string, int, bool, bool, bool> FunctionsLua::GetContainerItemInfo(int bag, int slot) {
-	std::string command = "texture, itemCount, locked, _, readable, lootable = GetContainerItemInfo("+std::to_string(bag)+", "+std::to_string(slot)+")";
+	std::string command = "texture, itemCount, locked, _, readable, lootable = GetContainerItemInfo(" + std::to_string(bag) + ", " + std::to_string(slot) + ")";
 	Functions::LuaCall(command.c_str());
 	std::string texture = (char*)Functions::GetText("texture");
 	int itemCount = GetIntFromChar((char*)Functions::GetText("itemCount"));
@@ -313,7 +424,7 @@ std::tuple<std::string, int, bool, bool, bool> FunctionsLua::GetContainerItemInf
 }
 
 std::tuple<int, std::string, std::string> FunctionsLua::GetItemInfo(int item_id) {
-	std::string command = "_, _, _, itemMinLevel, itemType, itemSubtype = GetItemInfo("+std::to_string(item_id)+")";
+	std::string command = "_, _, _, itemMinLevel, itemType, itemSubtype = GetItemInfo(" + std::to_string(item_id) + ")";
 	Functions::LuaCall(command.c_str());
 	int itemMinLevel = GetIntFromChar((char*)Functions::GetText("itemMinLevel"));
 	std::string itemType = (char*)Functions::GetText("itemType");
@@ -407,7 +518,7 @@ void FunctionsLua::UseHPotion() {
 }
 
 bool FunctionsLua::HasHPotion() {
-	int listID[6] = { 118, 858, 929, 1710, 3928, 13446};
+	int listID[6] = { 118, 858, 929, 1710, 3928, 13446 };
 	for (const auto& item : virtualInventory) {
 		for (int i = 0; i < 6; i++) {
 			if (item.id == listID[i]) return true;
@@ -588,8 +699,8 @@ void FunctionsLua::CastSpellByName(std::string spell_name) {
 }
 
 void FunctionsLua::UseAction(int slot, int self) {
-	if(self == 1) Functions::LuaCall(("UseAction(" + std::to_string(slot) + ", 0, 1)").c_str());
-	else Functions::LuaCall(("UseAction("+std::to_string(slot)+")").c_str());
+	if (self == 1) Functions::LuaCall(("UseAction(" + std::to_string(slot) + ", 0, 1)").c_str());
+	else Functions::LuaCall(("UseAction(" + std::to_string(slot) + ")").c_str());
 }
 
 bool FunctionsLua::IsAutoRepeatAction(int slot) {
@@ -660,7 +771,7 @@ int FunctionsLua::GetSlot(std::string spell_name, std::string slot_type) {
 		for (int i = 1; i < 120; i++) {
 			if (HasAction(i) && (GetSpellTexture(spell.slot) == GetActionTexture(i))
 				&& ((slot_type == "SPELL" && !IsConsumableAction(i))
-				|| (slot_type == "ITEM" && IsConsumableAction(i)))) {
+					|| (slot_type == "ITEM" && IsConsumableAction(i)))) {
 				slot = i;
 			}
 		}
@@ -752,7 +863,7 @@ std::string FunctionsLua::UnitCreatureType(std::string target) {
 
 bool FunctionsLua::IsGroupInCombat() {
 	for (int i = 1; i <= NumGroupMembers; i++) {
-		if(UnitAffectingCombat(tarType+std::to_string(i))) return true;
+		if (UnitAffectingCombat(tarType + std::to_string(i))) return true;
 	}
 	return false;
 }

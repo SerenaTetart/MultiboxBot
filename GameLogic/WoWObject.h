@@ -231,9 +231,9 @@ class LocalPlayer : public WoWUnit {
         std::string className;
         int castInfo, zoneID, bonusHealing = 0, money = 0;
         // == Craft skills == //
-        int leatherworkingLevel = 0, tailoringLevel = 0, enchantingLevel = 0, blacksmithingLevel = 0, herbalismLevel = 0,
-            miningLevel = 0, skinningLevel = 0, engineeringLevel = 0, alchemyLevel = 0, cookingLevel = 0, fishingLevel = 0,
-            firstAidLevel = 0;
+        int leatherworkingLevel[2] = {0, 0}, tailoringLevel[2] = {0, 0}, enchantingLevel[2] = {0, 0}, blacksmithingLevel[2] = {0, 0}, herbalismLevel[2] = {0, 0},
+            miningLevel[2] = {0, 0}, skinningLevel[2] = {0, 0}, engineeringLevel[2] = {0, 0}, alchemyLevel[2] = {0, 0}, cookingLevel[2] = {0, 0}, fishingLevel[2] = {0, 0},
+            firstAidLevel[2] = {0, 0};
 
         unsigned long long autoAttackGuid = 0;
         Position corpse_position;
