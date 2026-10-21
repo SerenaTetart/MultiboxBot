@@ -363,7 +363,9 @@ bool Functions::IsCurrentAction(const std::string& spell_name)
 	return isActive || isAutoRepeat;
 }
 
-bool Functions::IsSpellReady(std::string spell_name) {
+bool Functions::IsSpellReady(std::string spell_name, bool silenceable) {
+	if(silenceable && (localPlayer->flags & UNIT_FLAG_SILENCED)) return false;
+
 	using GetSpellCooldownByID_t = void(__fastcall*)(uint32_t spellID, uint32_t isPetBook, uint32_t* cdDurationMS, uint32_t* cdStartMS, uint32_t* cdEnabled);
 	auto GetSpellCooldownByID = reinterpret_cast<GetSpellCooldownByID_t>(GET_SPELL_COOLDOWN_BY_ID);
 

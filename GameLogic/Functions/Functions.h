@@ -32,7 +32,7 @@ class Functions {
 		static SpellSlotData GetSpellDataFromSlot(int slot, bool pet);
 		static bool SpellIsUsable(int32_t spellId);
 		static void MakeVirtualSpellBook(std::vector<SpellSlotData>*);
-		static bool IsSpellReady(std::string spell_name);
+		static bool IsSpellReady(std::string spell_name, bool silenceable=true);
 		static WoWUnit* GetMissingBuff(int* IDs, int size, int hasmana = 0, int noTank = 0);
 		static int GetAutoRepeatSpellId();
 		static int GetActiveSpellId();

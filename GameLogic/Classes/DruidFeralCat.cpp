@@ -21,47 +21,47 @@ static void DruidAttack() {
 			bool ProwlBuff = localPlayer->hasBuff(ProwlIDs, 3);
 			int ComboPoints = FunctionsLua::GetComboPoints();
 			if (!ProwlBuff && localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
-			if (!Combat && !ProwlBuff && Functions::IsSpellReady("Prowl")) {
+			if (!Combat && !ProwlBuff && Functions::IsSpellReady("Prowl", false)) {
 				// Prowl -> Not in PvE raids
 				FunctionsLua::CastSpellByName("Prowl");
 			}
-			else if (Combat && (distTarget > 30) && (localPlayer->movement_flags & MOVEFLAG_FORWARD) && (targetUnit->speed > 0) && Functions::IsSpellReady("Dash")) {
+			else if (Combat && (distTarget > 30) && (localPlayer->movement_flags & MOVEFLAG_FORWARD) && (targetUnit->speed > 0) && Functions::IsSpellReady("Dash", false)) {
 				// Dash
 				FunctionsLua::CastSpellByName("Dash");
 			}
-			else if (ProwlBuff && localPlayer->isBehind(targetUnit) && Functions::IsSpellReady("Ravage")) {
+			else if (ProwlBuff && localPlayer->isBehind(targetUnit) && Functions::IsSpellReady("Ravage", false)) {
 				// Ravage
 				FunctionsLua::CastSpellByName("Ravage");
 			}
-			else if (ProwlBuff && Functions::IsSpellReady("Pounce")) {
+			else if (ProwlBuff && Functions::IsSpellReady("Pounce", false)) {
 				// Pounce
 				FunctionsLua::CastSpellByName("Pounce");
 			}
-			else if (!ProwlBuff && IsInGroup && !(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && (targetUnit->targetGuid == localPlayer->Guid) && Functions::IsSpellReady("Cower")) {
+			else if (!ProwlBuff && IsInGroup && !(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && (targetUnit->targetGuid == localPlayer->Guid) && Functions::IsSpellReady("Cower", false)) {
 				// Cower
 				FunctionsLua::CastSpellByName("Cower");
 			}
-			else if (!ProwlBuff && ComboPoints >= 4 && !RipDebuff && targetUnit->getNbrDebuff() < 16 && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && Functions::IsSpellReady("Rip")) {
+			else if (!ProwlBuff && ComboPoints >= 4 && !RipDebuff && targetUnit->getNbrDebuff() < 16 && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && Functions::IsSpellReady("Rip", false)) {
 				// Rip (PvP)
 				FunctionsLua::CastSpellByName("Rip");
 			}
-			else if (!ProwlBuff && ComboPoints >= 4 && Functions::IsSpellReady("Ferocious Bite")) {
+			else if (!ProwlBuff && ComboPoints >= 4 && Functions::IsSpellReady("Ferocious Bite", false)) {
 				// Ferocious Bite
 				FunctionsLua::CastSpellByName("Ferocious Bite");
 			}
-			else if (!ProwlBuff && localPlayer->isBehind(targetUnit) && Functions::IsSpellReady("Shred")) {
+			else if (!ProwlBuff && localPlayer->isBehind(targetUnit) && Functions::IsSpellReady("Shred", false)) {
 				// Shred
 				FunctionsLua::CastSpellByName("Shred");
 			}
-			else if (!ProwlBuff && !FaerieFireDebuff && targetUnit->getNbrDebuff() < 16 && Functions::IsSpellReady("Faerie Fire (Feral)")) {
+			else if (!ProwlBuff && !FaerieFireDebuff && targetUnit->getNbrDebuff() < 16 && Functions::IsSpellReady("Faerie Fire (Feral)", false)) {
 				// Faerie Fire (Feral)
 				FunctionsLua::CastSpellByName("Faerie Fire (Feral)()");
 			}
-			else if (!ProwlBuff && !RakeDebuff && targetUnit->getNbrDebuff() < 16 && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && Functions::IsSpellReady("Rake")) {
+			else if (!ProwlBuff && !RakeDebuff && targetUnit->getNbrDebuff() < 16 && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && Functions::IsSpellReady("Rake", false)) {
 				// Rake (PvP)
 				FunctionsLua::CastSpellByName("Rake");
 			}
-			else if (Functions::IsSpellReady("Claw")) {
+			else if (Functions::IsSpellReady("Claw", false)) {
 				// Claw
 				FunctionsLua::CastSpellByName("Claw");
 			}
@@ -72,23 +72,23 @@ static void DruidAttack() {
 			bool DemoralizingRoarDebuff = targetUnit->hasDebuff(DemoralizingRoarIDs, 5);
 			bool FrenziedRegenerationBuff = (localPlayer->hasBuff(22842) || localPlayer->hasBuff(22895) || localPlayer->hasBuff(22896));
 			if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
-			if (Combat && localPlayer->rage < 50 && Functions::IsSpellReady("Enrage")) {
+			if (Combat && localPlayer->rage < 50 && Functions::IsSpellReady("Enrage", false)) {
 				// Enrage
 				FunctionsLua::CastSpellByName("Enrage");
 			}
-			else if (Combat && localPlayer->prctHP < 70 && localPlayer->rage > 50 && Functions::IsSpellReady("Frenzied Regeneration")) {
+			else if (Combat && localPlayer->prctHP < 70 && localPlayer->rage > 50 && Functions::IsSpellReady("Frenzied Regeneration", false)) {
 				// Frenzied Regeneration
 				FunctionsLua::CastSpellByName("Frenzied Regeneration");
-			} else if (nbrCloseEnemy > 3 && !DemoralizingRoarDebuff && Functions::IsSpellReady("Demoralizing Roar")) {
+			} else if (nbrCloseEnemy > 3 && !DemoralizingRoarDebuff && Functions::IsSpellReady("Demoralizing Roar", false)) {
 				// Demoralizing Roar
 				FunctionsLua::CastSpellByName("Demoralizing Roar");
-			} else if (Functions::IsSpellReady("Bash")) {
+			} else if (Functions::IsSpellReady("Bash", false)) {
 				// Bash
 				FunctionsLua::CastSpellByName("Bash");
-			} else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && nbrCloseEnemyFacing > 2 && Functions::IsSpellReady("Swipe")) {
+			} else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && nbrCloseEnemyFacing > 2 && Functions::IsSpellReady("Swipe", false)) {
 				// Swipe
 				FunctionsLua::CastSpellByName("Swipe");
-			} else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && Functions::IsSpellReady("Maul")) {
+			} else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && Functions::IsSpellReady("Maul", false)) {
 				// Maul
 				FunctionsLua::CastSpellByName("Maul");
 			}

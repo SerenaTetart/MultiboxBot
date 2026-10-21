@@ -15,27 +15,27 @@ static void DruidAttack() {
 			bool DemoralizingRoarDebuff = targetUnit->hasDebuff(DemoralizingRoarIDs, 5);
 			bool FrenziedRegenerationBuff = (localPlayer->hasBuff(22842) || localPlayer->hasBuff(22895) || localPlayer->hasBuff(22896));
 			if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
-			if (Combat && localPlayer->rage < 50 && Functions::IsSpellReady("Enrage")) {
+			if (Combat && localPlayer->rage < 50 && Functions::IsSpellReady("Enrage", false)) {
 				// Enrage
 				FunctionsLua::CastSpellByName("Enrage");
 			}
-			else if (Combat && localPlayer->prctHP < 70 && localPlayer->rage > 50 && Functions::IsSpellReady("Frenzied Regeneration")) {
+			else if (Combat && localPlayer->prctHP < 70 && localPlayer->rage > 50 && Functions::IsSpellReady("Frenzied Regeneration", false)) {
 				// Frenzied Regeneration
 				FunctionsLua::CastSpellByName("Frenzied Regeneration");
 			}
-			else if (nbrCloseEnemy > 3 && !DemoralizingRoarDebuff && Functions::IsSpellReady("Demoralizing Roar")) {
+			else if (nbrCloseEnemy > 3 && !DemoralizingRoarDebuff && Functions::IsSpellReady("Demoralizing Roar", false)) {
 				// Demoralizing Roar
 				FunctionsLua::CastSpellByName("Demoralizing Roar");
 			}
-			else if (Functions::IsSpellReady("Bash")) {
+			else if (Functions::IsSpellReady("Bash", false)) {
 				// Bash
 				FunctionsLua::CastSpellByName("Bash");
 			}
-			else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && nbrCloseEnemyFacing > 2 && Functions::IsSpellReady("Swipe")) {
+			else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && nbrCloseEnemyFacing > 2 && Functions::IsSpellReady("Swipe", false)) {
 				// Swipe
 				FunctionsLua::CastSpellByName("Swipe");
 			}
-			else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && Functions::IsSpellReady("Maul")) {
+			else if ((!FrenziedRegenerationBuff || localPlayer->prctHP > 90) && Functions::IsSpellReady("Maul", false)) {
 				// Maul
 				FunctionsLua::CastSpellByName("Maul");
 			}
