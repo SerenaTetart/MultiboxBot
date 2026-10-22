@@ -57,6 +57,31 @@ static const int MountBuffsID[68] = {
 	26656												// LEGENDARY
 };
 
+#include <cstdint>
+
+constexpr uintptr_t IS_OUTDOORS_FUNCTION = 0x00612CC0;
+bool Game::IsOutdoors() {
+	if (!localPlayer || !localPlayer->Pointer) return false;
+
+	using IsOutdoorsFn = uint32_t(__fastcall*)(const void*);
+	auto fn = reinterpret_cast<IsOutdoorsFn>(IS_OUTDOORS_FUNCTION);
+	return fn(reinterpret_cast<const void*>(localPlayer->Pointer)) != 0;
+}
+
+bool Game::CanUseMount() {
+	if (!localPlayer || !localPlayer->Pointer) return false;
+
+	if (localPlayer->isMounted) return false;
+	if (localPlayer->isdead || localPlayer->isMoving) return false;
+	if (localPlayer->flags & UNIT_FLAG_IN_COMBAT) return false;
+	if (localPlayer->flags & UNIT_FLAG_TAXI_FLIGHT) return false;
+	if (localPlayer->movement_flags & (MOVEFLAG_SWIMMING | MOVEFLAG_ONTRANSPORT)) return false;
+	if (localPlayer->castInfo != 0 || localPlayer->channelInfo != 0) return false;
+	if (!localPlayer->isOutdoor) return false;
+
+	return true;
+}
+
 void Game::UseMount() {
 	if (localPlayer->isMounted) return;
 	else if (localPlayer->hasBuff(768)) {

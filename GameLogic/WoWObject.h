@@ -228,6 +228,7 @@ class WoWUnit : public WoWObject {
 
 class LocalPlayer : public WoWUnit {
     public:
+        bool isOutdoor = false;
         std::string className;
         int castInfo, zoneID, bonusHealing = 0, money = 0;
         // == Craft skills == //
@@ -295,6 +296,8 @@ const uintptr_t GET_UNIT_REACTION_FUN_PTR = 0x006061E0;
 const uintptr_t CAN_ATTACK_UNIT_FUN_PTR = 0x00606980;
 const uintptr_t SET_TARGET_FUN_PTR = 0x00489A40; //0x00489A40 (new) || 0x00493540 (old)
 const uintptr_t CLICK_TO_MOVE_FUN_PTR = 0x00611130;
+const uintptr_t IS_OUTDOORS_FUN_PTR = 0x00612CC0;
+    //=== Static Offset ===//
 const uintptr_t LOCKED_TARGET_STATIC_OFFSET = 0x00B4E2D8;
 const uintptr_t CASTING_STATIC_OFFSET = 0x00CECA88;
 

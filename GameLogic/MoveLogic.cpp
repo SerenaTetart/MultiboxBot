@@ -24,10 +24,17 @@ void MoveToMap(Position targetpos) {
 	Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, targetpos);
 	float dist = nextpos.DistanceTo(localPlayer->position);
 	if (dist > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
-		ThreadSynchronizer::RunOnMainThread([nextpos]() {
-			localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-		});
-		Moving = MoveTypes::Journey;
+		if (targetpos.DistanceTo(localPlayer->position) > 40.0f && !localPlayer->isdead && Game::CanUseMount()) {
+			ThreadSynchronizer::RunOnMainThread([]() {
+				Game::UseMount();
+			});
+		}
+		else {
+			ThreadSynchronizer::RunOnMainThread([nextpos]() {
+				localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
+			});
+			Moving = MoveTypes::Journey;
+		}
 	}
 	else if (dist < 2.0f) { Moving = MoveTypes::NotMoving; }
 }

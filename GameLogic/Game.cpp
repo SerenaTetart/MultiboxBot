@@ -173,7 +173,7 @@ void Game::MainLoop() {
 								breathTimer = GetFloatFromChar(breathTimer_char);
 							}
 
-							if (localPlayer->isMounted && (Combat || (Leader != NULL && !Leader->isMounted))) {
+							if (localPlayer->isMounted && (Combat || ((Leader != NULL && !Leader->isMounted) && Moving == MoveTypes::NotMoving && !autoChores))) {
 								Dismount();
 							}
 						}
@@ -366,13 +366,13 @@ void Game::MainLoop() {
 				) {
 					if( !Combat && Loot() ) { }
 					else if (localPlayer->speed == 0 && !Combat && Trade()) { }
-					else if (!localPlayer->isMounted && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && Leader != NULL && Leader->isMounted) {
+					else if (!localPlayer->isMounted && !localPlayer->isMoving && (localPlayer->movement_flags == MOVEFLAG_NONE) && Leader != NULL && Leader->isMounted && Game::CanUseMount()) {
 						// Mount up !
 						ThreadSynchronizer::RunOnMainThread([]() {
 							UseMount();
 						});
 					}
-					else if (Moving != MoveTypes::Journey && Leader != NULL && Leader->Guid != localPlayer->Guid && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
+					else if (Moving != MoveTypes::Journey && Leader != NULL && Leader->Guid != localPlayer->Guid && !(Leader->movement_flags & UNIT_FLAG_TAXI_FLIGHT) && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
 						// Follow
 						Functions::FollowMultibox(positionCircle);
 						Moving = MoveTypes::Follow;
