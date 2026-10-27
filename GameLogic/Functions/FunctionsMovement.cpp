@@ -244,13 +244,19 @@ void Functions::FollowMultibox(int placement) {
 
 void Functions::MoveToFast(Position target_pos, MoveTypes moveType) {
     // Less accurate but useful in a hurry
-    Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
-
-    if (nextpos.DistanceTo(localPlayer->position) >= MIN_MOVE_DISTANCE && !Functions::enemyClose(nextpos)) {
-        localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
+    if (!Functions::Intersect(localPlayer->position, target_pos)) {
+        localPlayer->ClickToMove(Move, localPlayer->Guid, target_pos);
         Moving = moveType;
     }
-    else resetMovement();
+    else {
+        Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, target_pos);
+
+        if (nextpos.DistanceTo(localPlayer->position) >= MIN_MOVE_DISTANCE && !Functions::enemyClose(nextpos)) {
+            localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
+            Moving = moveType;
+        }
+        else resetMovement();
+    }
 }
 
 void Functions::MoveTo(Position target_pos, MoveTypes moveType, bool checkEnemyClose, bool targetSwim) {

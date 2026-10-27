@@ -234,14 +234,14 @@ std::tuple<int, int> FunctionsLua::GetTradeSkillList(std::string names[], int si
 		if (h) continue;
 		std::string n = (char*)Functions::GetText("n");
 		for (int y = 0; y < size; y++) {
-			if (z > 2) break;
+			if (z >= 2) break;
 			else if (names[y] == n) {
 				skills[z] = y + 1;
 				z++;
 				break;
 			}
 		}
-		if (z > 2) break;
+		if (z >= 2) break;
 	}
 	return std::make_tuple(skills[0], skills[1]);
 }

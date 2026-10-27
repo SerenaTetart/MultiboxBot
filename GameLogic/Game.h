@@ -10,7 +10,9 @@
 class Game {
 public:
 	static void MainLoop();
-	static void UseMount();
+	static bool UseMount();
+	static bool CanUseMount();
+	static bool IsOutdoors();
 	static void Dismount();
 	static bool Loot();
 	static bool Trade();

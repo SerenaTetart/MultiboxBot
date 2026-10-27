@@ -435,7 +435,7 @@ void Functions::ClassifyHeal() {
     );
 
     for (int i = 0; i < 5; i++) {
-        if (PartyMember[i] != NULL && PartyMember[i]->prctHP < 50) {
+        if (PartyMember[i] != NULL && !PartyMember[i]->isdead && PartyMember[i]->prctHP < 60) {
             AoEHeal++;
         }
     }

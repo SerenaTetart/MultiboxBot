@@ -24,10 +24,17 @@ void MoveToMap(Position targetpos) {
 	Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, targetpos);
 	float dist = nextpos.DistanceTo(localPlayer->position);
 	if (dist > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
-		ThreadSynchronizer::RunOnMainThread([nextpos]() {
-			localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-		});
-		Moving = MoveTypes::Journey;
+		if (targetpos.DistanceTo(localPlayer->position) > 40.0f && !localPlayer->isdead && Game::CanUseMount()) {
+			ThreadSynchronizer::RunOnMainThread([]() {
+				Game::UseMount();
+				});
+		}
+		else {
+			ThreadSynchronizer::RunOnMainThread([nextpos]() {
+				localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
+				});
+			Moving = MoveTypes::Journey;
+		}
 	}
 	else if (dist < 2.0f) { Moving = MoveTypes::NotMoving; }
 }
@@ -82,7 +89,7 @@ void Game::CorpseRun() {
 			if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
 				ThreadSynchronizer::RunOnMainThread([nextpos]() {
 					localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-				});
+					});
 				Moving = MoveTypes::Journey;
 			}
 		}
@@ -99,7 +106,7 @@ void SellItems() {
 					ThreadSynchronizer::RunOnMainThread([i]() {
 						Functions::InteractUnit(ListUnits[i].Pointer, 0);
 						FunctionsLua::SelectGossipOption(1);
-					});
+						});
 					break;
 				}
 			}
@@ -114,7 +121,7 @@ void SellItems() {
 				if (ListUnits[i].entryID == 4259) {
 					ThreadSynchronizer::RunOnMainThread([i]() {
 						Functions::InteractUnit(ListUnits[i].Pointer, 0);
-					});
+						});
 					break;
 				}
 			}
@@ -129,7 +136,7 @@ void SellItems() {
 				if (ListUnits[i].entryID == 4203) {
 					ThreadSynchronizer::RunOnMainThread([i]() {
 						Functions::InteractUnit(ListUnits[i].Pointer, 0);
-					});
+						});
 					break;
 				}
 			}
@@ -146,7 +153,7 @@ void GoToTrainer(Position trainerPos, int trainerID) {
 					Functions::InteractUnit(ListUnits[i].Pointer, 0);
 					FunctionsLua::SelectGossipOption(1);
 					FunctionsLua::BuyTrainerService(0);
-				});
+					});
 				break;
 			}
 		}
@@ -168,7 +175,7 @@ bool TrainSpell() {
 							Functions::InteractUnit(ListUnits[i].Pointer, 0);
 							FunctionsLua::SelectGossipOption(1);
 							FunctionsLua::BuyTrainerService(0);
-						});
+							});
 						break;
 					}
 				}
@@ -226,7 +233,7 @@ bool GoToVendor(Position vendorPos, int vendorID, int item_id, int item_quantity
 				return;
 			}
 			Functions::LuaCall("CloseMerchant()");
-		});
+			});
 		return true;
 	}
 
@@ -315,34 +322,13 @@ inline bool MatchesEnchantCraftLink(const std::string& link, const Craft& recipe
 
 inline auto GetProfessionsToCheck() {
 	return std::array{
-		ProfessionToCheck{ ProfessionId::Leatherworking, leatherWorkingCrafts, localPlayer->leatherworkingLevel[0] },
-		ProfessionToCheck{ ProfessionId::Mining, miningCrafts, localPlayer->miningLevel[0] },
-		ProfessionToCheck{ ProfessionId::Blacksmithing, blacksmithCrafts, localPlayer->blacksmithingLevel[0] },
-		ProfessionToCheck{ ProfessionId::Tailoring, tailoringCrafts, localPlayer->tailoringLevel[0] },
-		ProfessionToCheck{ ProfessionId::Alchemy, alchemyCrafts, localPlayer->alchemyLevel[0] },
-		ProfessionToCheck{ ProfessionId::Enchanting, enchantingCrafts, localPlayer->enchantingLevel[0] },
+		ProfessionToCheck{ ProfessionId::Leatherworking, leatherWorkingCrafts, localPlayer->leatherworkingLevel[0], localPlayer->leatherworkingLevel[1] },
+		ProfessionToCheck{ ProfessionId::Mining, miningCrafts, localPlayer->miningLevel[0], localPlayer->miningLevel[1] },
+		ProfessionToCheck{ ProfessionId::Blacksmithing, blacksmithCrafts, localPlayer->blacksmithingLevel[0], localPlayer->blacksmithingLevel[1] },
+		ProfessionToCheck{ ProfessionId::Tailoring, tailoringCrafts, localPlayer->tailoringLevel[0], localPlayer->tailoringLevel[1] },
+		ProfessionToCheck{ ProfessionId::Alchemy, alchemyCrafts, localPlayer->alchemyLevel[0], localPlayer->alchemyLevel[1] },
+		ProfessionToCheck{ ProfessionId::Enchanting, enchantingCrafts, localPlayer->enchantingLevel[0], localPlayer->enchantingLevel[1] },
 	};
-}
-
-inline std::optional<CraftPlan> GetCraftPlan(int max_crafts = 20) {
-	if (!localPlayer || max_crafts <= 0) return std::nullopt;
-
-	const auto professions = GetProfessionsToCheck();
-
-	for (const auto& [id, crafts, level] : professions) {
-		if (level <= 0) continue;
-		for (const auto& craft : crafts) {
-			if (level < craft.required_level || level >= craft.max_level) continue;
-			if (id == ProfessionId::Enchanting && IsEnchantRod(craft.crafted_id) && GetItemCount(craft.crafted_id) > 0) continue;
-			if (id == ProfessionId::Enchanting && craft.required_rod && GetItemCount(craft.required_rod) == 0) continue;
-			if (id == ProfessionId::Enchanting && craft.spell_id == 0 && craft.target_slot == 0) continue;
-			int batch_limit = (std::min)(max_crafts, craft.max_level - level);
-			if (id == ProfessionId::Enchanting) batch_limit = 1;
-			auto plan = TryPlanCraftBatch(id, craft, batch_limit);
-			if (plan) return plan;
-		}
-	}
-	return std::nullopt;
 }
 
 enum class CraftKnowledge { Checking, Learned, Missing };
@@ -359,12 +345,12 @@ CraftKnowledgeCache craftKnowledgeCache;
 
 inline const char* GetProfessionSpellName(ProfessionId profession_id) {
 	switch (profession_id) {
-		case ProfessionId::Leatherworking: return "Leatherworking";
-		case ProfessionId::Blacksmithing: return "Blacksmithing";
-		case ProfessionId::Mining: return "Smelting";
-		case ProfessionId::Tailoring: return "Tailoring";
-		case ProfessionId::Alchemy: return "Alchemy";
-		case ProfessionId::Enchanting: return "Enchanting";
+	case ProfessionId::Leatherworking: return "Leatherworking";
+	case ProfessionId::Blacksmithing: return "Blacksmithing";
+	case ProfessionId::Mining: return "Smelting";
+	case ProfessionId::Tailoring: return "Tailoring";
+	case ProfessionId::Alchemy: return "Alchemy";
+	case ProfessionId::Enchanting: return "Enchanting";
 	}
 	return nullptr;
 }
@@ -414,7 +400,7 @@ bool BuyItem(ProfessionId professionID, int item_id, int item_quantity) {
 	return false;
 }
 
-bool TrainTradeSkill(ProfessionId professionID, bool higherRank = false) {
+bool TrainTradeSkill(ProfessionId professionID, bool higherRank = false, bool checkAvailabilityOnly = false) {
 	Position trainerPos = localPlayer->position;
 	int trainerID = 0;
 	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
@@ -494,8 +480,31 @@ bool TrainTradeSkill(ProfessionId professionID, bool higherRank = false) {
 		}
 	}
 	if (!trainerID) return false;
+	if (checkAvailabilityOnly) return true;
 	GoToTrainer(trainerPos, trainerID);
 	return true;
+}
+
+inline std::optional<CraftPlan> GetCraftPlan(int max_crafts = 20) {
+	if (!localPlayer || max_crafts <= 0) return std::nullopt;
+
+	const auto professions = GetProfessionsToCheck();
+
+	for (const auto& [id, crafts, level, max_level] : professions) {
+		if (level <= 0) continue;
+		if (level == max_level && !TrainTradeSkill(id, true, true)) continue;
+		for (const auto& craft : crafts) {
+			if (level < craft.required_level || level >= craft.max_level) continue;
+			if (id == ProfessionId::Enchanting && IsEnchantRod(craft.crafted_id) && GetItemCount(craft.crafted_id) > 0) continue;
+			if (id == ProfessionId::Enchanting && craft.required_rod && GetItemCount(craft.required_rod) == 0) continue;
+			if (id == ProfessionId::Enchanting && craft.spell_id == 0 && craft.target_slot == 0) continue;
+			int batch_limit = (std::min)(max_crafts, craft.max_level - level);
+			if (id == ProfessionId::Enchanting) batch_limit = 1;
+			auto plan = TryPlanCraftBatch(id, craft, batch_limit);
+			if (plan) return plan;
+		}
+	}
+	return std::nullopt;
 }
 
 CraftKnowledge CheckCraftKnowledge(ProfessionId profession_id, int crafted_id) {
@@ -568,7 +577,7 @@ CraftKnowledge CheckCraftKnowledge(ProfessionId profession_id, int crafted_id) {
 		if (craftKnowledgeCache.profession_id != profession_id || craftKnowledgeCache.crafted_id != crafted_id) return;
 		craftKnowledgeCache.status = status;
 		craftKnowledgeCache.queued = false;
-	});
+		});
 	return CraftKnowledge::Checking;
 }
 
@@ -580,7 +589,7 @@ bool EnchantItem(int crafted_id) {
 		const Craft* recipe = FindEnchantRecipe(crafted_id);
 		if (!recipe) return;
 		FunctionsLua::EnchantCraft(recipe->spell_id ? recipe->spell_id : crafted_id, recipe->target_slot);
-	});
+		});
 	return true;
 }
 
@@ -599,7 +608,7 @@ bool CraftItem(ProfessionId professionID, int item_id, int amount) {
 			FunctionsLua::DoTradeSkill(i, amount);
 			return;
 		}
-	});
+		});
 	return true;
 }
 

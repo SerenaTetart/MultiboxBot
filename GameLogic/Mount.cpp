@@ -57,40 +57,104 @@ static const int MountBuffsID[68] = {
 	26656												// LEGENDARY
 };
 
-void Game::UseMount() {
-	if (localPlayer->isMounted) return;
+#include <cstdint>
+
+constexpr uintptr_t IS_OUTDOORS_FUNCTION = 0x00612CC0;
+bool Game::IsOutdoors() {
+	if (!localPlayer || !localPlayer->Pointer) return false;
+
+	using IsOutdoorsFn = uint32_t(__fastcall*)(const void*);
+	auto fn = reinterpret_cast<IsOutdoorsFn>(IS_OUTDOORS_FUNCTION);
+	return fn(reinterpret_cast<const void*>(localPlayer->Pointer)) != 0;
+}
+
+bool PossessMount() {
+	for (const auto& item : virtualInventory) {
+		// Fast
+		for (unsigned int z = 0; z < std::size(FastMountItemsID); z++) {
+			if (item.id == FastMountItemsID[z]) {
+				return true;
+			}
+		}
+	}
+	if (localPlayer->className == "Paladin") {
+		if (Functions::IsPlayerSpell("Summon Charger")) {
+			return true;
+		}
+		else if (Functions::IsPlayerSpell("Summon Warhorse")) {
+			return true;
+		}
+	}
+	else if (localPlayer->className == "Warlock") {
+		if (Functions::IsPlayerSpell("Summon Dreadsteed")) {
+			return true;
+		}
+		else if (Functions::IsPlayerSpell("Summon Felsteed")) {
+			return true;
+		}
+	}
+	for (const auto& item : virtualInventory) {
+		// Slow
+		for (unsigned int z = 0; z < std::size(SlowMountItemsID); z++) {
+			if (item.id == SlowMountItemsID[z]) {
+				return true;
+			}
+		}
+	}
+	if (localPlayer->className == "Druid" && Functions::IsPlayerSpell("Travel Form")) {
+		return true;
+	}
+	return false;
+}
+
+bool Game::CanUseMount() {
+	if (!localPlayer || !localPlayer->Pointer) return false;
+
+	if (localPlayer->isMounted || localPlayer->hasBuff(768)) return false;
+	if (localPlayer->isdead || localPlayer->isMoving) return false;
+	if (localPlayer->flags & UNIT_FLAG_IN_COMBAT) return false;
+	if (localPlayer->flags & UNIT_FLAG_TAXI_FLIGHT) return false;
+	if (localPlayer->movement_flags & (MOVEFLAG_SWIMMING | MOVEFLAG_ONTRANSPORT)) return false;
+	if (localPlayer->castInfo != 0 || localPlayer->channelInfo != 0) return false;
+	if (!localPlayer->isOutdoor) return false;
+	if (!PossessMount()) return false;
+
+	return true;
+}
+
+bool Game::UseMount() {
+	if (localPlayer->isMounted) return false;
 	else if (localPlayer->hasBuff(768)) {
 		// Cat Form
 		FunctionsLua::CastSpellByName("Cat Form");
-		return;
 	}
 	for (const auto& item : virtualInventory) {
 		// Fast
 		for (unsigned int z = 0; z < std::size(FastMountItemsID); z++) {
 			if (item.id == FastMountItemsID[z]) {
 				FunctionsLua::UseItem(FastMountItemsID[z]);
-				return;
+				return true;
 			}
 		}
 	}
 	if (localPlayer->className == "Paladin") {
 		if (Functions::IsSpellReady("Summon Charger")) {
 			FunctionsLua::CastSpellByName("Summon Charger");
-			return;
+			return true;
 		}
 		else if (Functions::IsSpellReady("Summon Warhorse")) {
 			FunctionsLua::CastSpellByName("Summon Warhorse");
-			return;
+			return true;
 		}
 	}
 	else if (localPlayer->className == "Warlock") {
 		if (Functions::IsSpellReady("Summon Dreadsteed")) {
 			FunctionsLua::CastSpellByName("Summon Dreadsteed");
-			return;
+			return true;
 		}
 		else if (Functions::IsSpellReady("Summon Felsteed")) {
 			FunctionsLua::CastSpellByName("Summon Felsteed");
-			return;
+			return true;
 		}
 	}
 	for (const auto& item : virtualInventory) {
@@ -98,14 +162,15 @@ void Game::UseMount() {
 		for (unsigned int z = 0; z < std::size(SlowMountItemsID); z++) {
 			if (item.id == SlowMountItemsID[z]) {
 				FunctionsLua::UseItem(SlowMountItemsID[z]);
-				return;
+				return true;
 			}
 		}
 	}
 	if (localPlayer->className == "Druid" && Functions::IsSpellReady("Travel Form")) {
 		FunctionsLua::CastSpellByName("Travel Form");
-		return;
+		return true;
 	}
+	return false;
 }
 
 void Game::Dismount() {

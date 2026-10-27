@@ -119,7 +119,7 @@ static void DruidAttack() {
 				//Moonfire
 				FunctionsLua::CastSpellByName("Moonfire");
 			}
-			else if (!localPlayer->isMoving && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !targetUnit->resist(SpellSchool::Nature) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && Functions::IsSpellReady("Entangling Roots")) {
+			else if (!localPlayer->isMoving && localPlayer->isOutdoor && (targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !targetUnit->resist(SpellSchool::Nature) && targetUnit->getNbrDebuff() < 16 && (time(0) - EntanglingRootsTimer) > 15.0f && Functions::IsSpellReady("Entangling Roots")) {
 				//Entangling Roots (PvP)
 				FunctionsLua::CastSpellByName("Entangling Roots");
 				if (localPlayer->isCasting()) EntanglingRootsTimer = time(0);
@@ -175,7 +175,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		FunctionsLua::CastSpellByName("Barkskin");
 		return 0;
 	}
-	else if (!inAnimalForm && !localPlayer->isMoving && Combat && (AoEHeal >= 4) && (distAlly < 40.0f) && Functions::IsSpellReady("Tranquility")) {
+	else if (!inAnimalForm && !localPlayer->isMoving && Combat && (AoEHeal >= 3) && (distAlly < 40.0f) && Functions::IsSpellReady("Tranquility")) {
 		//Tranquility
 		FunctionsLua::CastSpellByName("Tranquility");
 		return 0;

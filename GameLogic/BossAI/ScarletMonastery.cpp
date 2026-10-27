@@ -15,13 +15,18 @@ bool BossAI::ScarletMonastery() {
 					Functions::LuaCall("last_yell_monster = ''");
 				}
 			});
-			if ((float)(time(0) - mechanicTimer) < 10.0f) {
-				// Burn in righteous fire!
+			if ((float)(time(0) - mechanicTimer) < 6.0f) {
+				// Burn in righteous fire! -> Run away (except tank -> avoid bad positioning)
 				Position safePosition = Position(182.921417f, -429.258118f, 18.532364f);
-				if (localPlayer->position.DistanceTo(safePosition) > 5.0f) {
+				if (localPlayer->role != 0 && localPlayer->position.DistanceTo(safePosition) > 5.0f) {
 					ThreadSynchronizer::RunOnMainThread([safePosition]() {
-						Functions::MoveTo(safePosition, MoveTypes::BossMechanic, false, false);
+						Functions::MoveToFast(safePosition, MoveTypes::BossMechanic);
 					});
+					return true;
+				}
+				else {
+					// Stop Attacking
+					if (!localPlayer->isMoving && targetUnit != NULL && !IsFacing) localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 					return true;
 				}
 			} else if (localPlayer->role == 0 && unit.targetGuid == localPlayer->Guid) {
@@ -66,6 +71,11 @@ bool BossAI::ScarletMonastery() {
 					ThreadSynchronizer::RunOnMainThread([listAwayPoints, pointIndex]() {
 						Functions::MoveTo(listAwayPoints[pointIndex], MoveTypes::BossMechanic, false, false);
 					});
+					return true;
+				}
+				else {
+					// Stop Attacking
+					if (!localPlayer->isMoving && targetUnit != NULL && !IsFacing) localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 					return true;
 				}
 			}
