@@ -17,14 +17,14 @@ static void GetSpellBonusHealing() {
 	float bonusHealing = localPlayer->bonusHealing;
 	//====================================================//
 	float SubLevel20PENALTY = 1.0f;
-	if (RegrowthLevel[spell_regrowth.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RegrowthLevel[spell_regrowth.rank]) * 0.0375f;
-	RegrowthComputed = (RegrowthValue[spell_regrowth.rank] + (bonusHealing * 0.4114 * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank));
+	if (RegrowthLevel[spell_regrowth.rank-1] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RegrowthLevel[spell_regrowth.rank-1]) * 0.0375f;
+	RegrowthComputed = (RegrowthValue[spell_regrowth.rank-1] + (bonusHealing * 0.4114 * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank));
 	SubLevel20PENALTY = 1.0f;
-	if (HealingTouchLevel[spell_healing_touch.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - HealingTouchLevel[spell_healing_touch.rank]) * 0.0375f;
-	HealingTouchComputed = (HealingTouchValue[spell_healing_touch.rank] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank));
+	if (HealingTouchLevel[spell_healing_touch.rank-1] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - HealingTouchLevel[spell_healing_touch.rank-1]) * 0.0375f;
+	HealingTouchComputed = (HealingTouchValue[spell_healing_touch.rank-1] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank));
 	SubLevel20PENALTY = 1.0f;
-	if (RejuvenationLevel[spell_rejuvenation.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RejuvenationLevel[spell_rejuvenation.rank]) * 0.0375f;
-	RejuvenationComputed = (RejuvenationValue[spell_rejuvenation.rank] + (bonusHealing * (12.0f/15.0f) * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank)) * (1.0f + (0.05f * ImprovedRejuvenation));
+	if (RejuvenationLevel[spell_rejuvenation.rank-1] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RejuvenationLevel[spell_rejuvenation.rank-1]) * 0.0375f;
+	RejuvenationComputed = (RejuvenationValue[spell_rejuvenation.rank-1] + (bonusHealing * (12.0f/15.0f) * SubLevel20PENALTY)) * (1.0f + (0.02f * GiftOfNatureRank)) * (1.0f + (0.05f * ImprovedRejuvenation));
 }
 
 static void DruidAttack() {

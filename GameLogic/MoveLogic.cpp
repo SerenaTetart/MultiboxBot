@@ -85,13 +85,14 @@ void Game::CorpseRun() {
 		}
 		else {
 			std::cout << localPlayer->corpse_position.ToString() << "\n";
-			Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, localPlayer->corpse_position);
-			if (nextpos.DistanceTo(localPlayer->position) > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
-				ThreadSynchronizer::RunOnMainThread([nextpos]() {
-					localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-					});
-				Moving = MoveTypes::Journey;
-			}
+            if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) ||
+                !Navigation::HasCurrentMovement() ||
+                Navigation::IsCurrentMovementStalled(localPlayer->position)) {
+                Position corpsePosition = localPlayer->corpse_position;
+                ThreadSynchronizer::RunOnMainThread([corpsePosition]() {
+                    Functions::MoveTo(corpsePosition, MoveTypes::Journey);
+                });
+            }
 		}
 	}
 }

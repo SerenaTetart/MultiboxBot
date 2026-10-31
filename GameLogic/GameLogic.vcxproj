@@ -172,6 +172,7 @@
     <ClInclude Include="ListAI.h" />
     <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="Navigation.h" />
+    <ClInclude Include="DangerZoneGeometry.h" />
     <ClInclude Include="rng.h" />
     <ClInclude Include="WoWObject.h" />
   </ItemGroup>
@@ -180,6 +181,7 @@
     <ClCompile Include="BossAI\Gnomeregan.cpp" />
     <ClCompile Include="BossAI\Maraudon.cpp" />
     <ClCompile Include="BossAI\ScarletMonastery.cpp" />
+    <ClCompile Include="BossAI\Uldaman.cpp" />
     <ClCompile Include="Classes\Behavior.cpp" />
     <ClCompile Include="Classes\DruidBalance.cpp" />
     <ClCompile Include="Classes\DruidFeralCat.cpp" />

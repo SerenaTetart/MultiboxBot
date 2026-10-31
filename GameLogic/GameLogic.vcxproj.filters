@@ -45,6 +45,9 @@
     <ClInclude Include="ListAI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DangerZoneGeometry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Navigation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -171,6 +174,9 @@
       <Filter>Source Files\Functions</Filter>
     </ClCompile>
     <ClCompile Include="BossAI\Gnomeregan.cpp">
+      <Filter>Source Files\BossAI</Filter>
+    </ClCompile>
+    <ClCompile Include="BossAI\Uldaman.cpp">
       <Filter>Source Files\BossAI</Filter>
     </ClCompile>
   </ItemGroup>

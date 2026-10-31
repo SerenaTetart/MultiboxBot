@@ -261,6 +261,7 @@ class WoWItem : public WoWObject {
         WoWItem(uintptr_t pointer, unsigned long long guid, ObjectType objectType);
 };
 
+const uintptr_t ENTRYID_OFFSET = 0x0C;
 const uintptr_t TARGET_GUID_OFFSET = 0x40;
 const uintptr_t HEALTH_OFFSET = 0x58;
 const uintptr_t MANA_OFFSET = 0x5C;
