@@ -186,11 +186,38 @@ void Game::MainLoop() {
 				break;
 			}
 
-			if(!Combat && Navigation::HasBlacklists()) Navigation::ClearBlacklists();
 			Functions::ClassifyHeal();
 			Functions::countEnemies(nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, ccTarget);
 
 			Combat = (localPlayer->flags & UNIT_FLAG_IN_COMBAT) == UNIT_FLAG_IN_COMBAT;
+            if (!Combat && Navigation::HasBlacklists()) Navigation::ClearBlacklists();
+            BossAI::UpdateDangerZones();
+            bool lateralRecovering = false;
+            ThreadSynchronizer::RunOnMainThread([&lateralRecovering]() {
+                lateralRecovering = Functions::UpdateLateralRecovery();
+            });
+            if (!lateralRecovering && Moving != MoveTypes::NotMoving && Moving != MoveTypes::Follow &&
+                Moving != MoveTypes::Journey &&
+                !(localPlayer->movement_flags & MOVEFLAG_ROOT) &&
+                Navigation::IsCurrentMovementStalled(localPlayer->position)) {
+                ThreadSynchronizer::RunOnMainThread([]() {
+                    Functions::HandleMovementStall();
+                });
+                ThreadSynchronizer::RunOnMainThread([&lateralRecovering]() {
+                    lateralRecovering = Functions::UpdateLateralRecovery();
+                });
+            }
+
+            if (Moving != MoveTypes::NotMoving && Moving != MoveTypes::Follow &&
+                Moving != MoveTypes::Journey && localPlayer->isMoving &&
+                Navigation::IsCurrentMovementUnsafe(static_cast<unsigned int>(mapID), localPlayer->position)) {
+                ThreadSynchronizer::RunOnMainThread([]() {
+                    ThreadSynchronizer::pressKey(0x28);
+                    ThreadSynchronizer::releaseKey(0x28);
+                });
+                Navigation::ClearMovement();
+                Moving = MoveTypes::NotMoving;
+            }
 
 			IsFacing = false; distTarget = 0; hasTargetAggro = false;
 			if (targetUnit != NULL) {
@@ -217,13 +244,22 @@ void Game::MainLoop() {
 			int RaptorStrikeIDs[8] = {2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266};
 			int HeroicStrikeIDs[9] = { 78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286 };
 			int CleaveIDs[5] = { 845, 7369, 11608, 11609, 20569 };
-			if (breathTimer < 15.0f && breathTimer > 0.0f && (time(0) - jumpCD) >= 1.0f) {
+            bool escapingDanger = false;
+            if (Combat && Moving != MoveTypes::Follow && Moving != MoveTypes::Journey &&
+                Navigation::IsPositionDangerous(static_cast<unsigned int>(mapID), localPlayer->position)) {
+                ThreadSynchronizer::RunOnMainThread([&escapingDanger]() {
+                    escapingDanger = Functions::EscapeDangerZone();
+                });
+            }
+            if (escapingDanger) { }
+            else if (!lateralRecovering && breathTimer < 15.0f && breathTimer > 0.0f && (time(0) - jumpCD) >= 1.0f) {
 				// Breathe quickly !
 				ThreadSynchronizer::pressKey(0x20);
 				ThreadSynchronizer::releaseKey(0x20);
 				jumpCD = time(0);
 			}
 			else if (BossAI::BossAIAction()) { }
+            else if (lateralRecovering) { }
 			else if ((localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
 				ThreadSynchronizer::RunOnMainThread([=]() {
 					los_target = true;
@@ -249,7 +285,7 @@ void Game::MainLoop() {
 				}
 				else if (!passiveGroup && (Moving != MoveTypes::BossMechanic) && (Leader == NULL || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) && (targetUnit != NULL) && targetUnit->attackable && !targetUnit->isdead) {
 					if (localPlayer->movement_flags & MOVEFLAG_ROOT) {
-						Moving == MoveTypes::NotMoving;
+						Moving = MoveTypes::NotMoving;
 						// Nothing to do => face target
 						if (!IsFacing && !localPlayer->isMoving) {
 							ThreadSynchronizer::RunOnMainThread([]() {
@@ -375,7 +411,6 @@ void Game::MainLoop() {
 					else if (Moving != MoveTypes::Journey && Leader != NULL && Leader->Guid != localPlayer->Guid && !(Leader->movement_flags & UNIT_FLAG_TAXI_FLIGHT) && (Leader->position.DistanceTo(localPlayer->position) > 5.0f)) {
 						// Follow
 						Functions::FollowMultibox(positionCircle);
-						Moving = MoveTypes::Follow;
 					}
 				}
 				else if ((localPlayer->movement_flags & MOVEFLAG_FORWARD) && Moving != MoveTypes::MoveLoSAlly && Moving != MoveTypes::Follow && Moving != MoveTypes::NotMoving) {
@@ -390,11 +425,14 @@ void Game::MainLoop() {
 				else if (!localPlayer->isMoving && Moving != MoveTypes::Follow && Moving != MoveTypes::NotMoving && Moving != MoveTypes::MoveLoSAlly) {
 					Moving = MoveTypes::NotMoving;
 				}
-				if (localPlayer->speed > 0 && Moving != MoveTypes::NotMoving && (Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) && (playerLastPos.DistanceTo(localPlayer->position) < 0.5f)) {
-					// Jump
-					ThreadSynchronizer::pressKey(0x20);
-					ThreadSynchronizer::releaseKey(0x20);
-				}
+                if (!lateralRecovering && localPlayer->speed > 0 && Moving != MoveTypes::NotMoving &&
+                    (Leader == NULL || Leader->Guid != localPlayer->Guid || MCAutoMove || Leader->indexGroup != 0) &&
+                    playerLastPos.DistanceTo(localPlayer->position) < 0.5f &&
+                    (time(0) - jumpCD) >= 3) {
+                    ThreadSynchronizer::pressKey(0x20);
+                    ThreadSynchronizer::releaseKey(0x20);
+                    jumpCD = time(0);
+                }
 			}
 			/*end = std::chrono::high_resolution_clock::now();
 			float_ms = end - start;

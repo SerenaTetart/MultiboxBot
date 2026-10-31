@@ -134,14 +134,13 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
 
         mountModelID = *(int*)(descriptor + MOUNT_MODEL_ID_OFFSET);
         isMounted = (travelForm || ((mountModelID != 0) && !(flags & UNIT_FLAG_TAXI_FLIGHT)));
+        entryID = *(uint32_t*)(descriptor + 0x0C);
     }
 
     float x = *(float*)(Pointer + POS_X_OFFSET);
     float y = *(float*)(Pointer + POS_Y_OFFSET);
     float z = *(float*)(Pointer + POS_Z_OFFSET);
     position = Position(x, y, z);
-
-    entryID = ((uint32_t)((guid >> 24) & 0xFFFF));
 
     // Spell Resistances
     const ResistanceFlags flags = GetNPCResistances(entryID);

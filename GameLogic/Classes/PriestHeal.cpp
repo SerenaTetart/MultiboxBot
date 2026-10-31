@@ -23,16 +23,16 @@ static void GetSpellBonusHealing() {
 	SpellSlotData spell_flash_heal = Functions::GetSpellData("Flash Heal");
 	//====================================================//
 	float SubLevel20PENALTY = 1.0f;
-	if (RenewLevel[spell_renew.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RenewLevel[spell_renew.rank]) * 0.0375f;
-	RenewComputed = (RenewValue[spell_renew.rank] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank)) * (1.0f + (0.05f * RenewTalentRank));
+	if (RenewLevel[spell_renew.rank-1] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - RenewLevel[spell_renew.rank-1]) * 0.0375f;
+	RenewComputed = (RenewValue[spell_renew.rank-1] + (bonusHealing * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank)) * (1.0f + (0.05f * RenewTalentRank));
 
-	SubLevel20PENALTY = 1.0f - (20.0f - LesserHealLevel[spell_lesser_heal.rank]) * 0.0375f;
-	LesserHealComputed = (LesserHealValue[spell_lesser_heal.rank] + (bonusHealing * (2.5f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
+	SubLevel20PENALTY = 1.0f - (20.0f - LesserHealLevel[spell_lesser_heal.rank-1]) * 0.0375f;
+	LesserHealComputed = (LesserHealValue[spell_lesser_heal.rank-1] + (bonusHealing * (2.5f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
 	SubLevel20PENALTY = 1.0f;
-	if (HealLevel[spell_heal.rank] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - HealLevel[spell_heal.rank]) * 0.0375f;
-	HealComputed = (HealValue[spell_heal.rank] + (bonusHealing * (3.0f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
-	GreaterHealComputed = (GreaterHealValue[spell_greater_heal.rank] + (bonusHealing * (3.0f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
-	FlashHealComputed = (FlashHealValue[spell_flash_heal.rank] + (bonusHealing * (1.5f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
+	if (HealLevel[spell_heal.rank-1] < 20.0f) SubLevel20PENALTY = 1.0f - (20.0f - HealLevel[spell_heal.rank-1]) * 0.0375f;
+	HealComputed = (HealValue[spell_heal.rank-1] + (bonusHealing * (3.0f / 3.5f) * SubLevel20PENALTY)) * (1.0f + (0.02f * SpiritualHealingRank));
+	GreaterHealComputed = (GreaterHealValue[spell_greater_heal.rank-1] + (bonusHealing * (3.0f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
+	FlashHealComputed = (FlashHealValue[spell_flash_heal.rank-1] + (bonusHealing * (1.5f / 3.5f))) * (1.0f + (0.02f * SpiritualHealingRank));
 }
 
 static void PriestAttack() {

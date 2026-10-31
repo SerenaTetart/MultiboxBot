@@ -21,6 +21,9 @@ class Functions {
 		static bool MoveLoS(Position target_pos);
 		static bool MoveLoSSwim(Position target_pos);
 		static bool StepBack(WoWUnit* target, MoveTypes MoveType, float dist_away=15.0f);
+		static bool EscapeDangerZone();
+        static void HandleMovementStall();
+        static bool UpdateLateralRecovery();
 		static bool MoveObstacle(Position target_pos, bool checkEnemyClose=true);
 		static bool MoveObstacleSwim(Position target_pos, bool checkEnemyClose);
 		static void FollowMultibox(int placement = 0);
