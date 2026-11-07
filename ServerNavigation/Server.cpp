@@ -56,98 +56,86 @@ static float trunc4(float v) {
     return std::trunc(v * 10000.0f) / 10000.0f;
 }
 
+// TCP is a byte stream: commands and responses are newline-delimited.
+static bool SendAllSocket(SOCKET socketHandle, const std::string& response) {
+    size_t sent = 0;
+    while (sent < response.size()) {
+        const int count = send(socketHandle, response.data() + sent,
+            static_cast<int>(response.size() - sent), 0);
+        if (count <= 0) return false;
+        sent += static_cast<size_t>(count);
+    }
+    return true;
+}
+
+static bool HandleCommand(SOCKET csock, const std::string& command) {
+    if (command.empty()) return true;
+    const std::string payload = command.substr(1);
+    if (command[0] == 'C') {
+        Vector3 start_pos{}, end_pos{}, result{};
+        int mapID = 0;
+        if (!parse_two_vec3_and_map(payload, start_pos, end_pos, mapID))
+            return SendAllSocket(csock, "ERROR\n");
+        {
+            std::lock_guard<std::mutex> lock(g_compute_mutex);
+            result = Navigation::ComputePath(mapID, start_pos, end_pos);
+        }
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(4)
+            << trunc4(result.X) << "," << trunc4(result.Y) << "," << trunc4(result.Z) << "\n";
+        return SendAllSocket(csock, oss.str());
+    }
+    if (command[0] == 'B') {
+        unsigned int mapID = 0, type = 0;
+        std::string name;
+        Vector3 position{};
+        float radius = 0.0f;
+        if (!parse_add_blacklist(payload, mapID, name, position, radius, type))
+            return SendAllSocket(csock, "ERROR\n");
+        {
+            std::lock_guard<std::mutex> lock(g_compute_mutex);
+            Navigation::AddBlackList(mapID, name, position, radius, type);
+        }
+        return SendAllSocket(csock, "OK\n");
+    }
+    if (command[0] == 'R') {
+        std::string name;
+        if (!parse_remove_blacklist(payload, name))
+            return SendAllSocket(csock, "ERROR\n");
+        {
+            std::lock_guard<std::mutex> lock(g_compute_mutex);
+            Navigation::RemoveFromBlacklist(name);
+        }
+        return SendAllSocket(csock, "OK\n");
+    }
+    return SendAllSocket(csock, "ERROR\n");
+}
+
 static void handle_client(SOCKET csock, sockaddr_in caddr) {
     char ip[INET_ADDRSTRLEN]{};
     InetNtopA(AF_INET, &caddr.sin_addr, ip, sizeof(ip));
     std::printf("ServerNavigation: [+] Client %s:%u connected\n", ip, ntohs(caddr.sin_port));
 
-    while (true) {
-        char buffer[128];
-        int r = recv(csock, buffer, sizeof(buffer), 0);
-
-        if (r == 0) break;
-        if (r == SOCKET_ERROR) {
-            int err = WSAGetLastError();
-            if (err == WSAETIMEDOUT) continue;
-            break;
+    std::string pending;
+    char buffer[1024];
+    bool running = true;
+    while (running) {
+        const int count = recv(csock, buffer, sizeof(buffer), 0);
+        if (count <= 0) break;
+        pending.append(buffer, static_cast<size_t>(count));
+        if (pending.size() > 4096) break;
+        size_t newline;
+        while ((newline = pending.find('\n')) != std::string::npos) {
+            std::string command = pending.substr(0, newline);
+            pending.erase(0, newline + 1);
+            if (!command.empty() && command.back() == '\r') command.pop_back();
+            if (!HandleCommand(csock, command)) {
+                running = false;
+                break;
+            }
         }
-        if (r < 2) continue;
-
-        if (buffer[0] == 'C') {
-            std::string payload(buffer + 1, buffer + r);
-
-            Vector3 start_pos{}, end_pos{}, result{};
-            int mapID;
-
-            if (!parse_two_vec3_and_map(payload, start_pos, end_pos, mapID)) {
-                result = start_pos;
-            }
-            else {
-                std::lock_guard<std::mutex> lock(g_compute_mutex);
-
-                result = Navigation::ComputePath(mapID, start_pos, end_pos);
-            }
-
-            std::ostringstream oss;
-
-            oss << std::fixed
-                << std::setprecision(4)
-                << trunc4(result.X) << ","
-                << trunc4(result.Y) << ","
-                << trunc4(result.Z);
-
-            auto out = oss.str();
-
-            send(csock, out.c_str(), static_cast<int>(out.size()), 0);
-        }
-        else if (buffer[0] == 'B') {
-            std::string payload(buffer + 1, buffer + r);
-
-            unsigned int mapID = 0;
-            unsigned int type = 0;
-
-            std::string name;
-            Vector3 position{};
-
-            float radius = 0.0f;
-
-            if (!parse_add_blacklist(payload, mapID, name, position, radius, type)) {
-                const char* response = "ERROR";
-                send(csock, response, static_cast<int>(std::strlen(response)), 0);
-                continue;
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(g_compute_mutex);
-                Navigation::AddBlackList(mapID, name, position, radius, type);
-            }
-
-            const char* response = "OK";
-
-            send(csock, response, static_cast<int>(std::strlen(response)), 0);
-        }
-        else if (buffer[0] == 'R') {
-            std::string payload(buffer + 1, buffer + r);
-            std::string name;
-
-            if (!parse_remove_blacklist(payload, name)) {
-                const char* response = "ERROR";
-                send(csock, response, static_cast<int>(std::strlen(response)), 0);
-                continue;
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(g_compute_mutex);
-                Navigation::RemoveFromBlacklist(name);
-            }
-
-            const char* response = "OK";
-            send(csock, response, static_cast<int>(std::strlen(response)), 0);
-        }
-        else continue;
     }
-
-    ::closesocket(csock);
+    closesocket(csock);
     std::printf("ServerNavigation: [-] Client %s:%u disconnected\n", ip, ntohs(caddr.sin_port));
 }
 

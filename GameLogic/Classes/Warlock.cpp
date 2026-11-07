@@ -101,6 +101,9 @@ void ListAI::WarlockDps() {
 				bool targetPlayer = targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED;
 				int nbrSoulShard = FunctionsLua::GetItemCount(6265);
 				int nbrAggro = HasAggro[0].size();
+				const auto dismissPetForInferno = [hasPet]() {
+					if (hasPet) Functions::LuaCall("PetDismiss()");
+				};
 				int CoTonguesIDs[2] = { 1714, 11719 }; bool CoTonguesDebuff = targetUnit->hasDebuff(CoTonguesIDs, 2);
 				int CoShadowIDs[2] = { 17862, 17937 }; bool CoShadowDebuff = targetUnit->hasDebuff(CoShadowIDs, 2);
 				int CoAgonyIDs[6] = { 980, 1014, 6217, 11711, 11712, 11713 }; bool CoAgonyDebuff = targetUnit->hasDebuff(CoAgonyIDs, 6);
@@ -108,9 +111,6 @@ void ListAI::WarlockDps() {
 				int CorruptionIDs[7] = { 172, 6222, 6223, 7648, 11671, 11672, 25311 }; bool CorruptionDebuff = targetUnit->hasDebuff(CorruptionIDs, 7);
 				int SiphonLifeIDs[4] = { 18265, 18879, 18880, 18881 }; bool SiphonLifeDebuff = targetUnit->hasDebuff(SiphonLifeIDs, 4);
 				int ImmolateIDs[8] = { 348, 707, 1094, 2941, 11665, 11667, 11668, 25309 }; bool ImmolateDebuff = targetUnit->hasDebuff(ImmolateIDs, 8);
-				//Specific for Rain of Fire cast:
-				Position cluster_center = Position(0, 0, 0); int cluster_unit;
-				std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
 				if (targetUnit->isInCombatOrEncounter() && hasPet) {
 					Functions::LuaCall("PetAttack()");
 				}
@@ -137,27 +137,27 @@ void ListAI::WarlockDps() {
 					FunctionsLua::CastSpellByName("Fear");
 					if (localPlayer->isCasting()) FearTimer = time(0);
 				}
-				else if (!localPlayer->isMoving && targetPlayer && (targetUnit->level >= localPlayer->level-10) && !targetUnit->isCrowdControlled() && Functions::IsSpellReady("Inferno")) {
-					//Inferno (PvP)
-					if (hasPet) Functions::LuaCall("PetDismiss()");
-					FunctionsLua::CastSpellByName("Inferno");
-					Functions::ClickAOE(targetUnit->position);
-				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && Functions::IsSpellReady("Inferno")) {
-					//Inferno (AoE)
-					if (hasPet) Functions::LuaCall("PetDismiss()");
-					FunctionsLua::CastSpellByName("Inferno");
-					Functions::ClickAOE(cluster_center);
-				}
+				//Inferno (PvP)
+				else if (targetPlayer &&
+					localPlayer->position.DistanceTo(targetUnit->position) <= 12.5f &&
+					targetUnit->level >= localPlayer->level - 10 &&
+					!targetUnit->isCrowdControlled() &&
+					Functions::IsSpellReady("Inferno") &&
+					Functions::TryGroundTargetAOE("Inferno", 25.0f, 30.0f,
+						&targetUnit->position, dismissPetForInferno)) { }
+				//Inferno (AoE)
+				else if (Functions::IsSpellReady("Inferno") &&
+					Functions::TryGroundTargetAOE("Inferno", 25.0f, 30.0f,
+						nullptr, dismissPetForInferno)) { }
 				else if (!localPlayer->isMoving && (localPlayer->prctHP > 70.0f) && !targetUnit->resist(SpellSchool::Fire) && (nbrCloseEnemy >= 4) && Functions::IsSpellReady("Hellfire")) {
 					//Hellfire
 					FunctionsLua::CastSpellByName("Hellfire");
 				}
-				else if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Fire) && (cluster_unit >= 4) && Functions::IsSpellReady("Rain of Fire")) {
-					//Rain of Fire
-					FunctionsLua::CastSpellByName("Rain of Fire");
-					Functions::ClickAOE(cluster_center);
-				}
+				//Specific for Rain of Fire cast:
+				//Rain of Fire
+				else if (!targetUnit->resist(SpellSchool::Fire) &&
+					Functions::IsSpellReady("Rain of Fire") &&
+					Functions::TryGroundTargetAOE("Rain of Fire", 25.0f, 30.0f)) { }
 				else if (!CoShadowDebuff && (targetUnit->level == -1) && (targetUnit->getNbrDebuff() < 16) && (time(0) - CurseGCD) >= 10.0f && Functions::IsSpellReady("Curse of Shadow")) {
 					//Curse of Shadow (Boss)
 					FunctionsLua::CastSpellByName("Curse of Shadow");

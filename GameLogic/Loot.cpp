@@ -151,13 +151,14 @@ bool Game::Loot() {
 }
 
 bool Game::Trade() {
+    const auto leaderSnapshot = GetLeaderInfosSnapshot();
 	// Trade
 	bool traded = false;
 	for (int y = 1; y <= NumGroupMembers; y++) {
-		for (unsigned int i = 0; i < leaderInfos.size(); i++) {
+		for (unsigned int i = 0; i < leaderSnapshot.size(); i++) {
 			if (GroupMember[y] != NULL &&
 				GroupMember[y]->position.DistanceTo(localPlayer->position) < 8.0f &&
-				GroupMember[y]->name == get<0>(leaderInfos[i])
+				GroupMember[y]->name == get<0>(leaderSnapshot[i])
 			) {
 				if (i == 0) {
 					// Quest Items
@@ -174,7 +175,7 @@ bool Game::Trade() {
 						}
 					}
 				}
-				if ((get<2>(leaderInfos[i]) == 4 || get<3>(leaderInfos[i]) == 4)) {
+				if ((get<2>(leaderSnapshot[i]) == 4 || get<3>(leaderSnapshot[i]) == 4)) {
 					// Tailoring
 					int listID[] = { 2589, 2592, 3182, 4306, 4337, 4338, 10285, 14047, 14227, 14256 };
 					for (const auto& item : virtualInventory) {
@@ -189,7 +190,7 @@ bool Game::Trade() {
 						}
 					}
 				}
-				if ((get<2>(leaderInfos[i]) == 5 || get<3>(leaderInfos[i]) == 5)) {
+				if ((get<2>(leaderSnapshot[i]) == 5 || get<3>(leaderSnapshot[i]) == 5)) {
 					// Leatherworking
 					int listID[] = { 783, 2318, 2319, 2934, 4232, 4234, 4235, 4304, 7392, 7428, 8154, 8165, 8167, 8368, 8169 };
 					for (const auto& item : virtualInventory) {
@@ -204,7 +205,7 @@ bool Game::Trade() {
 						}
 					}
 				}
-				if ((get<2>(leaderInfos[i]) == 6 || get<3>(leaderInfos[i]) == 6)) {
+				if ((get<2>(leaderSnapshot[i]) == 6 || get<3>(leaderSnapshot[i]) == 6)) {
 					// Blacksmithing
 					int listID[] = { 2770, 2771, 2772, 2775, 2776, 2835, 2836, 2838, 3858, 7912, 10620, 11370 };
 					for (const auto& item : virtualInventory) {
@@ -219,7 +220,7 @@ bool Game::Trade() {
 						}
 					}
 				}
-				if ((get<2>(leaderInfos[i]) == 8 || get<3>(leaderInfos[i]) == 8)) {
+				if ((get<2>(leaderSnapshot[i]) == 8 || get<3>(leaderSnapshot[i]) == 8)) {
 					// Alchemy
 					int listID[] = { 765, 785, 2447, 2449, 2450, 2452, 2453, 3355, 3356, 3357, 3358, 3369, 3818, 3819, 3820, 3821, 4625, 8831, 8836, 8838, 8839, 8845 };
 					for (const auto& item : virtualInventory) {

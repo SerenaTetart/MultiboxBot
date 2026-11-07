@@ -79,6 +79,7 @@ int Functions::GetPositionCircle() {
 }
 
 void Functions::EnumerateVisibleObjects(int filter) {
+    const auto leaderSnapshot = Game::GetLeaderInfosSnapshot();
 	for (int i = 0; i < 40; i++) {
 		GroupMember[i] = NULL;
 	}
@@ -114,9 +115,9 @@ void Functions::EnumerateVisibleObjects(int filter) {
 			continue;
 		}
 
-		for (unsigned int y = 0; y < leaderInfos.size(); y++) {
-			if (ListUnits[i].name == get<0>(leaderInfos[y])) {
-				ListUnits[i].role = get<1>(leaderInfos[y]);
+		for (unsigned int y = 0; y < leaderSnapshot.size(); y++) {
+			if (ListUnits[i].name == get<0>(leaderSnapshot[y])) {
+				ListUnits[i].role = get<1>(leaderSnapshot[y]);
 				ListUnits[i].indexGroup = y;
 				break;
 			}
@@ -185,9 +186,10 @@ int Functions::Callback(unsigned long long guid, int filter) {
 			WoWUnit unit = WoWUnit(pointer, guid, objectType);
 			ListUnits.push_back(unit);
 			if (objectType == Player) {
-				for (unsigned int y = 0; y < leaderInfos.size(); y++) {
-					if (unit.name == get<0>(leaderInfos[y])) {
-						ListUnits.back().role = get<1>(leaderInfos[y]);
+                const auto leaderSnapshot = Game::GetLeaderInfosSnapshot();
+				for (unsigned int y = 0; y < leaderSnapshot.size(); y++) {
+					if (unit.name == get<0>(leaderSnapshot[y])) {
+						ListUnits.back().role = get<1>(leaderSnapshot[y]);
 						ListUnits.back().indexGroup = y;
 						break;
 					}
@@ -409,7 +411,6 @@ WoWUnit* Functions::GetMissingBuff(int* IDs, int size, int hasmana, int noTank) 
 //======================   Non-memory Functions   ======================//
 //======================================================================//
 //(They don't use Lua calls and memory pointers)
-
 void Functions::ClassifyHeal() {
 	//Heal all friendly players or NPC within 60 yards
     HealTargetArray.clear();
@@ -441,79 +442,118 @@ void Functions::ClassifyHeal() {
     }
 }
 
-Position meanPos(const std::vector<Position>& posArr) {
-	Position clusterCenter = Position(0, 0, 0);
-	for (unsigned int i = 0; i < posArr.size(); i++) {
-		clusterCenter.X = clusterCenter.X + posArr[i].X;
-		clusterCenter.Y = clusterCenter.Y + posArr[i].Y;
-		clusterCenter.Z = clusterCenter.Z + posArr[i].Z;
-	}
-	clusterCenter.X = clusterCenter.X / posArr.size();
-	clusterCenter.Y = clusterCenter.Y / posArr.size();
-	clusterCenter.Z = clusterCenter.Z / posArr.size();
-	return clusterCenter;
+// Notes de l'ancienne implementation du regroupement AoE (conservees pour reference) :
+//Execution: ~0.05ms
+//Hierarchical Clustering implementation to find position
+//1- Chaque position est un cluster
+//2- On rassemble les clusters les + proche et distance < range/2
+//On ajoute les positions du cluster_min2 dans cluster_min1
+//On d�truit les valeurs du cluster_min2
+//3- On choisit le cluster avec le plus d'unites
+std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_range, const Position* fixedCenter) {
+    if (!localPlayer || diameter <= 0.0f || max_range <= 0.0f)
+        return { Position(0, 0, 0), 0 };
+
+    const float radius = diameter * 0.5f;
+    std::vector<Position> enemies;
+    enemies.reserve(ListUnits.size());
+    for (auto& unit : ListUnits) {
+        if (unit.isdead || !unit.attackable || unit.isFromGroup ||
+            (unit.flags & UNIT_FLAG_POSSESSED) || (unit.flags & UNIT_FLAG_CONFUSED) ||
+            unit.speed > 4.5f ||
+            (!unit.isInCombatOrEncounter() && unit.creatureType != Totem &&
+                unit.createdBy == 0 && !(unit.flags & UNIT_FLAG_PLAYER_CONTROLLED)) ||
+            (unit.unitReaction >= Neutral && !FactionTemplate.isNeutral(unit.factionTemplateID)) ||
+            localPlayer->position.DistanceTo2D(unit.position) > max_range + radius)
+            continue;
+        enemies.push_back(unit.position);
+    }
+
+    if (enemies.size() < 4) return { fixedCenter ? *fixedCenter : Position(0, 0, 0), 0 };
+
+    Position best(0, 0, 0);
+    int bestCount = 0;
+    const float radiusSq = radius * radius;
+    const auto countAt = [&](const Position& center) {
+        if (localPlayer->position.DistanceTo(center) >= max_range) return 0;
+        int count = 0;
+        for (const auto& enemy : enemies) {
+            const float dx = center.X - enemy.X;
+            const float dy = center.Y - enemy.Y;
+            if (dx * dx + dy * dy <= radiusSq && std::abs(center.Z - enemy.Z) < 6.0f)
+                ++count;
+        }
+        return count;
+    };
+    if (fixedCenter) return { *fixedCenter, countAt(*fixedCenter) };
+    for (const auto& seed : enemies) {
+        int count = countAt(seed);
+        if (count > bestCount) {
+            best = seed;
+            bestCount = count;
+        }
+
+        Position center(0, 0, 0);
+        int neighbors = 0;
+        for (const auto& enemy : enemies) {
+            const float dx = seed.X - enemy.X;
+            const float dy = seed.Y - enemy.Y;
+            if (dx * dx + dy * dy <= diameter * diameter &&
+                std::abs(seed.Z - enemy.Z) < 6.0f) {
+                center.X += enemy.X;
+                center.Y += enemy.Y;
+                center.Z += enemy.Z;
+                ++neighbors;
+            }
+        }
+        if (neighbors < 2) continue;
+        center.X /= neighbors;
+        center.Y /= neighbors;
+        center.Z /= neighbors;
+        count = countAt(center);
+        if (count > bestCount) {
+            best = center;
+            bestCount = count;
+        }
+    }
+    return { best, bestCount };
 }
 
-std::tuple<Position, int> Functions::getAOETargetPos(float diameter, float max_range) {
-	//Execution: ~0.05ms
-	//Hierarchical Clustering implementation to find position
-	std::vector<std::vector<Position>> clustersArr;
-	std::vector<Position> clusters_center;
-	//1- Chaque position est un cluster
-	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if ((ListUnits[i].isInCombatOrEncounter() || ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)
-			&& ListUnits[i].attackable && !(ListUnits[i].flags & UNIT_FLAG_POSSESSED)
-			&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
-			&& ListUnits[i].speed <= 4.5f && !(ListUnits[i].flags & UNIT_FLAG_CONFUSED)
-			&& ListUnits[i].creatureType != Totem) {
-			std::vector<Position> cluster;
-			cluster.push_back(ListUnits[i].position);
-			clustersArr.push_back(cluster);
-			clusters_center.push_back(ListUnits[i].position);
-		}
-	}
-	if (clusters_center.size() > 0) {
-		//2- On rassemble les clusters les + proche et distance < range/2
-		int min_cluster1, min_cluster2;
-		do {
-			float distMin = INFINITY;
-			min_cluster1 = 0; min_cluster2 = 0;
-			for (unsigned int i = 0; i < clustersArr.size(); i++) {
-				for (unsigned int y = 0; y < clustersArr.size(); y++) {
-					if (i != y) {
-						float distCluster = clusters_center[i].DistanceTo(clusters_center[y]);
-						if (distCluster < distMin && distCluster < (diameter / 2)) {
-							distMin = distCluster;
-							min_cluster1 = i;
-							min_cluster2 = y;
-						}
-					}
-				}
-			}
-			if (min_cluster1 != 0 || min_cluster2 != 0) {
-				//On ajoute les positions du cluster_min2 dans cluster_min1
-				for (unsigned int i = 0; i < clustersArr[min_cluster2].size(); i++) {
-					clustersArr[min_cluster1].push_back(clustersArr[min_cluster2][i]);
-				}
-				clusters_center[min_cluster1] = meanPos(clustersArr[min_cluster1]);
-				//On d�truit les valeurs du cluster_min2
-				clustersArr.erase(clustersArr.begin() + min_cluster2);
-				clusters_center.erase(clusters_center.begin() + min_cluster2);
-			}
-		} while (min_cluster1 != 0 || min_cluster2 != 0);
-		//3- On choisit le cluster avec le plus d'unites
-		unsigned int max_cluster_unit = 0; int index = 0;
-		for (unsigned int i = 0; i < clustersArr.size(); i++) {
-			if (clustersArr[i].size() > max_cluster_unit && clusters_center[i].DistanceTo(localPlayer->position) < max_range) {
-				max_cluster_unit = clustersArr[i].size();
-				index = i;
-			}
-		}
-		
-		if (max_cluster_unit == 0) return std::make_tuple(Position(0, 0, 0), 0);
-		else return std::make_tuple(clusters_center[index], max_cluster_unit);
-	}
-	else return std::make_tuple(Position(0, 0, 0), 0);
+
+bool Functions::TryGroundTargetAOE(const char* spell, float diameter, float maxRange,
+    const Position* fixedCenter, const std::function<void()>& beforeCast) {
+    if (!localPlayer || !targetUnit || !Combat || !los_target ||
+        Moving == MoveTypes::BossMechanic || Moving == MoveTypes::RunAway)
+        return false;
+
+    Position center;
+    if (fixedCenter) {
+        if (localPlayer->position.DistanceTo(*fixedCenter) >= maxRange)
+            return false;
+        center = *fixedCenter;
+    } else {
+        const auto [candidate, count] = getAOETargetPos(diameter, maxRange);
+        if (count < 4) return false;
+        center = candidate;
+    }
+
+    if (Intersect(localPlayer->position, center)) {
+        MoveToLoS(center, MoveTypes::MoveLoSAoE,
+            (targetUnit->movement_flags & MOVEFLAG_SWIMMING) != 0);
+        groundAoERepositionRequested = Moving == MoveTypes::MoveLoSAoE;
+        return groundAoERepositionRequested;
+    }
+
+    if (Moving == MoveTypes::MoveLoSAoE) {
+        StopMovement();
+        return true;
+    }
+    if (localPlayer->isMoving) return false;
+
+    if (beforeCast) beforeCast();
+    FunctionsLua::CastSpellByName(spell);
+    ClickAOE(center);
+    return true;
 }
 
 void Functions::countEnemies(int& nbr, int& nbrClose, int& nbrCloseFacing, int& nbrEnemyPlayer, WoWUnit* enemyCC) {
@@ -546,15 +586,17 @@ void Functions::countEnemies(int& nbr, int& nbrClose, int& nbrCloseFacing, int& 
 	}
 }
 
-bool Functions::enemyClose(Position pos) {
+bool Functions::enemyClose(Position pos, bool requireLineOfSight) {
 	//Check if there are any enemy close to position
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		int level_difference = ListUnits[i].level - localPlayer->level;
+		// The movement-only LoS check is last to avoid unnecessary raycasts.
 		if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
 			&& !ListUnits[i].isInCombatOrEncounter() && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
-			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead && ListUnits[i].creatureType != Totem
+			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead && ListUnits[i].creatureType != Totem && ListUnits[i].createdBy == 0
 			&& (ListUnits[i].position.DistanceTo(pos) < (21.0f + (level_difference * 1.0f)))
-			&& (abs(ListUnits[i].position.Z - pos.Z) < 20.0f)) {
+			&& (std::abs(ListUnits[i].position.Z - pos.Z) < 20.0f)
+			&& (!requireLineOfSight || !Functions::Intersect(ListUnits[i].position, pos))) {
 			return true;
 		}
 	}
@@ -603,19 +645,21 @@ WoWUnit* Functions::GetGroupDead(int mode) {
 }
 
 WoWUnit* Functions::GetLeader() {
+	if (localPlayer == NULL) return NULL;
 	// Return only the first account
-	if (localPlayer == NULL || leaderInfos.size() <= 1) return NULL;
+    const auto leaderSnapshot = Game::GetLeaderInfosSnapshot();
+    if (leaderSnapshot.size() <= 1) return NULL;
 	for (unsigned int z = 0; z < ListUnits.size(); z++) {
-		if (ListUnits[z].name == get<0>(leaderInfos[0])) {
+		if (ListUnits[z].name == get<0>(leaderSnapshot[0])) {
 			if (FactionTemplate.AreSameFaction(ListUnits[z].factionTemplateID, localPlayer->factionTemplateID)) return &(ListUnits[z]);
 			else break;
 		}
 	}
 	for (unsigned int y = 0; y <= 3; y++) {
-		for (unsigned int i = 1; i < leaderInfos.size(); i++) {
-			if (get<1>(leaderInfos[i]) == y) {
+		for (unsigned int i = 1; i < leaderSnapshot.size(); i++) {
+			if (get<1>(leaderSnapshot[i]) == y) {
 				for (unsigned int z = 0; z < ListUnits.size(); z++) {
-					if (FactionTemplate.AreSameFaction(ListUnits[z].factionTemplateID, localPlayer->factionTemplateID) && ListUnits[z].name == get<0>(leaderInfos[i])) {
+					if (FactionTemplate.AreSameFaction(ListUnits[z].factionTemplateID, localPlayer->factionTemplateID) && ListUnits[z].name == get<0>(leaderSnapshot[i])) {
 						return &(ListUnits[z]);
 					}
 				}

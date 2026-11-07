@@ -30,7 +30,7 @@ std::string Position::ToString() {
     return txt;
 }
 
-float Position::DistanceTo(Position position) {
+float Position::DistanceTo(const Position& position) const {
     float deltaX = X - position.X;
     float deltaY = Y - position.Y;
     float deltaZ = Z - position.Z;
@@ -38,7 +38,7 @@ float Position::DistanceTo(Position position) {
     return std::sqrt((deltaX * deltaX) + (deltaY * deltaY) + (deltaZ * deltaZ));
 }
 
-float Position::DistanceTo2D(Position position) {
+float Position::DistanceTo2D(const Position& position) const {
     float deltaX = X - position.X;
     float deltaY = Y - position.Y;
 
@@ -46,7 +46,6 @@ float Position::DistanceTo2D(Position position) {
 }
 
 /* === Object === */
-
 WoWObject::WoWObject(uintptr_t pointer, unsigned long long guid, ObjectType objType) {
     Guid = guid;
     Pointer = pointer;
@@ -59,7 +58,6 @@ uintptr_t WoWObject::GetDescriptorPtr(uintptr_t pointer) {
 }
 
 /* === Unit === */
-
 WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType) : WoWObject(pointer, guid, objType) {
     uintptr_t descriptor = WoWObject::GetDescriptorPtr(pointer);
     movement_flags = *(MovementFlags*)(Pointer + MOVEMENT_FLAG_OFFSET);
@@ -144,7 +142,7 @@ WoWUnit::WoWUnit(uintptr_t pointer, unsigned long long guid, ObjectType objType)
 
     // Spell Resistances
     const ResistanceFlags flags = GetNPCResistances(entryID);
-        
+
     resist(SpellSchool::Fire) = HasResistance(flags, ResistanceFlags::Fire);
     resist(SpellSchool::Frost) = HasResistance(flags, ResistanceFlags::Frost);
     resist(SpellSchool::Nature) = HasResistance(flags, ResistanceFlags::Nature);
@@ -260,7 +258,6 @@ bool WoWUnit::isElite() {
 }
 
 /* === Local Player === */
-
 int GetSpellModifierFromSpellId(int spellId) {
     static const std::unordered_map<int, int> ModifierBySpell = {
         // Healing + Damage mod
@@ -316,10 +313,11 @@ LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType 
             uintptr_t cacheEntryPTR = GetItemCacheEntry((uintptr_t)0x00C0E2A0, itemID, (uintptr_t)0x0, 0, 0, (char)0);
 
             if (cacheEntryPTR != NULL) {
-                //name = (char*)(*(uintptr_t*)(cacheEntryPTR + 0x8));
 
+                //name = (char*)(*(uintptr_t*)(cacheEntryPTR + 0x8));
                 int equipSlot = *(int*)(cacheEntryPTR + 0x2C);
                 if (equipSlot > 0) {
+
                     /*int intellect = *(int*)(cacheEntryPTR + 0x90);
                     int spirit = *(int*)(cacheEntryPTR + 0x94);
                     int stamina = *(int*)(cacheEntryPTR + 0x98);
@@ -344,8 +342,8 @@ LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType 
     float y = *(float*)(PLAYER_CORPSE_POSITION_Y);
     float z = *(float*)(PLAYER_CORPSE_POSITION_Z);
     corpse_position = Position(x, y, z);
-    zoneID = *(int*)(ZONE_ID_OFFSET);
     //std::cout << "corpse pos: " << corpse_position.X << ", " << corpse_position.Y << ", " << corpse_position.Z << "\n";
+    zoneID = *(int*)(ZONE_ID_OFFSET);
 }
 
 void LocalPlayer::ClickToMove(ClickType clickType, unsigned long long interactGuid, Position pos) {
@@ -401,7 +399,6 @@ bool LocalPlayer::isCasting(int* IDs, int size) {
 }
 
 /* === Gameobject === */
-
 WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectType objType) : WoWObject(pointer, guid, objType) {
     uintptr_t descriptor = 0x2a0;
     float x = *(float*)(Pointer + descriptor + 0x24);
@@ -411,7 +408,7 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
     facing = *(float*)(Pointer + 0x30);
     displayID = *(int*)((char*)Pointer  + descriptor + 0x8);
     level = 0; gatherType = 0;
-        // === Mining === //
+    // === Mining === //
     if (displayID == 310) { level = 1; gatherType = 1; } // Copper
     else if (displayID == 315) { level = 65; gatherType = 1; } // Tin
     else if (displayID == 312) { level = 125; gatherType = 1; } // Iron
@@ -422,7 +419,7 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
     else if (displayID == 3951) { level = 245; gatherType = 1; } // Thorium
     else if (displayID == 3952) { level = 275; gatherType = 1; } // Rich Thorium
     else if (displayID == 6650) { level = 305; gatherType = 1; } // Obsidian
-        // === Herbalism === //
+    // === Herbalism === //
     else if (displayID == 269) { level = 1; gatherType = 2; }
     else if (displayID == 270) { level = 1; gatherType = 2; }
     else if (displayID == 414) { level = 15; gatherType = 2; }
@@ -455,7 +452,6 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
 }
 
 /* === Items === */
-
 WoWItem::WoWItem(uintptr_t pointer, unsigned long long guid, ObjectType objType) : WoWObject(pointer, guid, objType) {
     //itemID = *(int*)(pointer + 0x354);
 }

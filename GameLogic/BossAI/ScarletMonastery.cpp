@@ -7,17 +7,21 @@ bool BossAI::ScarletMonastery() {
 		if (!unit.isInCombatOrEncounter()) continue;
 		else if (unit.entryID == 6487) {
 			// Arcanist Doan
-			ThreadSynchronizer::RunOnMainThread([]() {
+			const Position safePosition(182.921417f, -429.258118f, 18.532364f);
+			ThreadSynchronizer::RunOnMainThread([safePosition]() {
 				const char* last_yell = (const char*)Functions::GetText("last_yell_monster");
 				bool BigAoE = last_yell && std::strcmp(last_yell, "Burn in righteous fire!") == 0;
 				if (BigAoE) {
 					mechanicTimer = time(0);
 					Functions::LuaCall("last_yell_monster = ''");
 				}
+				if ((time(0) - mechanicTimer) < 6 && localPlayer &&
+					(localPlayer->role == 0 || localPlayer->position.DistanceTo(safePosition) <= 5.0f) &&
+					!localPlayer->isMoving && targetUnit && !IsFacing)
+					localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 			});
 			if ((float)(time(0) - mechanicTimer) < 6.0f) {
 				// Burn in righteous fire! -> Run away (except tank -> avoid bad positioning)
-				Position safePosition = Position(182.921417f, -429.258118f, 18.532364f);
 				if (localPlayer->role != 0 && localPlayer->position.DistanceTo(safePosition) > 5.0f) {
 					ThreadSynchronizer::RunOnMainThread([safePosition]() {
 						Functions::MoveToFast(safePosition, MoveTypes::BossMechanic);
@@ -26,7 +30,6 @@ bool BossAI::ScarletMonastery() {
 				}
 				else {
 					// Stop Attacking
-					if (!localPlayer->isMoving && targetUnit != NULL && !IsFacing) localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 					return true;
 				}
 			} else if (localPlayer->role == 0 && unit.targetGuid == localPlayer->Guid) {
@@ -48,13 +51,18 @@ bool BossAI::ScarletMonastery() {
 				Position(1983.241699f, -431.547333f, 11.272270f),
 				Position(1966.446167f, -450.624084f, 11.272270f)
 			};
-			ThreadSynchronizer::RunOnMainThread([]() {
+			const Position enemyPosition = unit.position;
+			ThreadSynchronizer::RunOnMainThread([enemyPosition]() {
 				const char* last_yell = (const char*)Functions::GetText("last_yell_monster");
 				bool Whirlwind = last_yell && std::strcmp(last_yell, "Blades of light!") == 0;
 				if (Whirlwind) {
 					mechanicTimer = time(0);
 					Functions::LuaCall("last_yell_monster = ''");
 				}
+				if ((time(0) - mechanicTimer) < 10 && localPlayer &&
+					localPlayer->position.DistanceTo(enemyPosition) >= 15.0f &&
+					!localPlayer->isMoving && targetUnit && !IsFacing)
+					localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 			});
 			if ((float)(time(0) - mechanicTimer) < 10.0f) {
 				// Whirlwind !
@@ -75,7 +83,6 @@ bool BossAI::ScarletMonastery() {
 				}
 				else {
 					// Stop Attacking
-					if (!localPlayer->isMoving && targetUnit != NULL && !IsFacing) localPlayer->ClickToMove(FaceTarget, targetUnit->Guid, targetUnit->position);
 					return true;
 				}
 			}

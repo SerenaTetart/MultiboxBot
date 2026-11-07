@@ -28,6 +28,7 @@ struct DbcHeader
 class FactionTemplateDBC {
 public:
     explicit FactionTemplateDBC(const std::string& path) { load(path); }
+    static std::string GetModulePath();
     const FactionTemplateEntry* Get(uint32_t id) const;
     bool isNeutral(uint32_t ID);
     bool IsAlliance(uint32_t factionTemplateId);
@@ -38,7 +39,6 @@ private:
     const std::unordered_map<uint32_t, FactionTemplateEntry>& All() const { return byId; }
     static uint32_t readU32(const char* p);
     void load(const std::string& path);
-    std::string GetModulePath();
 };
 
 extern FactionTemplateDBC FactionTemplate;

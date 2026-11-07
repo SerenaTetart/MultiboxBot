@@ -3,6 +3,7 @@
 #include <vector>
 #include <tuple>
 #include <cstring>
+#include <mutex>
 #include <winsock2.h>
 #include <windows.h>
 
@@ -70,11 +71,19 @@ void Client::recvMessage() {
         unsigned int str_length = static_cast<unsigned int>((buffer[8] - '0') * 10 + (buffer[9] - '0'));
         unsigned int skill = static_cast<unsigned int>(buffer[10] - '0');
 
-        if (11 + static_cast<int>(str_length) > len) {
+        if (index > 1 || id >= 40 ||
+            buffer[5] < '0' || buffer[5] > '9' ||
+            buffer[6] < '0' || buffer[6] > '9' ||
+            buffer[7] < '0' || buffer[7] > '9' ||
+            buffer[8] < '0' || buffer[8] > '9' ||
+            buffer[9] < '0' || buffer[9] > '9' ||
+            buffer[10] < '0' || buffer[10] > '9' ||
+            11 + static_cast<int>(str_length) > len) {
             return;
         }
 
         std::string playerName = subStringSafe(buffer, 11, 11 + static_cast<int>(str_length));
+        std::lock_guard<std::mutex> lock(leaderInfosMutex);
 
         if (leaderInfos.size() < id + 1) {
             while (leaderInfos.size() < id) {
@@ -117,11 +126,17 @@ void Client::recvMessage() {
         unsigned int id = static_cast<unsigned int>((buffer[6] - '0') * 10 + (buffer[7] - '0'));
         int str_length = (buffer[9] - '0') * 10 + (buffer[10] - '0');
 
-        if (12 + str_length > len) {
+        if (buffer[4] < '0' || buffer[4] > '9' ||
+            buffer[6] < '0' || buffer[6] > '9' ||
+            buffer[7] < '0' || buffer[7] > '9' ||
+            buffer[9] < '0' || buffer[9] > '9' ||
+            buffer[10] < '0' || buffer[10] > '9' ||
+            id >= 40 || 12 + str_length > len) {
             return;
         }
 
         std::string playerName = subStringSafe(buffer, 12, 12 + str_length);
+        std::lock_guard<std::mutex> lock(leaderInfosMutex);
 
         if (leaderInfos.size() < id + 1) {
             while (leaderInfos.size() < id) {
@@ -195,7 +210,7 @@ bool Client::ConnectToServer(const char* addr, int port) {
         return false;
     }
 
-    std::cout << "Connecting to Navigation server...\n";
+    std::cout << "Connecting to control server...\n";
 
     if (connect(sock, reinterpret_cast<SOCKADDR*>(&sin), sizeof(sin)) == SOCKET_ERROR) {
         closesocket(sock);

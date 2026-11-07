@@ -16,20 +16,25 @@ public:
         if (!active_) {
             active_ = true;
             lastProgress_ = now;
+            progressX_ = from.X;
+            progressY_ = from.Y;
+            progressZ_ = from.Z;
         } else {
             UpdateProgress(from, now);
         }
+        // Replanning can change the waypoint every frame. It must not
+        // hide a physically stationary character from the watchdog.
         // Changing waypoints does not reset the stall timeout without actual progress.
-        if (XYDistance(to.X, to.Y, goalX_, goalY_) > ArrivalThreshold)
-            bestRemaining_ = XYDistance(from.X, from.Y, to.X, to.Y);
         goalX_ = to.X;
         goalY_ = to.Y;
+        goalZ_ = to.Z;
     }
 
     template<class Point>
     bool Stalled(const Point& current, TimePoint now) {
         if (!active_) return false;
-        if (XYDistance(current.X, current.Y, goalX_, goalY_) <= ArrivalThreshold) {
+        if (Distance3D(current.X, current.Y, current.Z,
+            goalX_, goalY_, goalZ_) <= ArrivalThreshold) {
             Clear();
             return false;
         }
@@ -39,29 +44,34 @@ public:
 
     template<class Point>
     bool Towards(const Point& goal) const {
-        return active_ && XYDistance(goal.X, goal.Y, goalX_, goalY_) <= 1.5f;
+        return active_ && XYDistance(goal.X, goal.Y, goalX_, goalY_) <= ArrivalThreshold &&
+            std::abs(goal.Z - goalZ_) <= ArrivalThreshold;
     }
 
     bool Active() const { return active_; }
-
     void Clear() { active_ = false; }
 
 private:
     static float XYDistance(float ax, float ay, float bx, float by) {
         return std::hypot(ax - bx, ay - by);
     }
+    static float Distance3D(float ax, float ay, float az, float bx, float by, float bz) {
+        return std::hypot(XYDistance(ax, ay, bx, by), az - bz);
+    }
 
     template<class Point>
     void UpdateProgress(const Point& current, TimePoint now) {
-        const float remaining = XYDistance(current.X, current.Y, goalX_, goalY_);
-        if (bestRemaining_ - remaining >= ProgressThreshold) {
-            bestRemaining_ = remaining;
+        if (Distance3D(current.X, current.Y, current.Z,
+            progressX_, progressY_, progressZ_) >= ProgressThreshold) {
+            progressX_ = current.X;
+            progressY_ = current.Y;
+            progressZ_ = current.Z;
             lastProgress_ = now;
         }
     }
 
     bool active_ = false;
-    float goalX_ = 0.0f, goalY_ = 0.0f;
-    float bestRemaining_ = 0.0f;
+    float goalX_ = 0.0f, goalY_ = 0.0f, goalZ_ = 0.0f;
+    float progressX_ = 0.0f, progressY_ = 0.0f, progressZ_ = 0.0f;
     TimePoint lastProgress_{};
 };

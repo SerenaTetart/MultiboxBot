@@ -46,9 +46,6 @@ static void DruidAttack() {
 			else FunctionsLua::CastSpellByName("Bear Form");
 		}
 		else {
-			//Specific for Hurricane cast:
-			Position cluster_center = Position(0, 0, 0); int cluster_unit;
-			std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
 			int MoonkinFormIDs[1] = { 24858 }; bool MoonkinFormBuff = localPlayer->hasBuff(MoonkinFormIDs, 1);
 			int MoonfireIDs[10] = { 8921, 8924, 8925, 8926, 8927, 8928, 8929, 9833, 9834, 9835 };
 			bool MoonfireDebuff = targetUnit->hasDebuff(MoonfireIDs, 10);
@@ -57,11 +54,11 @@ static void DruidAttack() {
 				//Moonkin Form
 				FunctionsLua::CastSpellByName("Moonkin Form");
 			}
-			else if (!localPlayer->isMoving && !targetUnit->resist(SpellSchool::Nature) && (cluster_unit >= 4) && Functions::IsSpellReady("Hurricane")) {
-				//Hurricane
-				FunctionsLua::CastSpellByName("Hurricane");
-				Functions::ClickAOE(cluster_center);
-			}
+			//Specific for Hurricane cast:
+			//Hurricane
+			else if (!targetUnit->resist(SpellSchool::Nature) &&
+				Functions::IsSpellReady("Hurricane") &&
+				Functions::TryGroundTargetAOE("Hurricane", 25.0f, 30.0f)) { }
 			else if (IsFacing && !MoonfireDebuff && !targetUnit->resist(SpellSchool::Arcane) && (targetUnit->getNbrDebuff() < 16) && Functions::IsSpellReady("Moonfire") && ((localPlayer->prctMana > 50.0f) || (MoonkinFormBuff))) {
 				//Moonfire
 				FunctionsLua::CastSpellByName("Moonfire");

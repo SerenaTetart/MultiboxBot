@@ -34,6 +34,7 @@ struct Craft {
     int spell_id = 0;
     int required_rod = 0;
     int target_slot = 0;
+    bool learnable_from_trainer = true;
 };
 
 using Profession = std::vector<Craft>;
@@ -51,6 +52,7 @@ struct CraftPlan {
     int quantity;
     std::vector<CraftCostEntry> to_buy;
     std::int64_t total_cost;
+    bool learnable_from_trainer = true;
 };
 
 inline const std::vector<BuyableItem> buyableItems = {
@@ -193,8 +195,10 @@ inline const Profession alchemyCrafts = {
     { 3383, 90, 110,{ { 785, 1 },{ 2450, 2 },{ 3371, 1 } } }, // Elixir of Wisdom
     { 929, 110, 155,{ { 2453, 1 },{ 2450, 1 },{ 3372, 1 } } }, // Healing Potion
     { 3385, 120, 155,{ { 785, 1 },{ 3820, 1 },{ 3371, 1 } } }, // Lesser Mana Potion
+    { 3390, 140, 165,{ { 3355, 1 },{ 2452, 1 },{ 3372, 1 } }, 0, 0, 0, false }, // Elixir of Lesser Agility
     { 3388, 155, 170,{ { 2453, 2 },{ 2450, 2 },{ 3372, 1 } } }, // Strong Troll's Blood Potion
     { 1710, 155, 185,{ { 3357, 1 },{ 3356, 1 },{ 3372, 1 } } }, // Greater Healing Potion
+    { 3823, 165, 185,{ { 3818, 1 },{ 3355, 1 },{ 3372, 1 } } }, // Lesser invisibility potion
     { 8949, 185, 210,{ { 3820, 1 },{ 3821, 1 },{ 3372, 1 } } }, // Elixir of Agility
     { 8951, 195, 215,{ { 3355, 1 },{ 3821, 1 },{ 3372, 1 } } }, // Elixir of Greater Defense
     { 3928, 215, 230,{ { 8838, 1 },{ 3358, 1 },{ 8925, 1 } } }, // Superior Healing Potion
