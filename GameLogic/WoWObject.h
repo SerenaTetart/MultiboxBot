@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <array>
+#include <cstdint>
 
 #include "Data/NPCResistance.h"
 
@@ -248,7 +249,8 @@ class LocalPlayer : public WoWUnit {
 
 class WoWGameObject : public WoWObject {
     public:
-        int displayID = 0, level = 0, gatherType = 0;
+        std::uint32_t entryID = 0;
+        int level = 0, gatherType = 0, displayID = 0;
         Position position; float facing;
 
         WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectType objectType);

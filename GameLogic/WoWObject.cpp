@@ -408,49 +408,93 @@ WoWGameObject::WoWGameObject(uintptr_t pointer, unsigned long long guid, ObjectT
     float z = *(float*)(Pointer + descriptor + 0x2C);
     position = Position(x, y, z);
     facing = *(float*)(Pointer + 0x30);
-    displayID = *(int*)((char*)Pointer  + descriptor + 0x8);
-    level = 0; gatherType = 0;
-    // === Mining === //
-    if (displayID == 310) { level = 1; gatherType = 1; } // Copper
-    else if (displayID == 315) { level = 65; gatherType = 1; } // Tin
-    else if (displayID == 312) { level = 125; gatherType = 1; } // Iron
-    else if (displayID == 311) { level = 155; gatherType = 1; } // Gold
-    else if (displayID == 313) { level = 175; gatherType = 1; } // Mithril
-    else if (displayID == 314) { level = 230; gatherType = 1; } // True Silver || Silver
-    else if (displayID == 2571) { level = 230; gatherType = 1; } // Dark Iron
-    else if (displayID == 3951) { level = 245; gatherType = 1; } // Thorium
-    else if (displayID == 3952) { level = 275; gatherType = 1; } // Rich Thorium
-    else if (displayID == 6650) { level = 305; gatherType = 1; } // Obsidian
-    // === Herbalism === //
-    else if (displayID == 269) { level = 1; gatherType = 2; }
-    else if (displayID == 270) { level = 1; gatherType = 2; }
-    else if (displayID == 414) { level = 15; gatherType = 2; }
-    else if (displayID == 268) { level = 50; gatherType = 2; }
-    else if (displayID == 271) { level = 70; gatherType = 2; }
-    else if (displayID == 700) { level = 85; gatherType = 2; }
-    else if (displayID == 358) { level = 100; gatherType = 2; }
-    else if (displayID == 371) { level = 115; gatherType = 2; }
-    else if (displayID == 357) { level = 120; gatherType = 2; }
-    else if (displayID == 320) { level = 125; gatherType = 2; }
-    else if (displayID == 677) { level = 150; gatherType = 2; }
-    else if (displayID == 697) { level = 160; gatherType = 2; }
-    else if (displayID == 698) { level = 170; gatherType = 2; }
-    else if (displayID == 701) { level = 185; gatherType = 2; }
-    else if (displayID == 701) { level = 185; gatherType = 2; }
-    else if (displayID == 699) { level = 195; gatherType = 2; }
-    else if (displayID == 2312) { level = 205; gatherType = 2; }
-    else if (displayID == 2314) { level = 210; gatherType = 2; }
-    else if (displayID == 2310) { level = 220; gatherType = 2; }
-    else if (displayID == 2315) { level = 230; gatherType = 2; }
-    else if (displayID == 2311) { level = 235; gatherType = 2; }
-    else if (displayID == 389) { level = 245; gatherType = 2; }
-    else if (displayID == 2313) { level = 250; gatherType = 2; }
-    else if (displayID == 4652) { level = 260; gatherType = 2; }
-    else if (displayID == 4635) { level = 270; gatherType = 2; }
-    else if (displayID == 4633) { level = 280; gatherType = 2; }
-    else if (displayID == 4632) { level = 285; gatherType = 2; }
-    else if (displayID == 4634) { level = 290; gatherType = 2; }
-    else if (displayID == 4636) { level = 300; gatherType = 2; }
+    displayID = *(int*)((char*)Pointer + descriptor + 0x8);
+    constexpr unsigned long long GameObjectHighGuid = 0xF110ULL;
+    if ((guid >> 48) != GameObjectHighGuid) return;
+    entryID = static_cast<std::uint32_t>((guid >> 24) & 0xFFFFFFULL);
+    switch (entryID) {
+        // === Mining ===
+        case 1731: case 2055: case 3763: case 103713: case 181248: // Copper Vein
+            level = 1; gatherType = 1; break;
+        case 1732: case 2054: case 3764: case 103711: case 181249: // Tin Vein
+            level = 65; gatherType = 1; break;
+        case 1733: case 73940: // Silver Vein (also ooze-covered)
+            level = 75; gatherType = 1; break;
+        case 1735: case 73939: // Iron Deposit (also ooze-covered)
+            level = 125; gatherType = 1; break;
+        case 1734: case 73941: // Gold Vein (also ooze-covered)
+            level = 155; gatherType = 1; break;
+        case 2040: case 123310: // Mithril Deposit (also ooze-covered)
+            level = 175; gatherType = 1; break;
+        case 2047: case 181108: case 123309: // Truesilver Deposit (also ooze-covered)
+            level = 230; gatherType = 1; break;
+        case 165658: // Dark Iron Deposit
+            level = 230; gatherType = 1; break;
+        case 324: case 150082: case 176643: case 123848: // Small / ooze-covered Thorium
+            level = 245; gatherType = 1; break;
+        case 175404: case 177388: case 180215: // Rich / ooze-covered / Hakkari Thorium
+            level = 275; gatherType = 1; break;
+        case 181068: case 181069: // Small / Large Obsidian Chunk
+            level = 305; gatherType = 1; break;
+
+        // === Herbalism ===
+        case 1617: case 3725: // Silverleaf
+        case 1618: case 3724: // Peacebloom
+            level = 1; gatherType = 2; break;
+        case 1619: case 3726: // Earthroot
+            level = 15; gatherType = 2; break;
+        case 1620: case 3727: // Mageroyal
+            level = 50; gatherType = 2; break;
+        case 1621: case 3729: // Briarthorn
+            level = 70; gatherType = 2; break;
+        case 2045: // Stranglekelp
+            level = 85; gatherType = 2; break;
+        case 1622: case 3730: // Bruiseweed
+            level = 100; gatherType = 2; break;
+        case 1623: // Wild Steelbloom
+            level = 115; gatherType = 2; break;
+        case 1628: // Grave Moss
+            level = 120; gatherType = 2; break;
+        case 1624: // Kingsblood
+            level = 125; gatherType = 2; break;
+        case 2041: // Liferoot
+            level = 150; gatherType = 2; break;
+        case 2042: // Fadeleaf
+            level = 160; gatherType = 2; break;
+        case 2046: // Goldthorn
+            level = 170; gatherType = 2; break;
+        case 2043: // Khadgar's Whisker
+            level = 185; gatherType = 2; break;
+        case 2044: // Wintersbite
+            level = 195; gatherType = 2; break;
+        case 2866: // Firebloom
+            level = 205; gatherType = 2; break;
+        case 142140: // Purple Lotus
+            level = 210; gatherType = 2; break;
+        case 142141: case 176642: // Arthas' Tears
+            level = 220; gatherType = 2; break;
+        case 142142: case 176636: // Sungrass
+            level = 230; gatherType = 2; break;
+        case 142143: case 183046: // Blindweed
+            level = 235; gatherType = 2; break;
+        case 142144: // Ghost Mushroom
+            level = 245; gatherType = 2; break;
+        case 142145: case 176637: // Gromsblood
+            level = 250; gatherType = 2; break;
+        case 176583: case 176638: // Golden Sansam
+            level = 260; gatherType = 2; break;
+        case 176584: case 176639: // Dreamfoil
+            level = 270; gatherType = 2; break;
+        case 176586: case 176640: // Mountain Silversage
+            level = 280; gatherType = 2; break;
+        case 176587: case 176641: // Plaguebloom
+            level = 285; gatherType = 2; break;
+        case 176588: // Icecap
+            level = 290; gatherType = 2; break;
+        case 176589: // Black Lotus
+            level = 300; gatherType = 2; break;
+        default: break;
+    }
 }
 
 /* === Items === */
