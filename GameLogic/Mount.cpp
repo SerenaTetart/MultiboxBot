@@ -110,7 +110,7 @@ bool PossessMount() {
 bool Game::CanUseMount() {
 	if (!localPlayer || !localPlayer->Pointer) return false;
 
-	if (localPlayer->isMounted || localPlayer->hasBuff(768)) return false;
+	if (localPlayer->isMounted) return false;
 	if (localPlayer->isdead || localPlayer->isMoving) return false;
 	if (localPlayer->flags & UNIT_FLAG_IN_COMBAT) return false;
 	if (localPlayer->flags & UNIT_FLAG_TAXI_FLIGHT) return false;
@@ -123,10 +123,18 @@ bool Game::CanUseMount() {
 }
 
 bool Game::UseMount() {
-	if (localPlayer->isMounted) return false;
+	if (localPlayer->isMounted || localPlayer->castInfo != 0 || localPlayer->channelInfo != 0) return false;
 	else if (localPlayer->hasBuff(768)) {
 		// Cat Form
-		FunctionsLua::CastSpellByName("Cat Form");
+		Functions::CancelPlayerBuff(768);
+	}
+	else if (localPlayer->hasBuff(5487)) {
+		// Bear Form
+		Functions::CancelPlayerBuff(5487);
+	}
+	else if (localPlayer->hasBuff(9634)) {
+		// Dire Bear Form
+		Functions::CancelPlayerBuff(9634);
 	}
 	for (const auto& item : virtualInventory) {
 		// Fast

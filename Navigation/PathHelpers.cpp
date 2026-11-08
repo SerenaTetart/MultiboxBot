@@ -1,5 +1,7 @@
 #include "Pathfinder.h"
+#include <cmath>
 #include "Marker.h"
+#include "MapSharedData.h"
 #include "AreaEnums.h"
 
 
@@ -7,17 +9,16 @@ bool PathFinder::ApplyCircleBlacklistToPolys(dtNavMeshQuery* meshQuery, const dt
 {
     if (!meshQuery || !navmesh)
     {
-        std::cerr << "MeshQuery or NavMesh is null." << std::endl;
         return false;
     }
     float searchBoxSize[VERTEX_SIZE] = { 3.0f, 5.0f, 3.0f };
-    float* searchPoint = Options.position.ToRecast().ToFloatArray().data();
+    const auto searchCoords = Options.position.ToRecast().ToFloatArray();
+    const float* searchPoint = searchCoords.data();
 
     dtPolyRef CenterPoly;
     float CenterPolyPoint[3];
     dtStatus startResult = meshQuery->findNearestPoly(searchPoint, searchBoxSize, &query, &CenterPoly, CenterPolyPoint);
     if (dtStatusFailed(startResult)) {
-        std::cerr << "Failed to find nearest poly." << std::endl;
         return false;
     }
 
@@ -27,7 +28,6 @@ bool PathFinder::ApplyCircleBlacklistToPolys(dtNavMeshQuery* meshQuery, const dt
 
     dtStatus circleResult = meshQuery->findPolysAroundCircle(CenterPoly, searchPoint, Options.radius, &query, polyRefsInCircle, nullptr, nullptr, &polyRefInCircleCount, POLY_ARRAY_MAX);
     if (dtStatusFailed(circleResult)) {
-        std::cerr << "Failed to find polys around circle." << std::endl;
         return false;
     }
 
@@ -40,26 +40,14 @@ bool PathFinder::ApplyCircleBlacklistToPolys(dtNavMeshQuery* meshQuery, const dt
         dtStatus tileAndPolyStatus = navmesh->getTileAndPolyByRef(polyRef, &tile, &poly);
         if (dtStatusFailed(tileAndPolyStatus) || !poly)
         {
-            std::cerr << "Error retrieving tile and polygon by ref." << std::endl;
             continue;
         }
 
         // Modify the polygon area directly by using mutablePoly
         dtPoly* mutablePoly = const_cast<dtPoly*>(poly);
 
-        if (NavigationManager::DEBUGMOD)
-        {
-            std::cout << "Polygon area: " << static_cast<int>(mutablePoly->getArea()) << std::endl;
-        }
-
         // Example: Set area ID to 35 (or any specific value you want)
         mutablePoly->setArea(Options.Type);
-
-        if (NavigationManager::DEBUGMOD)
-        {
-            // Debug output: Print the updated area of the mutablePoly
-            std::cout << "Polygon area after setting: " << static_cast<int>(mutablePoly->getArea()) << std::endl;
-        }
 
       
     }
@@ -77,7 +65,7 @@ void PathFinder::SetFilters()
 
 	unsigned short includeFlags = 0;
 	unsigned short excludeFlags = 0;
-	includeFlags |= (0x01);
+	includeFlags |= NAV_GROUND; // Only walking on ground; do not enable water/lava implicitly.
 
 	Queryfilter.setIncludeFlags(includeFlags);
 	Queryfilter.setExcludeFlags(excludeFlags);
@@ -93,12 +81,7 @@ bool PathFinder::HaveTile(const Vector3& p) const
 	auto r = navMesh->getTileAt(tx, ty, 0);
 	
 
-	if (r == NULL)
-	{
-		std::cout << "Tile Failed" << std::endl;
-	}
-
-	return (navMesh->getTileAt(tx, ty, 0) != NULL);
+    return r != nullptr;
 }
 
 
@@ -129,7 +112,6 @@ dtPolyRef PathFinder::GetNearestPoly(const float* startPoint) const
 	dtStatus results =  navMeshQuery->findNearestPoly(startPoint, PathFinder::searchBoxSize, &Queryfilter, &startPoly, startPolyPoint);
 	if (dtStatusFailed(results))
 	{
-		std::cout << "Failed to GetNearestPoly" << std::endl;
 		return NULL;
 	}
 	return startPoly;
@@ -147,7 +129,6 @@ dtStatus PathFinder::DistanceToWall(float* pos, float* Hitpos, float* distance)
 
     if (dtStatusFailed(startResult))
     {
-        std::cerr << "CheckPath : Failed to find nearest poly." << std::endl;
         return false;
     }
 
@@ -176,39 +157,24 @@ bool PathFinder::ModifyPoint(float* SearchPoint)
     dtStatus Left = DistanceToWall(leftPosition, hitpos, &DistanceLeft);
     if (dtStatusFailed(Left))
     {
-        std::cerr << "CheckPath : Failed to find distance to wall on the left." << std::endl;
         return false;
     }
-
-    std::cout << "Left Position: x= " << leftPosition[0] << ", y= " << leftPosition[1] << ", z= " << leftPosition[2] << "\n";
-    std::cout << "Left Hitpos: x= " << hitpos[0] << ", y= " << hitpos[1] << ", z= " << hitpos[2] << "\n";
-    std::cout << "DistanceLeft: " << DistanceLeft << "\n\n";
 
     // Calculate the position to the right
     float rightPosition[3] = { SearchPoint[0] + WallDistance, SearchPoint[1], SearchPoint[2] };
     dtStatus Right = DistanceToWall(rightPosition, hitpos, &DistanceRight);
     if (dtStatusFailed(Right))
     {
-        std::cerr << "CheckPath : Failed to find distance to wall on the right." << std::endl;
         return false;
     }
-
-    std::cout << "Right Position: x= " << rightPosition[0] << ", y= " << rightPosition[1] << ", z= " << rightPosition[2] << "\n";
-    std::cout << "Right Hitpos: x= " << hitpos[0] << ", y= " << hitpos[1] << ", z= " << hitpos[2] << "\n";
-    std::cout << "DistanceRight: " << DistanceRight << "\n\n";
 
     // Calculate the position in front
     float frontPosition[3] = { SearchPoint[0], SearchPoint[1], SearchPoint[2] + WallDistance };
     dtStatus Front = DistanceToWall(frontPosition, hitpos, &DistanceFront);
     if (dtStatusFailed(Front))
     {
-        std::cerr << "CheckPath : Failed to find distance to wall in front." << std::endl;
         return false;
     }
-
-    std::cout << "Front Position: x= " << frontPosition[0] << ", y= " << frontPosition[1] << ", z= " << frontPosition[2] << "\n";
-    std::cout << "Front Hitpos: x= " << hitpos[0] << ", y= " << hitpos[1] << ", z= " << hitpos[2] << "\n";
-    std::cout << "DistanceFront: " << DistanceFront << "\n\n";
 
     return false;
 }

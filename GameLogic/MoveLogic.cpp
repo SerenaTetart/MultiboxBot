@@ -12,31 +12,33 @@
 #include <iostream>
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 void MoveToMap(Position targetpos) {
-	Position nextpos = Navigation::CalculatePath(mapID, localPlayer->position, targetpos);
-	float dist = nextpos.DistanceTo(localPlayer->position);
-	if (dist > 2.0f && !(localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
-		if (targetpos.DistanceTo(localPlayer->position) > 40.0f && !localPlayer->isdead && Game::CanUseMount()) {
-			ThreadSynchronizer::RunOnMainThread([]() {
-				Game::UseMount();
-				});
-		}
-		else {
-			ThreadSynchronizer::RunOnMainThread([nextpos]() {
-				localPlayer->ClickToMove(Move, localPlayer->Guid, nextpos);
-				});
-			Moving = MoveTypes::Journey;
-		}
-	}
-	else if (dist < 2.0f) { Moving = MoveTypes::NotMoving; }
+    if (!localPlayer || (Combat && !localPlayer->isdead)) return;
+    if (localPlayer->position.DistanceTo(targetpos) < 2.0f) {
+        ThreadSynchronizer::RunOnMainThread([]() { Functions::StopMovement(); });
+        return;
+    }
+    if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) &&
+        targetpos.DistanceTo(localPlayer->position) > 40.0f &&
+        !localPlayer->isdead && Game::CanUseMount()) {
+        ThreadSynchronizer::RunOnMainThread([]() { Game::UseMount(); });
+        return;
+    }
+    ThreadSynchronizer::RunOnMainThread([targetpos]() {
+        if (!localPlayer || (Combat && !localPlayer->isdead)) return;
+        Functions::MoveToFast(targetpos, MoveTypes::Journey);
+    });
 }
 
 void Game::CorpseRun() {
@@ -84,7 +86,6 @@ void Game::CorpseRun() {
 			MoveToMap(Position(-1475.534912f, 2617.167969f, 75.827087f));
 		}
 		else {
-			std::cout << localPlayer->corpse_position.ToString() << "\n";
             if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) ||
                 !Navigation::HasCurrentMovement() ||
                 Navigation::IsCurrentMovementStalled(localPlayer->position)) {
@@ -271,7 +272,7 @@ inline std::optional<CraftPlan> TryPlanCraftBatch(ProfessionId profession_id, co
 		resources.push_back({ resource.item_id, resource.item_quantity, buyable ? buyable->unit_price : -1, GetItemCount(resource.item_id) });
 	}
 
-	CraftPlan plan{ profession_id, craft.crafted_id, 0,{}, 0 };
+	CraftPlan plan{ profession_id, craft.crafted_id, 0,{}, 0, craft.learnable_from_trainer };
 	plan.to_buy.reserve(resources.size());
 
 	for (int amount = max_crafts; amount >= 1; --amount) {
@@ -332,17 +333,6 @@ inline auto GetProfessionsToCheck() {
 	};
 }
 
-enum class CraftKnowledge { Checking, Learned, Missing };
-
-struct CraftKnowledgeCache {
-	std::mutex mutex;
-	ProfessionId profession_id = ProfessionId::Leatherworking;
-	int crafted_id = 0;
-	CraftKnowledge status = CraftKnowledge::Checking;
-	bool queued = false;
-};
-
-CraftKnowledgeCache craftKnowledgeCache;
 
 inline const char* GetProfessionSpellName(ProfessionId profession_id) {
 	switch (profession_id) {
@@ -486,6 +476,19 @@ bool TrainTradeSkill(ProfessionId professionID, bool higherRank = false, bool ch
 	return true;
 }
 
+enum class CraftKnowledge { Checking, Learned, Missing };
+
+struct CraftKnowledgeCache {
+	std::mutex mutex;
+	ProfessionId profession_id = ProfessionId::Leatherworking;
+	int crafted_id = 0;
+	CraftKnowledge status = CraftKnowledge::Checking;
+	bool queued = false;
+	std::map<std::pair<ProfessionId, int>, std::chrono::steady_clock::time_point> missing_nontrainer;
+};
+
+CraftKnowledgeCache craftKnowledgeCache;
+
 inline std::optional<CraftPlan> GetCraftPlan(int max_crafts = 20) {
 	if (!localPlayer || max_crafts <= 0) return std::nullopt;
 
@@ -496,6 +499,18 @@ inline std::optional<CraftPlan> GetCraftPlan(int max_crafts = 20) {
 		if (level == max_level && !TrainTradeSkill(id, true, true)) continue;
 		for (const auto& craft : crafts) {
 			if (level < craft.required_level || level >= craft.max_level) continue;
+			if (id == ProfessionId::Mining) {
+				const int blacksmithLevel = localPlayer->blacksmithingLevel[0];
+				if (blacksmithLevel > 0 &&
+					((craft.crafted_id == 2841 && blacksmithLevel < 100) ||
+					 (craft.crafted_id == 3859 && blacksmithLevel < 205))) continue;
+			}
+			if (!craft.learnable_from_trainer) {
+				std::lock_guard<std::mutex> lock(craftKnowledgeCache.mutex);
+				auto it = craftKnowledgeCache.missing_nontrainer.find({ id, craft.crafted_id });
+				if (it != craftKnowledgeCache.missing_nontrainer.end() &&
+					std::chrono::steady_clock::now() < it->second) continue;
+			}
 			if (id == ProfessionId::Enchanting && IsEnchantRod(craft.crafted_id) && GetItemCount(craft.crafted_id) > 0) continue;
 			if (id == ProfessionId::Enchanting && craft.required_rod && GetItemCount(craft.required_rod) == 0) continue;
 			if (id == ProfessionId::Enchanting && craft.spell_id == 0 && craft.target_slot == 0) continue;
@@ -620,7 +635,14 @@ inline bool MakeCraft() {
 
 	switch (CheckCraftKnowledge(plan->profession_id, plan->crafted_id)) {
 	case CraftKnowledge::Checking: return true;
-	case CraftKnowledge::Missing: return TrainTradeSkill(plan->profession_id);
+	case CraftKnowledge::Missing:
+		if (plan->learnable_from_trainer) return TrainTradeSkill(plan->profession_id);
+		{
+			std::lock_guard<std::mutex> lock(craftKnowledgeCache.mutex);
+			craftKnowledgeCache.missing_nontrainer[{ plan->profession_id, plan->crafted_id }] =
+				std::chrono::steady_clock::now() + std::chrono::seconds(60);
+		}
+		return true;
 	case CraftKnowledge::Learned: break;
 	}
 
@@ -645,6 +667,14 @@ inline bool MakeCraft() {
 		else return false;
 
 		if (localPlayer->position.DistanceTo(anvilPos) >= 2.0f) { MoveToMap(anvilPos); return true; }
+	}
+	if (localPlayer->isMounted) {
+		ThreadSynchronizer::RunOnMainThread([]() {
+			if (!localPlayer || !localPlayer->isMounted) return;
+			Game::Dismount();
+			if (localPlayer->isMounted) Functions::LuaCall("if IsMounted() then Dismount() end");
+		});
+		return true;
 	}
 	return CraftItem(plan->profession_id, plan->crafted_id, plan->quantity);
 }

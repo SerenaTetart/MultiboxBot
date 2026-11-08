@@ -6,6 +6,11 @@
 #include "MapSharedData.h"
 
 
+static_assert(sizeof(dtPolyRef) == 8 && sizeof(dtTileRef) == 8,
+              "CMaNGOS Classic MMAP v8 requires DT_POLYREF64");
+static_assert(DT_SALT_BITS == 12 && DT_TILE_BITS == 21 && DT_POLY_BITS == 31,
+              "Detour polygon reference layout must match CMaNGOS Classic");
+
 Mapper::~Mapper()
 {
 	for (MMapDataSet::iterator i = loadedMMaps.begin(); i != loadedMMaps.end(); ++i)
@@ -104,103 +109,132 @@ void Mapper::getMapName(unsigned int mapId, std::string& result)
 
 bool Mapper::loadMapData(unsigned int mapId)
 {
-	if (loadedMMaps.find(mapId) != loadedMMaps.end())
-		return true;
+    if (loadedMMaps.find(mapId) != loadedMMaps.end())
+        return true;
 
-	std::string fileName = "";
-	getMapName(mapId, fileName);
-	FILE* file = fopen(fileName.c_str(), "rb");
-	dtNavMeshParams params;
-	size_t file_read = fread(&params, sizeof(dtNavMeshParams), 1, file);
-	fclose(file);
+    std::string filename;
+    getMapName(mapId, filename);
+    FILE* file = fopen(filename.c_str(), "rb");
+    if (!file)
+        return false;
 
-	dtNavMesh* mesh = dtAllocNavMesh();
-	
-	dtStatus dtResult = mesh->init(&params);
-	if (dtStatusFailed(dtResult))
-	{
-		dtFreeNavMesh(mesh);
-		return false;
+    dtNavMeshParams params{};
+    const size_t count = fread(&params, sizeof(params), 1, file);
+    fclose(file);
+    if (count != 1)
+        return false;
 
-	}
-	MMapData* mmap_data = new MMapData(mesh);
-	mmap_data->mmapLoadedTiles.clear();
-	loadedMMaps.insert(std::pair<unsigned int, MMapData*>(mapId, mmap_data));
-
-	return true;
+    dtNavMesh* mesh = dtAllocNavMesh();
+    if (!mesh)
+        return false;
+    const dtStatus status = mesh->init(&params);
+    if (dtStatusFailed(status))
+    {
+        dtFreeNavMesh(mesh);
+        return false;
+    }
+    loadedMMaps.emplace(mapId, new MMapData(mesh));
+    return true;
 }
 
 bool Mapper::loadMap(unsigned int mapId, int x, int y)
 {
-	loadMapData(mapId);
+    if (!loadMapData(mapId))
+        return false;
+    MMapData* mmap = loadedMMaps.at(mapId);
+    const unsigned int key = packTileID(x, y);
+    if (mmap->mmapLoadedTiles.find(key) != mmap->mmapLoadedTiles.end())
+        return true;
 
-	MMapData* mmap = loadedMMaps[mapId];
+    std::string filename;
+    getTileName(mapId, x, y, filename);
+    FILE* file = fopen(filename.c_str(), "rb");
+    if (!file)
+        return false;
 
-	unsigned int packedGridPos = packTileID(x, y);
-	if (mmap->mmapLoadedTiles.find(packedGridPos) != mmap->mmapLoadedTiles.end())
-		return true;
+    MmapTileHeader header;
+    const size_t headerRead = fread(&header, sizeof(header), 1, file);
+    if (headerRead != 1 || header.mmapMagic != MMAP_MAGIC ||
+        header.mmapVersion != MMAP_VERSION || header.dtVersion != DT_NAVMESH_VERSION ||
+        header.size == 0)
+    {
+        fclose(file);
+        return false;
+    }
 
-	std::string fileName = "";
-	getTileName(mapId, x, y, fileName);
+    const long payloadBegin = ftell(file);
+    if (payloadBegin < 0 || fseek(file, 0, SEEK_END) != 0)
+    {
+        fclose(file);
+        return false;
+    }
+    const long fileEnd = ftell(file);
+    if (fileEnd < payloadBegin ||
+        static_cast<unsigned long long>(fileEnd - payloadBegin) != header.size ||
+        fseek(file, payloadBegin, SEEK_SET) != 0)
+    {
+        fclose(file);
+        return false;
+    }
 
+    unsigned char* data = static_cast<unsigned char*>(dtAlloc(header.size, DT_ALLOC_PERM));
+    if (!data)
+    {
+        fclose(file);
+        return false;
+    }
+    const size_t tileRead = fread(data, header.size, 1, file);
+    fclose(file);
+    if (tileRead != 1)
+    {
+        dtFree(data);
+        return false;
+    }
 
-	FILE* file = fopen(fileName.c_str(), "rb");
-	MmapTileHeader fileHeader;
-	size_t file_read = fread(&fileHeader, sizeof(MmapTileHeader), 1, file);
-	unsigned char* data = (unsigned char*)dtAlloc(fileHeader.size, DT_ALLOC_PERM);
-	size_t result = fread(data, fileHeader.size, 1, file);
-	fclose(file);
-
-	dtMeshHeader* header = (dtMeshHeader*)data;
-	dtTileRef tileRef = 0;
-	dtStatus dtResult = mmap->navMesh->addTile(data, fileHeader.size, DT_TILE_FREE_DATA, 0, &tileRef);
-
-	if (dtStatusFailed(dtResult))
-	{
-		dtFree(data);
-		return false;
-	}
-
-	mmap->mmapLoadedTiles.insert(std::pair<unsigned int, dtTileRef>(packedGridPos, tileRef));
-	return false;
+    dtTileRef tileRef = 0;
+    const dtStatus status = mmap->navMesh->addTile(data, header.size, DT_TILE_FREE_DATA, 0, &tileRef);
+    if (dtStatusFailed(status))
+    {
+        dtFree(data);
+        return false;
+    }
+    mmap->mmapLoadedTiles.emplace(key, tileRef);
+    return true;
 }
 
 unsigned int Mapper::packTileID(int x, int y)
 {
-	return unsigned int(x << 16 | y);
+	return (static_cast<unsigned int>(x) << 16) | static_cast<unsigned int>(y);
 }
 
 dtNavMeshQuery* Mapper::GetNavMeshQuery(unsigned int mapId, unsigned int instanceId)
 {
-	if (loadedMMaps.find(mapId) == loadedMMaps.end()) // Map is there aka loaded in memory
-		return NULL;
+    auto it = loadedMMaps.find(mapId);
+    if (it == loadedMMaps.end())
+        return nullptr;
 
-	MMapData* mmap = loadedMMaps[mapId];
-	if (mmap->navMeshQueries.find(instanceId) == mmap->navMeshQueries.end())
-	{
-		dtNavMeshQuery* query = dtAllocNavMeshQuery();
-		dtStatus dtResult = query->init(mmap->navMesh, 65535);
-		if (dtStatusFailed(dtResult))
-		{
-			std::cout << "error GetNavMeshQuery" << std::endl;
-			dtFreeNavMeshQuery(query);
-			return NULL;
-		}
+    MMapData* mmap = it->second;
+    auto queryIt = mmap->navMeshQueries.find(instanceId);
+    if (queryIt != mmap->navMeshQueries.end())
+        return queryIt->second;
 
-		mmap->navMeshQueries.insert(std::pair<unsigned int, dtNavMeshQuery*>(instanceId, query));
-	}
-
-	return mmap->navMeshQueries[instanceId];
+    dtNavMeshQuery* query = dtAllocNavMeshQuery();
+    if (!query)
+        return nullptr;
+    const dtStatus status = query->init(mmap->navMesh, 65535);
+    if (dtStatusFailed(status))
+    {
+        dtFreeNavMeshQuery(query);
+        return nullptr;
+    }
+    mmap->navMeshQueries.emplace(instanceId, query);
+    return query;
 }
+
 dtNavMesh const* Mapper::GetNavMesh(unsigned int mapId)
 {
-	if (loadedMMaps.find(mapId) == loadedMMaps.end())
-	{
-		std::cout << "error  GetNavMesh" << std::endl;
-		return NULL;
-	}
-
-	return loadedMMaps[mapId]->navMesh;
+    auto it = loadedMMaps.find(mapId);
+    return it == loadedMMaps.end() ? nullptr : it->second->navMesh;
 }
 
 Mapper* Handle = NULL;

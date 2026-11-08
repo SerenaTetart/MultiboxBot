@@ -12,5 +12,6 @@ enum MoveTypes {
 	Journey,
 	unknown5,
 	BossMechanic,
-	Looting
+	Looting,
+	MoveLoSAoE
 };

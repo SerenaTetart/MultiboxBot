@@ -16,10 +16,6 @@ void ListAI::HunterDps() {
 			int AspectHawkIDs[7] = { 13165, 14318, 14319, 14320, 14321, 14322, 25296 };
 			bool AspectHawkBuff = localPlayer->hasBuff(AspectHawkIDs, 7);
 
-			//Specific for Volley cast:
-			Position cluster_center = Position(0, 0, 0); int cluster_unit;
-			std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 35);
-
 			bool FeedingBuff = FunctionsLua::GetUnitBuff("pet", "Interface\\Icons\\Ability_Hunter_BeastTraining");
 
 			if (ListAI::DPSTargeting()) {}
@@ -122,11 +118,10 @@ void ListAI::HunterDps() {
 					//Raptor Strike
 					FunctionsLua::CastSpellByName("Raptor Strike");
 				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && Functions::IsSpellReady("Volley")) {
-					//Volley
-					FunctionsLua::CastSpellByName("Volley");
-					Functions::ClickAOE(cluster_center);
-				}
+				//Specific for Volley cast:
+				//Volley
+				else if (Functions::IsSpellReady("Volley") &&
+					Functions::TryGroundTargetAOE("Volley", 25.0f, 35.0f)) { }
 				else if (!HunterMarkDebuff && targetUnit->getNbrDebuff() < 16 && Functions::IsSpellReady("Hunter's Mark")) {
 					//Hunter's Mark
 					FunctionsLua::CastSpellByName("Hunter's Mark");

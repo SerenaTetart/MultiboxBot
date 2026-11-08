@@ -160,14 +160,13 @@ public:
     Position();
     Position(float x, float y, float z);
     std::string ToString();
-    float DistanceTo(Position position);
-    float DistanceTo2D(Position position);
+    float DistanceTo(const Position& position) const;
+    float DistanceTo2D(const Position& position) const;
 
     bool operator==(const Position& other) const;
 };
 
 // === Objects === //
-
 class WoWObject {
     public:
         unsigned long long Guid;
@@ -177,7 +176,6 @@ class WoWObject {
         WoWObject(uintptr_t pointer, unsigned long long guid, ObjectType objType);
         uintptr_t GetDescriptorPtr(uintptr_t pointer);
 };
-
 
 enum class SpellSchool : std::size_t {
     Fire,

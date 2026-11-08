@@ -1,5 +1,5 @@
 #include "Marker.h"
-#include <iostream>
+#include <algorithm>
 #include "Pathfinder.h"
 
 std::map<Marker, bool> MarkerCreator::Marks;
@@ -8,11 +8,6 @@ std::vector<std::string> MarkerCreator::RemoveMarkerByName;
 
 void MarkerCreator::AddMarker(unsigned int mapid, const char* name, Vector3 position, float radius, Area type)
 {
-    if (true)
-    {
-        std::cout << "[Marker] Adding " << name << " MapID " << mapid << " x: " << position.X << " y: " << position.Y << " z: " << position.Z << " radius: "
-            << radius << " Type: " << type << std::endl;
-    }
     Marker marker = { mapid, name, position, radius, type };
     Marks[marker] = false;
 }
@@ -50,7 +45,6 @@ void MarkerCreator::Remove(
         restoreMarker.Type = Area::Walkable;
 
         if (PathFinder::ApplyCircleBlacklistToPolys(meshQuery, navmesh, query, restoreMarker)) {
-            std::cout << "Removing " << marker.Name << std::endl;
 
             processedNames.push_back(marker.Name);
             it = Marks.erase(it);
@@ -76,7 +70,6 @@ void MarkerCreator::Apply(dtNavMeshQuery* meshQuery, const dtNavMesh* navmesh, d
     {
         if (!pair.second)
         {
-            std::cout << "Blacklisting  " << std::string(pair.first.Name) << std::endl;
             PathFinder::ApplyCircleBlacklistToPolys(meshQuery, navmesh, query, pair.first);
             pair.second = true; // Update the value associated with the key to true
         }

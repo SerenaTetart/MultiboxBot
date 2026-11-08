@@ -6,9 +6,7 @@ bool BossAI::BossAIAction() {
 	bool result = false;
 	if (!Combat) {
 		if (Moving == MoveTypes::BossMechanic) {
-			Moving = MoveTypes::NotMoving;
-			ThreadSynchronizer::pressKey(0x28);
-			ThreadSynchronizer::releaseKey(0x28);
+            Functions::StopMovement();
 		}
 		return false;
 	}
@@ -30,9 +28,7 @@ bool BossAI::BossAIAction() {
     }
 
 	if (result == false && Moving == MoveTypes::BossMechanic) {
-		Moving = MoveTypes::NotMoving;
-		ThreadSynchronizer::pressKey(0x28);
-		ThreadSynchronizer::releaseKey(0x28);
+        Functions::StopMovement();
 	}
 	return result;
 }
@@ -55,8 +51,23 @@ namespace {
 }
 
 void BossAI::UpdateDangerZones() {
+    if (localPlayer == nullptr) return;
+    const auto currentMap = static_cast<unsigned int>(mapID);
+    const auto currentZone = static_cast<unsigned int>(localPlayer->zoneID);
     std::vector<DangerZone> zones;
-    zones.reserve(ListUnits.size());
+    bool hasApplicableRule = false;
+    for (const auto& rule : DangerRules) {
+        if (rule.EntryId != 0 && (rule.MapId == 0 || rule.MapId == currentMap) &&
+            (rule.ZoneId == 0 || rule.ZoneId == currentZone)) {
+            hasApplicableRule = true;
+            break;
+        }
+    }
+    if (!hasApplicableRule) {
+        Navigation::SetNpcDangerZones(currentMap, zones);
+        return;
+    }
+    zones.reserve(DangerRules.size());
     for (const auto& unit : ListUnits) {
         if (unit.objectType != Unit) continue;
 

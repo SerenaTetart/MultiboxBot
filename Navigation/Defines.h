@@ -30,7 +30,7 @@
 /**
  * @brief Version number of the MMAP format.
  */
-#define MMAP_VERSION 4
+#define MMAP_VERSION 8
 
  /**
   * @brief Size of the grids used in MMAP.

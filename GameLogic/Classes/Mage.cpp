@@ -75,10 +75,6 @@ void ListAI::MageDps() {
 			if (targetUnit != NULL) PolymorphDebuff = targetUnit->hasDebuff(PolymorphIDs, 6);
 			WoWUnit* ArcaneIntellectTarget = Functions::GetMissingBuff(ArcaneIntellectIDs, 5);
 
-			// Specific for Blizzard cast:
-			Position cluster_center = Position(0, 0, 0); int cluster_unit;
-			std::tie(cluster_center, cluster_unit) = Functions::getAOETargetPos(25, 30);
-
 			WoWUnit* RemoveCurseTarget = FunctionsLua::GetGroupDispel("Curse");
 			std::string RankConjureMana = GetSpellRank("Conjure Mana");
 
@@ -177,16 +173,16 @@ void ListAI::MageDps() {
 					if(localPlayer->isCasting()) PolymorphTimer = time(0);
 					localPlayer->SetTarget(firstTarget->Guid);
 				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && !targetUnit->resist(SpellSchool::Fire) && (playerSpec == 1 || localPlayer->level < 20 || targetUnit->resist(SpellSchool::Frost)) && Functions::IsSpellReady("Flamestrike")) {
-					//Flamestrike
-					FunctionsLua::CastSpellByName("Flamestrike");
-					Functions::ClickAOE(cluster_center);
-				}
-				else if (!localPlayer->isMoving && (cluster_unit >= 4) && !targetUnit->resist(SpellSchool::Frost) && Functions::IsSpellReady("Blizzard")) {
-					//Blizzard
-					FunctionsLua::CastSpellByName("Blizzard");
-					Functions::ClickAOE(cluster_center);
-				}
+				//Flamestrike
+				else if (!targetUnit->resist(SpellSchool::Fire) &&
+					(playerSpec == 1 || localPlayer->level < 20 || targetUnit->resist(SpellSchool::Frost)) &&
+					Functions::IsSpellReady("Flamestrike") &&
+					Functions::TryGroundTargetAOE("Flamestrike", 25.0f, 30.0f)) { }
+				// Specific for Blizzard cast:
+				//Blizzard
+				else if (!targetUnit->resist(SpellSchool::Frost) &&
+					Functions::IsSpellReady("Blizzard") &&
+					Functions::TryGroundTargetAOE("Blizzard", 25.0f, 30.0f)) { }
 				else if ((localPlayer->speed > 0 || localPlayer->level < 20) && !targetUnit->resist(SpellSchool::Arcane) && (nbrCloseEnemy >= 4) && Functions::IsSpellReady("Arcane Explosion")) {
 					//Arcane Explosion
 					FunctionsLua::CastSpellByName("Arcane Explosion");

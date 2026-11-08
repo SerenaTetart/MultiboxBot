@@ -22,7 +22,7 @@ static void PaladinAttack() {
 			}
 		}
 		if (localPlayer->autoAttackGuid == 0) Functions::InteractUnit(targetUnit->Pointer, 1);
-		if (((nbrCloseEnemy >= 2) || (localPlayer->prctMana < 33)) && !SealBuff && !SoWDebuff && Functions::IsSpellReady("Seal of Wisdom")) {
+		if (((nbrCloseEnemy >= 2) || !SoWDebuff) && !SealBuff && Functions::IsSpellReady("Seal of Wisdom")) {
 			// Seal of Wisdom
 			FunctionsLua::CastSpellByName("Seal of Wisdom");
 		}
@@ -34,12 +34,16 @@ static void PaladinAttack() {
 			// Holy Wrath
 			FunctionsLua::CastSpellByName("Holy Wrath");
 		}
-		else if ((nbrCloseEnemy >= 2) && Functions::IsSpellReady("Consecration")) {
+		else if ((nbrCloseEnemy >= int(nbrEnemy*0.75)) && Functions::IsSpellReady("Consecration")) {
 			// Consecration
 			FunctionsLua::CastSpellByName("Consecration");
 		}
-		else if (SealBuff && (localPlayer->prctMana > 33) && (distTarget < 10) && autoAttackTimer > 1.0f && ((SoWBuff && !SoWDebuff && targetUnit->rank > 0 && !missAggro) || !SoWBuff) && Functions::IsSpellReady("Judgement")) {
-			// Judgement
+		else if (SoWBuff && !SoWDebuff && (localPlayer->prctMana > 10) && (distTarget < 10) && autoAttackTimer > 1.0f && targetUnit->rank > 0 && !missAggro && Functions::IsSpellReady("Judgement")) {
+			// Judgement of Wisdom
+			FunctionsLua::CastSpellByName("Judgement");
+		}
+		else if (SoRBuff && (localPlayer->prctMana > 33) && (distTarget < 10) && autoAttackTimer > 1.0f && Functions::IsSpellReady("Judgement")) {
+			// Judgement of Righteousness
 			FunctionsLua::CastSpellByName("Judgement");
 		}
 		else if (!targetStunned && !targetConfused && (distTarget < 10) && Functions::IsSpellReady("Hammer of Justice")) {
@@ -184,7 +188,7 @@ void ListAI::PaladinTank() {
 				BoMightTarget = Functions::GetMissingBuff(BoMightIDs, 7, 2);
 			}
 			int BoSIDs[2] = { 6940, 20729 };
-			
+
 			int DevotionAuraIDs[7] = { 465, 10290, 643, 10291, 1032, 10292, 10293 };
 			bool DevotionAuraBuff = localPlayer->hasBuff(DevotionAuraIDs, 7);
 			int RetributionAuraIDs[5] = { 7294, 10298, 10299, 10300, 10301 };

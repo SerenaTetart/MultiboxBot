@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <chrono>
+#include <cstdio>
 
 SOCKET Navigation::sock = INVALID_SOCKET;
 WSADATA Navigation::WSAData;
@@ -27,11 +28,13 @@ namespace {
     std::mutex PathRetryMutex;
     FailedPathRequest LastFailedPath;
     constexpr auto FailedPathCooldown = std::chrono::milliseconds(1250);
+    constexpr auto ReconnectCooldown = std::chrono::milliseconds(2000);
+    constexpr size_t MaxFrameSize = 4096;
+    std::mutex NetworkMutex;
+    Clock::time_point ReconnectAfter{};
+    bool WinsockActive = false;
+    std::string ReceivedData;
 
-    float DistanceSq2D(const Position& a, const Position& b) {
-        const float dx = a.X - b.X, dy = a.Y - b.Y;
-        return dx * dx + dy * dy;
-    }
     void ForgetFailedPath() {
         std::lock_guard<std::mutex> guard(PathRetryMutex);
         LastFailedPath.Valid = false;
@@ -40,8 +43,8 @@ namespace {
         std::lock_guard<std::mutex> guard(PathRetryMutex);
         return LastFailedPath.Valid && LastFailedPath.MapId == mapId &&
             Clock::now() < LastFailedPath.RetryAfter &&
-            DistanceSq2D(start, LastFailedPath.Start) <= 16.0f &&
-            DistanceSq2D(end, LastFailedPath.Goal) <= 9.0f;
+            start.DistanceTo2D(LastFailedPath.Start) <= 4.0f &&
+            end.DistanceTo2D(LastFailedPath.Goal) <= 3.0f;
     }
     void NoteFailed(unsigned int mapId, const Position& start, const Position& end) {
         std::lock_guard<std::mutex> guard(PathRetryMutex);
@@ -52,29 +55,86 @@ Position Navigation::LastMoveDestination;
 bool Navigation::HasLastMove = false;
 MovementWatchdog Navigation::MoveWatchdog;
 
+// Navigation requests share a single persistent, synchronized TCP connection.
+static bool SendAll(SOCKET socketHandle, const std::string& message) {
+    size_t sent = 0;
+    while (sent < message.size()) {
+        const int count = send(socketHandle, message.data() + sent,
+            static_cast<int>(message.size() - sent), 0);
+        if (count <= 0) return false;
+        sent += static_cast<size_t>(count);
+    }
+    return true;
+}
+
 static void CloseNavigationSocket(SOCKET& socketHandle) {
     if (socketHandle != INVALID_SOCKET) {
         closesocket(socketHandle);
         socketHandle = INVALID_SOCKET;
     }
-    WSACleanup();
+    ReceivedData.clear();
 }
 
-bool Navigation::is_socket_connected(SOCKET s) {
-	if (s == INVALID_SOCKET) return false;
-	sockaddr_in peer{}; int len = sizeof(peer);
-	return ::getpeername(s, reinterpret_cast<sockaddr*>(&peer), &len) == 0;
+static void RetryNavigationLater(SOCKET& socketHandle) {
+    CloseNavigationSocket(socketHandle);
+    ReconnectAfter = Clock::now() + ReconnectCooldown;
 }
 
-static bool parse_vec3_cstr(const char* s, Position& p) {
-	float x, y, z;
-	int n = std::sscanf(s, " %f , %f , %f", &x, &y, &z);
-	if (n != 3) return false;
-	p.X = x; p.Y = y; p.Z = z;
-	return true;
+// Ancienne reception par buffer C (conservee pour reference) :
+// make it a C-string
+static bool ReceiveLine(SOCKET socketHandle, std::string& line) {
+    while (true) {
+        const size_t newline = ReceivedData.find('\n');
+        if (newline != std::string::npos) {
+            line = ReceivedData.substr(0, newline);
+            ReceivedData.erase(0, newline + 1);
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            return true;
+        }
+        if (ReceivedData.size() >= MaxFrameSize) return false;
+        char buffer[256];
+        const int count = recv(socketHandle, buffer, sizeof(buffer), 0);
+        if (count <= 0) return false;
+        ReceivedData.append(buffer, static_cast<size_t>(count));
+    }
 }
 
-void appendPosition(std::string& msg, Position& pos) {
+static bool EnsureNavigationConnected(SOCKET& socketHandle, WSADATA& wsaData, const char* addr, int port) {
+    if (socketHandle != INVALID_SOCKET) return true;
+    if (Clock::now() < ReconnectAfter) return false;
+
+    if (!WinsockActive) {
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+            ReconnectAfter = Clock::now() + ReconnectCooldown;
+            return false;
+        }
+        WinsockActive = true;
+    }
+
+    socketHandle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (socketHandle == INVALID_SOCKET) {
+        ReconnectAfter = Clock::now() + ReconnectCooldown;
+        return false;
+    }
+    const DWORD receiveTimeoutMs = 3000;
+    const DWORD sendTimeoutMs = 1500;
+    setsockopt(socketHandle, SOL_SOCKET, SO_RCVTIMEO,
+        reinterpret_cast<const char*>(&receiveTimeoutMs), sizeof(receiveTimeoutMs));
+    setsockopt(socketHandle, SOL_SOCKET, SO_SNDTIMEO,
+        reinterpret_cast<const char*>(&sendTimeoutMs), sizeof(sendTimeoutMs));
+
+    SOCKADDR_IN sin{};
+    sin.sin_addr.s_addr = inet_addr(addr);
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(static_cast<u_short>(port));
+    if (connect(socketHandle, reinterpret_cast<SOCKADDR*>(&sin), sizeof(sin)) == SOCKET_ERROR) {
+        RetryNavigationLater(socketHandle);
+        return false;
+    }
+    return true;
+}
+
+void appendPosition(std::string& msg, const Position& pos) {
 	// truncate at 4 decimals
 	std::ostringstream oss;
 	oss << std::fixed << std::setprecision(4) << pos.X << "," << pos.Y << "," << pos.Z;
@@ -83,9 +143,13 @@ void appendPosition(std::string& msg, Position& pos) {
 }
 
 Position Navigation::CalculatePath(unsigned int mapID, Position start, Position end, bool throttleFailedRequests) {
+    if (!std::isfinite(start.X) || !std::isfinite(start.Y) || !std::isfinite(start.Z) ||
+        !std::isfinite(end.X) || !std::isfinite(end.Y) || !std::isfinite(end.Z)) return start;
     if (end.DistanceTo(start) < 2.0f) return start;
     if (throttleFailedRequests && RecentlyFailed(mapID, start, end)) return start;
-    if (!is_socket_connected(sock) && !ConnectToServer("127.0.0.1", 50002)) {
+
+    std::lock_guard<std::mutex> networkGuard(NetworkMutex);
+    if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002)) {
         if (throttleFailedRequests) NoteFailed(mapID, start, end);
         return start;
     }
@@ -95,74 +159,78 @@ Position Navigation::CalculatePath(unsigned int mapID, Position start, Position 
     appendPosition(msg, start);
     msg += " ";
     appendPosition(msg, end);
-	msg += " "+std::to_string(mapID);
-    if (send(sock, msg.c_str(), (int)msg.size(), 0) != static_cast<int>(msg.size())) {
-        CloseNavigationSocket(sock);
+    msg += " " + std::to_string(mapID) + "\n";
+    // Receive reply "nx,ny,nz"
+    std::string response;
+    if (!SendAll(sock, msg) || !ReceiveLine(sock, response)) {
+        RetryNavigationLater(sock);
         if (throttleFailedRequests) NoteFailed(mapID, start, end);
         return start;
     }
 
-    // Receive reply "nx,ny,nz"
-    char buffer[128];
-    int r = recv(sock, buffer, sizeof(buffer) - 1, 0);
-    if (r > 0) {
-        buffer[r] = '\0'; // make it a C-string
-        Position decoded{};
-        if (parse_vec3_cstr(buffer, decoded) &&
-            std::isfinite(decoded.X) && std::isfinite(decoded.Y) && std::isfinite(decoded.Z)) {
-            if (decoded.DistanceTo(start) < 2.0f) {
-                if (throttleFailedRequests) NoteFailed(mapID, start, end);
-                return start;
-            }
-            if (throttleFailedRequests) ForgetFailedPath();
-            return decoded;
-        }
+    if (response == "ERROR") {
+        if (throttleFailedRequests) NoteFailed(mapID, start, end);
+        return start;
     }
-    CloseNavigationSocket(sock);
-    if (throttleFailedRequests) NoteFailed(mapID, start, end);
-    return start;
+
+    Position waypoint{};
+    if (std::sscanf(response.c_str(), " %f , %f , %f", &waypoint.X, &waypoint.Y, &waypoint.Z) != 3 ||
+        !std::isfinite(waypoint.X) || !std::isfinite(waypoint.Y) || !std::isfinite(waypoint.Z)) {
+        RetryNavigationLater(sock);
+        if (throttleFailedRequests) NoteFailed(mapID, start, end);
+        return start;
+    }
+    if (waypoint.DistanceTo(start) < 2.0f) {
+        if (throttleFailedRequests) NoteFailed(mapID, start, end);
+        return start;
+    }
+    ForgetFailedPath();
+    return waypoint;
 }
 
-static bool ReceiveNavigationAck(SOCKET sock) {
-    char buffer[16];
-    int r = recv(sock, buffer, sizeof(buffer) - 1, 0);
-    if (r <= 0) return false;
-    buffer[r] = '\0';
-    return std::string(buffer) == "OK";
+static bool ReceiveNavigationAck(SOCKET socketHandle, bool& transportOk) {
+    std::string response;
+    transportOk = ReceiveLine(socketHandle, response);
+    return transportOk && response == "OK";
 }
 
 bool Navigation::AddBlacklist(unsigned int mapId, const std::string& name, const Position& position, float radius, unsigned int type) {
-    if (name.empty() || radius <= 0.0f || IsBlacklisted(name)) return false;
-
+    if (name.empty() || radius <= 0.0f) return false;
     // Add locally *first*: even a disconnected navigation server must never
     // cause an explicitly blacklisted zone to be ignored by CTM movement.
     {
         std::lock_guard<std::mutex> guard(AvoidanceMutex);
+        if (std::any_of(Blacklists.begin(), Blacklists.end(),
+            [&](const BlacklistEntry& entry) { return entry.Name == name; })) return false;
         Blacklists.push_back({name, position, radius, mapId});
         ++ZoneVersion;
     }
     ForgetFailedPath();
 
-    if (!is_socket_connected(sock) && !ConnectToServer("127.0.0.1", 50002)) return false;
+    std::lock_guard<std::mutex> networkGuard(NetworkMutex);
+    if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002)) return false;
     std::ostringstream oss;
     oss << "B " << mapId << " " << name << " "
         << std::fixed << std::setprecision(4)
         << position.X << "," << position.Y << "," << position.Z << " "
-        << radius << " " << type;
-    const std::string msg = oss.str();
-    const bool synced = send(sock, msg.c_str(), static_cast<int>(msg.size()), 0) ==
-        static_cast<int>(msg.size()) && ReceiveNavigationAck(sock);
-    if (!synced) CloseNavigationSocket(sock);
+        << radius << " " << type << "\n";
+    bool transportOk = false;
+    const bool sent = SendAll(sock, oss.str());
+    const bool synced = sent && ReceiveNavigationAck(sock, transportOk);
+    if (!sent || !transportOk) RetryNavigationLater(sock);
     return synced;
 }
 
 bool Navigation::RemoveBlacklist(const std::string& name) {
     bool synced = false;
-    if (is_socket_connected(sock) || ConnectToServer("127.0.0.1", 50002)) {
-        const std::string msg = "R " + name;
-        synced = send(sock, msg.c_str(), static_cast<int>(msg.size()), 0) ==
-                 static_cast<int>(msg.size()) && ReceiveNavigationAck(sock);
-        if (!synced) CloseNavigationSocket(sock);
+    {
+        std::lock_guard<std::mutex> networkGuard(NetworkMutex);
+        if (EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002)) {
+            bool transportOk = false;
+            const bool sent = SendAll(sock, "R " + name + "\n");
+            synced = sent && ReceiveNavigationAck(sock, transportOk);
+            if (!sent || !transportOk) RetryNavigationLater(sock);
+        }
     }
     {
         std::lock_guard<std::mutex> guard(AvoidanceMutex);
@@ -173,15 +241,6 @@ bool Navigation::RemoveBlacklist(const std::string& name) {
     }
     ForgetFailedPath();
     return synced;
-}
-
-bool Navigation::IsBlacklisted(const std::string& name) {
-    std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    for (const auto& blacklist : Blacklists) {
-		if(blacklist.Name == name) return true;
-    }
-
-    return false;
 }
 
 bool Navigation::HasBlacklists() {
@@ -199,35 +258,25 @@ void Navigation::ClearBlacklists() {
         }
 
         if (!RemoveBlacklist(name)) {
-            std::cout << "Warning: server blacklist not removed: " << name << "\n";
+            break; // Leave the pending blacklist intact if the navigation server is unavailable.
         }
     }
 }
 
 void Navigation::SetNpcDangerZones(unsigned int mapId, const std::vector<DangerZone>& zones) {
-    std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    std::size_t index = 0;
-    bool changed = false;
-    for (const auto& zone : zones) {
-        if (!(zone.Radius > 0.0f) || zone.MapId != mapId) continue;
-        if (index == NpcDangerZones.size()) {
-            changed = true;
-            break;
-        }
-        const auto& previous = NpcDangerZones[index++];
-        if (zone.Guid != previous.Guid || zone.MapId != previous.MapId ||
-            zone.Radius != previous.Radius || zone.Center.X != previous.Center.X ||
-            zone.Center.Y != previous.Center.Y || zone.Center.Z != previous.Center.Z) {
-            changed = true;
-            break;
-        }
-    }
-    if (!changed && index == NpcDangerZones.size()) return;
-
     std::vector<DangerZone> filtered;
     filtered.reserve(zones.size());
     for (const auto& zone : zones)
-        if (zone.Radius > 0.0f && zone.MapId == mapId) filtered.push_back(zone);
+        if (zone.MapId == mapId && zone.Radius > 0.0f) filtered.push_back(zone);
+
+    std::lock_guard<std::mutex> guard(AvoidanceMutex);
+    const bool unchanged = std::equal(filtered.begin(), filtered.end(),
+        NpcDangerZones.begin(), NpcDangerZones.end(),
+        [](const DangerZone& a, const DangerZone& b) {
+            return a.Guid == b.Guid && a.MapId == b.MapId && a.Radius == b.Radius &&
+                a.Center == b.Center;
+        });
+    if (unchanged) return;
     NpcDangerZones.swap(filtered);
     ++ZoneVersion;
 }
@@ -246,14 +295,6 @@ Navigation::AvoidanceSnapshot Navigation::GetAvoidanceSnapshot(unsigned int mapI
         cached = {ZoneVersion, snapshot};
     }
     return cached.second;
-}
-
-std::vector<DangerZone> Navigation::GetAvoidanceZones(unsigned int mapId) {
-    return *GetAvoidanceSnapshot(mapId);
-}
-
-bool Navigation::HasAvoidanceZones(unsigned int mapId) {
-    return !GetAvoidanceSnapshot(mapId)->empty();
 }
 
 bool Navigation::IsPositionDangerous(const AvoidanceSnapshot& zones, const Position& position) {
@@ -322,35 +363,22 @@ bool Navigation::IsCurrentMovementUnsafe(unsigned int mapId, const Position& fro
         if (!HasLastMove) return false;
         destination = LastMoveDestination;
     }
-    const float dx = from.X - destination.X, dy = from.Y - destination.Y;
-    if (dx * dx + dy * dy < 1.0f) return false;
+    if (from.DistanceTo2D(destination) < 1.0f) return false;
     return !IsSegmentSafe(mapId, from, destination);
 }
 
 bool Navigation::ConnectToServer(const char* addr, int port) {
-	if (WSAStartup(MAKEWORD(2, 2), &WSAData) != 0) return false;
-	SOCKADDR_IN sin;
-	sin.sin_addr.s_addr = inet_addr(addr);
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(port);
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == INVALID_SOCKET) { WSACleanup(); return false; }
-
-	std::cout << "Connecting to Navigation server...\n";
-	if (connect(sock, (SOCKADDR*)&sin, sizeof(sin)) == SOCKET_ERROR) {
-        CloseNavigationSocket(sock);
-		return false;
-	}
-    const DWORD timeoutMs = 1500;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO,
-        reinterpret_cast<const char*>(&timeoutMs), sizeof(timeoutMs));
-    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO,
-        reinterpret_cast<const char*>(&timeoutMs), sizeof(timeoutMs));
-	std::cout << "Connected to " << addr << ":" << port << "\n";
-	return true;
+    std::lock_guard<std::mutex> networkGuard(NetworkMutex);
+    return EnsureNavigationConnected(sock, WSAData, addr, port);
 }
 
 void Navigation::DisconnectClient() {
+    std::lock_guard<std::mutex> networkGuard(NetworkMutex);
     CloseNavigationSocket(sock);
-	std::cout << "Navigation client disconnected !\n";
+    if (WinsockActive) {
+        WSACleanup();
+        WinsockActive = false;
+    }
+    ReconnectAfter = {};
+    ForgetFailedPath();
 }

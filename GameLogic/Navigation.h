@@ -56,8 +56,6 @@ public:
 
     static void SetNpcDangerZones(unsigned int mapId, const std::vector<DangerZone>& zones);
     static AvoidanceSnapshot GetAvoidanceSnapshot(unsigned int mapId);
-    static std::vector<DangerZone> GetAvoidanceZones(unsigned int mapId);
-    static bool HasAvoidanceZones(unsigned int mapId);
     static bool IsPositionDangerous(unsigned int mapId, const Position& position);
     static bool IsSegmentSafe(unsigned int mapId, const Position& from, const Position& to);
     static bool IsSegmentSafe(const AvoidanceSnapshot& zones, const Position& from, const Position& to);
@@ -72,8 +70,6 @@ public:
     static bool IsCurrentMovementUnsafe(unsigned int mapId, const Position& from);
     static void DisconnectClient();
 private:
-	static bool IsBlacklisted(const std::string& name);
-    static bool is_socket_connected(SOCKET s);
 
     static WSADATA WSAData;
     static SOCKET sock;

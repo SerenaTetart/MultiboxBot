@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <functional>
+#include <string>
 #include "../WoWObject.h"
 #include "../Data/Spell.h"
 #include "../Data/Movement.h"
@@ -18,18 +20,18 @@ class Functions {
 		static void ClickAOE(Position tpos);
 		static void InteractUnit(uintptr_t target, int autoloot);
 		static void InteractObject(uintptr_t object_ptr, int autoloot);
-		static bool MoveLoS(Position target_pos);
-		static bool MoveLoSSwim(Position target_pos);
 		static bool StepBack(WoWUnit* target, MoveTypes MoveType, float dist_away=15.0f);
 		static bool EscapeDangerZone();
         static void HandleMovementStall();
+        // All movement orders and explicit stops pass through these two methods.
+        static bool StartMovement(const Position& destination, bool emergency = false,
+            bool navigationWaypoint = false, unsigned long long guid = 0);
+        static void StopMovement();
         static bool UpdateLateralRecovery();
-		static bool MoveObstacle(Position target_pos, bool checkEnemyClose=true);
-		static bool MoveObstacleSwim(Position target_pos, bool checkEnemyClose);
 		static void FollowMultibox(int placement = 0);
 		static void MoveTo(Position target_pos, MoveTypes moveType, bool checkEnemyClose=true, bool targetSwim=false);
 		static void MoveToFast(Position target_pos, MoveTypes moveType);
-		static void MoveToLoS(Position target_pos, MoveTypes moveType);
+		static void MoveToLoS(Position target_pos, MoveTypes moveType, bool targetSwim = false);
 		static void CancelPlayerBuff(int buffID);
 		static unsigned int GetMapID();
 		static SpellSlotData GetSpellDataFromSlot(int slot, bool pet);
@@ -43,9 +45,11 @@ class Functions {
 		// === Non-memory Functions === //
 		static void ClassifyHeal();
 		static Position RandomisePos(Position target_pos, float radius, Position away_from = Position(0.0f, 0.0f, 0.0f), float dist_away = 0.0f);
-		static std::tuple<Position, int> getAOETargetPos(float range, float range2);
+		static std::tuple<Position, int> getAOETargetPos(float range, float range2, const Position* fixedCenter = nullptr);
+		static bool TryGroundTargetAOE(const char* spell, float diameter, float maxRange,
+            const Position* fixedCenter = nullptr, const std::function<void()>& beforeCast = {});
 		static void countEnemies(int& nbr, int& nbrClose, int& nbrCloseFacing, int& nbrEnemyPlayer, WoWUnit* enemyCC);
-		static bool enemyClose(Position pos);
+		static bool enemyClose(Position pos, bool requireLineOfSight = false);
         static int getNbrCreatureType(int range, CreatureType type1, CreatureType type2=Null, CreatureType type3=Null);
         static bool PlayerIsRanged();
 		static WoWUnit* GetGroupDead(int mode = 0);
