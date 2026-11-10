@@ -214,7 +214,7 @@ bool TrainSpell() {
 }
 
 bool GoToVendor(Position vendorPos, int vendorID, int item_id, int item_quantity) {
-	if (!vendorID) return false; // TODO: renseigner l'ID et la position du vendeur avant activation.
+	if (!vendorID) return false;
 	if (localPlayer->position.DistanceTo(vendorPos) >= 2.0f) {
 		MoveToMap(vendorPos);
 		return true;
@@ -320,6 +320,81 @@ inline bool MatchesEnchantCraftLink(const std::string& link, const Craft& recipe
 	if (pos != std::string::npos) return std::atoi(link.c_str() + pos + 8) == (recipe.spell_id ? recipe.spell_id : recipe.crafted_id);
 	pos = link.find("item:");
 	return recipe.target_slot == 0 && pos != std::string::npos && std::atoi(link.c_str() + pos + 5) == recipe.crafted_id;
+}
+
+namespace {
+
+enum class CraftStationType { Forge, Anvil };
+
+struct CraftStationConfig {
+    std::optional<Position> forge;
+    std::optional<Position> anvil;
+};
+
+struct CraftAreaConfig {
+    int map_id;
+    int zone_id;
+    int neighboring_zone_id;
+    CraftStationConfig stations;
+};
+
+const std::array<CraftAreaConfig, 3>& GetCraftAreas() {
+    static const std::array<CraftAreaConfig, 3> areas = {{
+        // Stormwind
+        { 0, 1519, 12, {
+            Position(-8427.233398f, 609.402161f, 95.222618f),
+            Position(-8427.233398f, 609.402161f, 95.222618f)
+        } },
+        // Ironforge
+        { 0, 1537, 1, {
+            Position(-4791.228516f, -1123.044312f, 498.806091f),
+            Position(-4791.228516f, -1123.044312f, 498.806091f)
+        } },
+        // Darnassus
+        { 1, 1657, 141, {
+            Position(9915.537109f, 2311.028564f, 1330.787964f),
+            std::nullopt
+        } }
+    }};
+    return areas;
+}
+
+std::optional<CraftStationType> RequiredStationFor(ProfessionId profession) {
+    switch (profession) {
+    case ProfessionId::Mining: return CraftStationType::Forge;
+    case ProfessionId::Blacksmithing: return CraftStationType::Anvil;
+    default: return std::nullopt;
+    }
+}
+
+struct CraftLocation {
+    bool available;
+    std::optional<Position> destination;
+};
+
+CraftLocation ResolveCraftLocation(ProfessionId profession) {
+    const auto required = RequiredStationFor(profession);
+    if (!required) return { true, std::nullopt };
+    if (!localPlayer || !FactionTemplate.IsAlliance(localPlayer->factionTemplateID))
+        return { false, std::nullopt };
+
+    for (const auto& area : GetCraftAreas()) {
+        if (area.map_id != mapID) continue;
+        if (localPlayer->zoneID != area.zone_id &&
+            localPlayer->zoneID != area.neighboring_zone_id) continue;
+
+        const auto& station = *required == CraftStationType::Forge
+            ? area.stations.forge : area.stations.anvil;
+        return { station.has_value(), station };
+    }
+    return { false, std::nullopt };
+}
+
+struct SelectedCraft {
+    CraftPlan plan;
+    std::optional<Position> station_position;
+};
+
 }
 
 inline auto GetProfessionsToCheck() {
@@ -489,13 +564,16 @@ struct CraftKnowledgeCache {
 
 CraftKnowledgeCache craftKnowledgeCache;
 
-inline std::optional<CraftPlan> GetCraftPlan(int max_crafts = 20) {
+static std::optional<SelectedCraft> GetCraftPlan(int max_crafts = 20) {
 	if (!localPlayer || max_crafts <= 0) return std::nullopt;
 
 	const auto professions = GetProfessionsToCheck();
 
 	for (const auto& [id, crafts, level, max_level] : professions) {
 		if (level <= 0) continue;
+		const CraftLocation location = ResolveCraftLocation(id);
+		if (!location.available) continue;
+		if (id == ProfessionId::Blacksmithing && GetItemCount(5956) == 0) continue;
 		if (level == max_level && !TrainTradeSkill(id, true, true)) continue;
 		for (const auto& craft : crafts) {
 			if (level < craft.required_level || level >= craft.max_level) continue;
@@ -517,7 +595,7 @@ inline std::optional<CraftPlan> GetCraftPlan(int max_crafts = 20) {
 			int batch_limit = (std::min)(max_crafts, craft.max_level - level);
 			if (id == ProfessionId::Enchanting) batch_limit = 1;
 			auto plan = TryPlanCraftBatch(id, craft, batch_limit);
-			if (plan) return plan;
+			if (plan) return SelectedCraft{ std::move(*plan), location.destination };
 		}
 	}
 	return std::nullopt;
@@ -630,43 +708,32 @@ bool CraftItem(ProfessionId professionID, int item_id, int amount) {
 
 inline bool MakeCraft() {
 	if (inventoryFull) return false;
-	auto plan = GetCraftPlan();
-	if (!plan) return false;
+	auto selection = GetCraftPlan();
+	if (!selection) return false;
+	const CraftPlan& plan = selection->plan;
 
-	switch (CheckCraftKnowledge(plan->profession_id, plan->crafted_id)) {
+	switch (CheckCraftKnowledge(plan.profession_id, plan.crafted_id)) {
 	case CraftKnowledge::Checking: return true;
 	case CraftKnowledge::Missing:
-		if (plan->learnable_from_trainer) return TrainTradeSkill(plan->profession_id);
+		if (plan.learnable_from_trainer) return TrainTradeSkill(plan.profession_id);
 		{
 			std::lock_guard<std::mutex> lock(craftKnowledgeCache.mutex);
-			craftKnowledgeCache.missing_nontrainer[{ plan->profession_id, plan->crafted_id }] =
+			craftKnowledgeCache.missing_nontrainer[{ plan.profession_id, plan.crafted_id }] =
 				std::chrono::steady_clock::now() + std::chrono::seconds(60);
 		}
 		return true;
 	case CraftKnowledge::Learned: break;
 	}
 
-	if (plan->profession_id == ProfessionId::Blacksmithing && GetItemCount(5956) == 0) return false;
-
-	if (!plan->to_buy.empty()) {
-		for (const auto& item : plan->to_buy)
-			if (!BuyItem(plan->profession_id, item.item_id, item.item_quantity)) return false;
+	if (!plan.to_buy.empty()) {
+		for (const auto& item : plan.to_buy)
+			if (!BuyItem(plan.profession_id, item.item_id, item.item_quantity)) return false;
 		return true;
 	}
-	if (plan->profession_id == ProfessionId::Blacksmithing || plan->profession_id == ProfessionId::Mining) {
-		Position anvilPos = Position(0, 0, 0);
-
-		if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-			// Stormwind
-			anvilPos = Position(-8427.233398f, 609.402161f, 95.222618f);
-		}
-		else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-			// Ironforge
-			anvilPos = Position(-4791.228516f, -1123.044312f, 498.806091f);
-		}
-		else return false;
-
-		if (localPlayer->position.DistanceTo(anvilPos) >= 2.0f) { MoveToMap(anvilPos); return true; }
+	if (selection->station_position &&
+		localPlayer->position.DistanceTo(*selection->station_position) >= 2.0f) {
+		MoveToMap(*selection->station_position);
+		return true;
 	}
 	if (localPlayer->isMounted) {
 		ThreadSynchronizer::RunOnMainThread([]() {
@@ -676,7 +743,7 @@ inline bool MakeCraft() {
 		});
 		return true;
 	}
-	return CraftItem(plan->profession_id, plan->crafted_id, plan->quantity);
+	return CraftItem(plan.profession_id, plan.crafted_id, plan.quantity);
 }
 
 void AssembleBack() {

@@ -34,7 +34,7 @@ extern std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
 extern std::vector<int> HealTargetArray;
 extern int AoEHeal, nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, NumGroupMembers, playerSpec, positionCircle,
 			mapID, keybindTrigger, IsInGroup, autoChores;
-extern unsigned int LastTarget;
+extern unsigned long long LastTarget;
 extern MoveTypes Moving;
 extern std::string tarType;
 extern std::mutex leaderInfosMutex;

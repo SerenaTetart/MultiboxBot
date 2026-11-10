@@ -7,8 +7,9 @@ class MovementWatchdog {
 public:
     using Clock = std::chrono::steady_clock;
     using TimePoint = Clock::time_point;
-    static constexpr auto StallTimeout = std::chrono::milliseconds(2500);
-    static constexpr float ProgressThreshold = 0.75f;
+    static constexpr auto StallTimeout = std::chrono::milliseconds(1200);
+    static constexpr auto InterruptedTimeout = std::chrono::milliseconds(650);
+    static constexpr float ProgressThreshold = 0.35f;
     static constexpr float ArrivalThreshold = 1.5f;
 
     template<class Point>
@@ -31,7 +32,7 @@ public:
     }
 
     template<class Point>
-    bool Stalled(const Point& current, TimePoint now) {
+    bool Stalled(const Point& current, TimePoint now, bool movementReported = true) {
         if (!active_) return false;
         if (Distance3D(current.X, current.Y, current.Z,
             goalX_, goalY_, goalZ_) <= ArrivalThreshold) {
@@ -39,7 +40,7 @@ public:
             return false;
         }
         UpdateProgress(current, now);
-        return now - lastProgress_ >= StallTimeout;
+        return now - lastProgress_ >= (movementReported ? StallTimeout : InterruptedTimeout);
     }
 
     template<class Point>

@@ -181,7 +181,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Swiftmend
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Swiftmend");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -189,7 +189,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Regrowth
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Regrowth");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -198,7 +198,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		if (Functions::IsSpellReady("Nature's Swiftness")) FunctionsLua::CastSpellByName("Nature's Swiftness");
 		FunctionsLua::CastSpellByName("Healing Touch");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -206,7 +206,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Innervate
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Innervate");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -214,7 +214,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Rejuvenation
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Rejuvenation");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -222,20 +222,30 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 }
 
 void ListAI::DruidFeralCat() {
+	WoWUnit* LastTargeted = Functions::GetUnitByGUID(LastTarget);
 	int HealingTouchIDs[11] = { 5185, 5186, 5187, 5188, 5189, 6778, 8903, 9758, 9888, 9889, 25297 };
 	int RegrowthIDs[9] = { 8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858 };
-	if ((ListUnits.size() > LastTarget) && ((localPlayer->isCasting(HealingTouchIDs, 11) && (ListUnits[LastTarget].prctHP > 80))
-		|| (localPlayer->isCasting(RegrowthIDs, 9) && (ListUnits[LastTarget].prctHP > 80)))) {
+	int RebirthIDs[5] = { 20484, 20739, 20742, 20747, 20748 };
+	if (LastTargeted != NULL && ((localPlayer->isCasting(HealingTouchIDs, 11) && (LastTargeted->prctHP > 80))
+		|| (localPlayer->isCasting(RegrowthIDs, 9) && (LastTargeted->prctHP > 80)))) {
+		// Cancel Heal
+		ThreadSynchronizer::pressKey(0x28);
+		ThreadSynchronizer::releaseKey(0x28);
+	}
+	else if (LastTargeted != NULL && localPlayer->isCasting(RebirthIDs, 5) && !LastTargeted->isdead) {
+		// Cancel Rez
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
 	ThreadSynchronizer::RunOnMainThread([]() {
 		bool CatFormBuff = localPlayer->hasBuff(768);
-		if (!CatFormBuff && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
+		bool BearFormBuff = (localPlayer->hasBuff(5487) || localPlayer->hasBuff(9634));
+		bool inAnimalForm = CatFormBuff || BearFormBuff;
+		if (!inAnimalForm && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
 			//Healthstone
 			FunctionsLua::UseHealthstone();
 		}
-		else if (!CatFormBuff && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
+		else if (!inAnimalForm && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
 			//Healing Potion
 			FunctionsLua::UseHPotion();
 		}
@@ -249,71 +259,71 @@ void ListAI::DruidFeralCat() {
 			WoWUnit* RemoveCurseTarget = FunctionsLua::GetGroupDispel("Curse");
 			WoWUnit* CurePoisonTarget = FunctionsLua::GetGroupDispel("Poison");
 			WoWUnit* deadPlayer = Functions::GetGroupDead(1);
-			int CatFormIDs[1] = { 768 }; bool CatFormBuff = localPlayer->hasBuff(CatFormIDs, 1);
 			if (CatFormBuff && !Combat && (targetUnit == NULL || !targetUnit->attackable || targetUnit->isdead) && localPlayer->prctMana > 70.0f) {
 				//Kitty Form
 				FunctionsLua::CastSpellByName("Cat Form");
 			}
-			else if (!CatFormBuff && !localPlayer->isMoving && Functions::IsSpellReady("Rebirth") && (deadPlayer != NULL)) {
+			else if (!inAnimalForm && !localPlayer->isMoving && Functions::IsSpellReady("Rebirth") && (deadPlayer != NULL)) {
 				//Rebirth
 				localPlayer->SetTarget(deadPlayer->Guid);
+				LastTarget = deadPlayer->Guid;
 				FunctionsLua::CastSpellByName("Rebirth");
 			}
-			else if (!CatFormBuff && (MotWPlayer != NULL) && Functions::IsSpellReady("Gift of the Wild")) {
+			else if (!inAnimalForm && (MotWPlayer != NULL) && Functions::IsSpellReady("Gift of the Wild")) {
 				//Gift of the Wild (Group)
 				localPlayer->SetTarget(MotWPlayer->Guid);
 				FunctionsLua::CastSpellByName("Gift of the Wild");
 			}
-			else if (!CatFormBuff && !MotWBuff && Functions::IsSpellReady("Mark of the Wild")) {
+			else if (!inAnimalForm && !MotWBuff && Functions::IsSpellReady("Mark of the Wild")) {
 				//Mark of the Wild (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Mark of the Wild");
 			}
-			else if (!CatFormBuff && (MotWPlayer != NULL) && Functions::IsSpellReady("Mark of the Wild")) {
+			else if (!inAnimalForm && (MotWPlayer != NULL) && Functions::IsSpellReady("Mark of the Wild")) {
 				//Mark of the Wild (Group)
 				localPlayer->SetTarget(MotWPlayer->Guid);
 				FunctionsLua::CastSpellByName("Mark of the Wild");
 			}
-			else if (!CatFormBuff && !ThornsBuff && Functions::IsSpellReady("Thorns")) {
+			else if (!inAnimalForm && !ThornsBuff && Functions::IsSpellReady("Thorns")) {
 				//Thorns (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Thorns");
 			}
-			else if (!CatFormBuff && (ThornsTarget != NULL) && Functions::IsSpellReady("Thorns")) {
+			else if (!inAnimalForm && (ThornsTarget != NULL) && Functions::IsSpellReady("Thorns")) {
 				//Thorns (Group)
 				localPlayer->SetTarget(ThornsTarget->Guid);
 				FunctionsLua::CastSpellByName("Thorns");
 			}
-			else if (!CatFormBuff && Combat && (localPlayer->prctMana < 10) && (FunctionsLua::GetMPotionCD() < 1.25)) {
+			else if (!inAnimalForm && Combat && (localPlayer->prctMana < 10) && (FunctionsLua::GetMPotionCD() < 1.25)) {
 				//Mana Potion
 				FunctionsLua::UseMPotion();
 			}
-			else if (!CatFormBuff && (localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Curse") && Functions::IsSpellReady("Remove Curse")) {
+			else if (!inAnimalForm && (localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Curse") && Functions::IsSpellReady("Remove Curse")) {
 				//Remove Curse (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Remove Curse");
 			}
-			else if (!CatFormBuff && (RemoveCurseTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Remove Curse")) {
+			else if (!inAnimalForm && (RemoveCurseTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Remove Curse")) {
 				//Remove Curse (Group)
 				localPlayer->SetTarget(RemoveCurseTarget->Guid);
 				FunctionsLua::CastSpellByName("Remove Curse");
 			}
-			else if (!CatFormBuff && (localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Poison") && Functions::IsSpellReady("Cure Poison")) {
+			else if (!inAnimalForm && (localPlayer->prctMana > 25) && !Functions::IsPlayerSpell("Abolish Poison") && FunctionsLua::GetUnitDispel("player", "Poison") && Functions::IsSpellReady("Cure Poison")) {
 				//Cure Poison (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Cure Poison");
 			}
-			else if (!CatFormBuff && (CurePoisonTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Cure Poison")) {
+			else if (!inAnimalForm && (CurePoisonTarget != NULL) && (localPlayer->prctMana > 25) && !Functions::IsPlayerSpell("Abolish Poison") && Functions::IsSpellReady("Cure Poison")) {
 				//Cure Poison (Group)
 				localPlayer->SetTarget(CurePoisonTarget->Guid);
 				FunctionsLua::CastSpellByName("Cure Poison");
 			}
-			else if (!CatFormBuff && (localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Poison") && Functions::IsSpellReady("Abolish Poison")) {
+			else if (!inAnimalForm && (localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Poison") && Functions::IsSpellReady("Abolish Poison")) {
 				//Abolish Poison (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Abolish Poison");
 			}
-			else if (!CatFormBuff && (CurePoisonTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Abolish Poison")) {
+			else if (!inAnimalForm && (CurePoisonTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Abolish Poison")) {
 				//Abolish Poison (Group)
 				localPlayer->SetTarget(CurePoisonTarget->Guid);
 				FunctionsLua::CastSpellByName("Abolish Poison");

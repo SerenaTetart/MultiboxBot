@@ -627,15 +627,30 @@ int FunctionsLua::GetStackDebuff(std::string target, std::string texture) {
 	return 0;
 }
 
-bool FunctionsLua::GetUnitDispel(std::string target, std::string dispellType1, std::string dispellType2, std::string dispellType3) {
-	//Retourne si la cible a un debuff � dispel
+bool FunctionsLua::GetUnitDispel(std::string target, std::string dispellType1, std::string dispellType2, std::string dispellType3, WoWUnit* dispelUnit) {
+	if (dispelUnit == nullptr && target == "player") dispelUnit = localPlayer;
+	else if (dispelUnit == nullptr && target == "target" && localPlayer != nullptr) dispelUnit = localPlayer->getTarget();
+
 	std::string args[3] = { dispellType1, dispellType2, dispellType3 };
+	if (dispelUnit != nullptr) {
+		for (std::string& type : args) {
+			if ((type == "Disease" && dispelUnit->hasBuff(552)) ||
+				(type == "Poison" && dispelUnit->hasBuff(2893))) {
+				type.clear();
+			}
+		}
+	}
+
+	if ((args[0].empty() || args[0] == "Null") &&
+		(args[1].empty() || args[1] == "Null") &&
+		(args[2].empty() || args[2] == "Null")) return false;
+
 	for (int i = 1; i <= 16; i++) {
 		std::string debuffIcon, debuffType;
 		std::tie(debuffIcon, std::ignore, debuffType) = UnitDebuff(target, i);
 		if (debuffIcon != "Interface\\Icons\\Spell_Frost_FrostArmor02" && debuffIcon != "Interface\\Icons\\Spell_Shadow_Cripple") {
 			for (int y = 0; y < 3; y++) {
-				if (args[y] == debuffType) return true;
+				if (!args[y].empty() && args[y] != "Null" && args[y] == debuffType) return true;
 			}
 		}
 	}
@@ -643,12 +658,11 @@ bool FunctionsLua::GetUnitDispel(std::string target, std::string dispellType1, s
 }
 
 WoWUnit* FunctionsLua::GetGroupDispel(std::string dispellType1, std::string dispellType2, std::string dispellType3) {
-	//Retourne le joueur du groupe � dispel
 	for (int i = 1; i <= NumGroupMembers; i++) {
 		if ((GroupMember[i] != NULL) && (GroupMember[i]->unitReaction > Neutral)
 			&& !GroupMember[i]->isdead && (localPlayer->position.DistanceTo(GroupMember[i]->position) < 40.0f)
 			&& !Functions::Intersect(localPlayer->position, GroupMember[i]->position)
-			&& GetUnitDispel(tarType + std::to_string(i), dispellType1, dispellType2, dispellType3)) return GroupMember[i];
+			&& GetUnitDispel(tarType + std::to_string(i), dispellType1, dispellType2, dispellType3, GroupMember[i])) return GroupMember[i];
 	}
 	return NULL;
 }

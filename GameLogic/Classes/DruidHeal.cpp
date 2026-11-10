@@ -138,7 +138,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Swiftmend
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Swiftmend");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -146,7 +146,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Regrowth
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Regrowth");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -155,7 +155,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		localPlayer->SetTarget(healGuid);
 		if(Functions::IsSpellReady("Nature's Swiftness")) FunctionsLua::CastSpellByName("Nature's Swiftness");
 		FunctionsLua::CastSpellByName("Healing Touch");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -163,7 +163,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Innervate
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Innervate");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -171,7 +171,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Rejuvenation
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Rejuvenation");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -181,17 +181,26 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 void ListAI::DruidHeal() {
 	int HealingTouchIDs[11] = { 5185, 5186, 5187, 5188, 5189, 6778, 8903, 9758, 9888, 9889, 25297 };
 	int RegrowthIDs[9] = { 8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858 };
-	if ((ListUnits.size() > LastTarget) && ((localPlayer->isCasting(HealingTouchIDs, 11) && (ListUnits[LastTarget].prctHP > 80))
-		|| (localPlayer->isCasting(RegrowthIDs, 9) && (ListUnits[LastTarget].prctHP > 80)))) {
+	int RebirthIDs[5] = { 20484, 20739, 20742, 20747, 20748 };
+	WoWUnit* LastTargeted = Functions::GetUnitByGUID(LastTarget);
+	if (LastTargeted != NULL && ((localPlayer->isCasting(HealingTouchIDs, 11) && (LastTargeted->hpLost < HealingTouchComputed*0.9))
+		|| (localPlayer->isCasting(RegrowthIDs, 9) && (LastTargeted->hpLost < RegrowthComputed*0.9)))) {
+		// Cancel Heal
+		ThreadSynchronizer::pressKey(0x28);
+		ThreadSynchronizer::releaseKey(0x28);
+	}
+	else if (LastTargeted != NULL && localPlayer->isCasting(RebirthIDs, 5) && !LastTargeted->isdead) {
+		// Cancel Rez
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
 	ThreadSynchronizer::RunOnMainThread([]() {
-		if (Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
+		bool BearFormBuff = (localPlayer->hasBuff(5487) || localPlayer->hasBuff(9634));
+		if (!BearFormBuff && Combat && (localPlayer->prctHP < 40) && (FunctionsLua::GetHealthstoneCD() < 1.25)) {
 			//Healthstone
 			FunctionsLua::UseHealthstone();
 		}
-		else if (Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
+		else if (!BearFormBuff && Combat && (localPlayer->prctHP < 35) && (FunctionsLua::GetHPotionCD() < 1.25)) {
 			//Healing Potion
 			FunctionsLua::UseHPotion();
 		}
@@ -210,66 +219,67 @@ void ListAI::DruidHeal() {
 			WoWUnit* RemoveCurseTarget = FunctionsLua::GetGroupDispel("Curse");
 			WoWUnit* CurePoisonTarget = FunctionsLua::GetGroupDispel("Poison");
 			WoWUnit* deadPlayer = Functions::GetGroupDead(1);
-			if (!localPlayer->isMoving && Functions::IsSpellReady("Rebirth") && (deadPlayer != NULL)) {
+			if (!BearFormBuff && !localPlayer->isMoving && Functions::IsSpellReady("Rebirth") && (deadPlayer != NULL)) {
 				//Rebirth
 				localPlayer->SetTarget(deadPlayer->Guid);
+				LastTarget = deadPlayer->Guid;
 				FunctionsLua::CastSpellByName("Rebirth");
 			}
-			else if ((MotWPlayer != NULL) && Functions::IsSpellReady("Gift of the Wild")) {
+			else if (!BearFormBuff && (MotWPlayer != NULL) && Functions::IsSpellReady("Gift of the Wild")) {
 				//Gift of the Wild (Group)
 				localPlayer->SetTarget(MotWPlayer->Guid);
 				FunctionsLua::CastSpellByName("Gift of the Wild");
 			}
-			else if (!MotWBuff && Functions::IsSpellReady("Mark of the Wild")) {
+			else if (!BearFormBuff && !MotWBuff && Functions::IsSpellReady("Mark of the Wild")) {
 				//Mark of the Wild (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Mark of the Wild");
 			}
-			else if ((MotWPlayer != NULL) && Functions::IsSpellReady("Mark of the Wild")) {
+			else if (!BearFormBuff && (MotWPlayer != NULL) && Functions::IsSpellReady("Mark of the Wild")) {
 				//Mark of the Wild (Group)
 				localPlayer->SetTarget(MotWPlayer->Guid);
 				FunctionsLua::CastSpellByName("Mark of the Wild");
 			}
-			else if (!ThornsBuff && Functions::IsSpellReady("Thorns")) {
+			else if (!BearFormBuff && !ThornsBuff && Functions::IsSpellReady("Thorns")) {
 				//Thorns (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Thorns");
 			}
-			else if ((ThornsTarget != NULL) && Functions::IsSpellReady("Thorns")) {
+			else if (!BearFormBuff && (ThornsTarget != NULL) && Functions::IsSpellReady("Thorns")) {
 				//Thorns (Group)
 				localPlayer->SetTarget(ThornsTarget->Guid);
 				FunctionsLua::CastSpellByName("Thorns");
 			}
-			else if (Combat && (localPlayer->prctMana < 10) && (FunctionsLua::GetMPotionCD() < 1.25)) {
+			else if (!BearFormBuff && Combat && (localPlayer->prctMana < 10) && (FunctionsLua::GetMPotionCD() < 1.25)) {
 				//Mana Potion
 				FunctionsLua::UseMPotion();
 			}
-			else if ((localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Curse") && Functions::IsSpellReady("Remove Curse")) {
+			else if (!BearFormBuff && (localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Curse") && Functions::IsSpellReady("Remove Curse")) {
 				//Remove Curse (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Remove Curse");
 			}
-			else if ((RemoveCurseTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Remove Curse")) {
+			else if (!BearFormBuff && (RemoveCurseTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Remove Curse")) {
 				//Remove Curse (Group)
 				localPlayer->SetTarget(RemoveCurseTarget->Guid);
 				FunctionsLua::CastSpellByName("Remove Curse");
 			}
-			else if ((localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Poison") && Functions::IsSpellReady("Cure Poison")) {
+			else if (!BearFormBuff && (localPlayer->prctMana > 25) && !Functions::IsPlayerSpell("Abolish Poison") && FunctionsLua::GetUnitDispel("player", "Poison") && Functions::IsSpellReady("Cure Poison")) {
 				//Cure Poison (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Cure Poison");
 			}
-			else if ((CurePoisonTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Cure Poison")) {
+			else if (!BearFormBuff && (CurePoisonTarget != NULL) && (localPlayer->prctMana > 25) && !Functions::IsPlayerSpell("Abolish Poison") && Functions::IsSpellReady("Cure Poison")) {
 				//Cure Poison (Group)
 				localPlayer->SetTarget(CurePoisonTarget->Guid);
 				FunctionsLua::CastSpellByName("Cure Poison");
 			}
-			else if ((localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Poison") && Functions::IsSpellReady("Abolish Poison")) {
+			else if (!BearFormBuff && (localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Poison") && Functions::IsSpellReady("Abolish Poison")) {
 				//Abolish Poison (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Abolish Poison");
 			}
-			else if ((CurePoisonTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Abolish Poison")) {
+			else if (!BearFormBuff && (CurePoisonTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Abolish Poison")) {
 				//Abolish Poison (Group)
 				localPlayer->SetTarget(CurePoisonTarget->Guid);
 				FunctionsLua::CastSpellByName("Abolish Poison");

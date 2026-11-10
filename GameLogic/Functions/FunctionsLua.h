@@ -95,7 +95,7 @@ class FunctionsLua {
 	static bool GetUnitBuff(std::string target, std::string texture);
 	static bool GetUnitDebuff(std::string target, std::string texture);
 	static int GetStackDebuff(std::string target, std::string texture);
-	static bool GetUnitDispel(std::string target, std::string dispellType1, std::string dispellType2="Null", std::string dispellType3="Null");
+	static bool GetUnitDispel(std::string target, std::string dispellType1, std::string dispellType2="Null", std::string dispellType3="Null", WoWUnit* dispelUnit=nullptr);
 	static WoWUnit* GetGroupDispel(std::string dispellType1, std::string dispellType2="Null", std::string dispellType3="Null");
         // === Spells/Actions === //
 	static bool GetShapeshiftFormInfo(int nbr);

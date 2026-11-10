@@ -563,7 +563,7 @@ void Functions::countEnemies(int& nbr, int& nbrClose, int& nbrCloseFacing, int& 
 	}
 	nbr = 0; nbrClose = 0; nbrCloseFacing = 0; nbrEnemyPlayer = 0;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
-		if (!ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].creatureType == Totem) || (!(ListUnits[i].isInCombatOrEncounter()) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
+		if (ListUnits[i].isdead || !ListUnits[i].attackable || (ListUnits[i].flags & UNIT_FLAG_CONFUSED) || (ListUnits[i].creatureType == Totem) || (!(ListUnits[i].isInCombatOrEncounter()) && !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED)))
 			continue;
 		else if (ListUnits[i].isFromGroup || (ListUnits[i].flags & UNIT_FLAG_POSSESSED)) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
@@ -640,6 +640,13 @@ WoWUnit* Functions::GetGroupDead(int mode) {
 		for (int i = NumGroupMembers; i >= 1; i--) {
 			if ((GroupMember[i] != NULL) && GroupMember[i]->isdead) return GroupMember[i];
 		}
+	}
+	return NULL;
+}
+
+WoWUnit* Functions::GetUnitByGUID(unsigned long long unitGUID) {
+	for (WoWUnit unit : ListUnits) {
+		if (unit.Guid == unitGUID) return &unit;
 	}
 	return NULL;
 }

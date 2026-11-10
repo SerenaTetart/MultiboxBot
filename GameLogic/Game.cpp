@@ -217,7 +217,9 @@ void Game::MainLoop() {
             if (!lateralRecovering && !(Combat && (localPlayer->castInfo || localPlayer->channelInfo)) &&
                 Moving != MoveTypes::NotMoving && Navigation::HasCurrentMovement() &&
                 !(localPlayer->movement_flags & (MOVEFLAG_ROOT | MOVEFLAG_FALLING | MOVEFLAG_FALLINGFAR)) &&
-                Navigation::IsCurrentMovementStalled(localPlayer->position)) {
+                Navigation::IsCurrentMovementStalled(localPlayer->position,
+                    localPlayer->isMoving || (localPlayer->movement_flags &
+                        (MOVEFLAG_FORWARD | MOVEFLAG_BACKWARD | MOVEFLAG_STRAFE_LEFT | MOVEFLAG_STRAFE_RIGHT)))) {
                 ThreadSynchronizer::RunOnMainThread([]() {
                     Functions::HandleMovementStall();
                 });
@@ -545,7 +547,7 @@ los_target = false, passiveGroup = false, inInstance = false, inventoryFull = fa
 bool groundAoERepositionRequested = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoChores = 0;
-unsigned int LastTarget = 0;
+unsigned long long LastTarget = 0;
 float distTarget = 0, autoAttackTimer = 0, breathTimer = 0;
 MoveTypes Moving;
 std::string tarType = "party";

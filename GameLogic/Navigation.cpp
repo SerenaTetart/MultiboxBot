@@ -27,13 +27,16 @@ namespace {
     };
     std::mutex PathRetryMutex;
     FailedPathRequest LastFailedPath;
-    constexpr auto FailedPathCooldown = std::chrono::milliseconds(1250);
-    constexpr auto ReconnectCooldown = std::chrono::milliseconds(2000);
+    constexpr auto FailedPathCooldown = std::chrono::milliseconds(400);
+    constexpr auto ReconnectCooldown = std::chrono::milliseconds(400);
     constexpr size_t MaxFrameSize = 4096;
     std::mutex NetworkMutex;
     Clock::time_point ReconnectAfter{};
     bool WinsockActive = false;
     std::string ReceivedData;
+    // Local avoidance must clear immediately; server removals can be retried later.
+    // Protected by NetworkMutex.
+    std::vector<std::string> PendingBlacklistRemovals;
 
     void ForgetFailedPath() {
         std::lock_guard<std::mutex> guard(PathRetryMutex);
@@ -116,8 +119,8 @@ static bool EnsureNavigationConnected(SOCKET& socketHandle, WSADATA& wsaData, co
         ReconnectAfter = Clock::now() + ReconnectCooldown;
         return false;
     }
-    const DWORD receiveTimeoutMs = 3000;
-    const DWORD sendTimeoutMs = 1500;
+    const DWORD receiveTimeoutMs = 1000;
+    const DWORD sendTimeoutMs = 600;
     setsockopt(socketHandle, SOL_SOCKET, SO_RCVTIMEO,
         reinterpret_cast<const char*>(&receiveTimeoutMs), sizeof(receiveTimeoutMs));
     setsockopt(socketHandle, SOL_SOCKET, SO_SNDTIMEO,
@@ -130,6 +133,22 @@ static bool EnsureNavigationConnected(SOCKET& socketHandle, WSADATA& wsaData, co
     if (connect(socketHandle, reinterpret_cast<SOCKADDR*>(&sin), sizeof(sin)) == SOCKET_ERROR) {
         RetryNavigationLater(socketHandle);
         return false;
+    }
+    return true;
+}
+
+// Called with NetworkMutex held, after the socket is connected. On a disconnect,
+// keep unconfirmed removals so a later route request can synchronize the server.
+static bool FlushPendingBlacklistRemovals(SOCKET& socketHandle) {
+    while (!PendingBlacklistRemovals.empty()) {
+        const std::string command = "R " + PendingBlacklistRemovals.back() + "\n";
+        std::string reply;
+        if (!SendAll(socketHandle, command) || !ReceiveLine(socketHandle, reply)) {
+            RetryNavigationLater(socketHandle);
+            return false;
+        }
+        if (reply != "OK") return false;
+        PendingBlacklistRemovals.pop_back();
     }
     return true;
 }
@@ -149,7 +168,8 @@ Position Navigation::CalculatePath(unsigned int mapID, Position start, Position 
     if (throttleFailedRequests && RecentlyFailed(mapID, start, end)) return start;
 
     std::lock_guard<std::mutex> networkGuard(NetworkMutex);
-    if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002)) {
+    if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002) ||
+        !FlushPendingBlacklistRemovals(sock)) {
         if (throttleFailedRequests) NoteFailed(mapID, start, end);
         return start;
     }
@@ -208,7 +228,8 @@ bool Navigation::AddBlacklist(unsigned int mapId, const std::string& name, const
     ForgetFailedPath();
 
     std::lock_guard<std::mutex> networkGuard(NetworkMutex);
-    if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002)) return false;
+    if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002) ||
+        !FlushPendingBlacklistRemovals(sock)) return false;
     std::ostringstream oss;
     oss << "B " << mapId << " " << name << " "
         << std::fixed << std::setprecision(4)
@@ -225,12 +246,16 @@ bool Navigation::RemoveBlacklist(const std::string& name) {
     bool synced = false;
     {
         std::lock_guard<std::mutex> networkGuard(NetworkMutex);
-        if (EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002)) {
+        if (EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002) &&
+            FlushPendingBlacklistRemovals(sock)) {
             bool transportOk = false;
             const bool sent = SendAll(sock, "R " + name + "\n");
             synced = sent && ReceiveNavigationAck(sock, transportOk);
             if (!sent || !transportOk) RetryNavigationLater(sock);
         }
+        if (!synced && std::find(PendingBlacklistRemovals.begin(),
+                PendingBlacklistRemovals.end(), name) == PendingBlacklistRemovals.end())
+            PendingBlacklistRemovals.push_back(name);
     }
     {
         std::lock_guard<std::mutex> guard(AvoidanceMutex);
@@ -249,18 +274,26 @@ bool Navigation::HasBlacklists() {
 }
 
 void Navigation::ClearBlacklists() {
-    while (true) {
-        std::string name;
-        {
-            std::lock_guard<std::mutex> guard(AvoidanceMutex);
-            if (Blacklists.empty()) break;
-            name = Blacklists.back().Name;
-        }
-
-        if (!RemoveBlacklist(name)) {
-            break; // Leave the pending blacklist intact if the navigation server is unavailable.
+    std::vector<std::string> names;
+    {
+        std::lock_guard<std::mutex> guard(AvoidanceMutex);
+        if (Blacklists.empty()) return;
+        names.reserve(Blacklists.size());
+        for (const auto& entry : Blacklists) names.push_back(entry.Name);
+        Blacklists.clear();
+        ++ZoneVersion;
+    }
+    // Never block chores or keep a stale danger area just because the server is
+    // unavailable. The next navigation request synchronizes these removals.
+    {
+        std::lock_guard<std::mutex> networkGuard(NetworkMutex);
+        for (const auto& name : names) {
+            if (std::find(PendingBlacklistRemovals.begin(),
+                    PendingBlacklistRemovals.end(), name) == PendingBlacklistRemovals.end())
+                PendingBlacklistRemovals.push_back(name);
         }
     }
+    ForgetFailedPath();
 }
 
 void Navigation::SetNpcDangerZones(unsigned int mapId, const std::vector<DangerZone>& zones) {
@@ -345,9 +378,9 @@ bool Navigation::GetCurrentMovementDestination(Position& destination) {
     return true;
 }
 
-bool Navigation::IsCurrentMovementStalled(const Position& from) {
+bool Navigation::IsCurrentMovementStalled(const Position& from, bool movementReported) {
     std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    return HasLastMove && MoveWatchdog.Stalled(from, MovementWatchdog::Clock::now());
+    return HasLastMove && MoveWatchdog.Stalled(from, MovementWatchdog::Clock::now(), movementReported);
 }
 
 void Navigation::ClearMovement() {

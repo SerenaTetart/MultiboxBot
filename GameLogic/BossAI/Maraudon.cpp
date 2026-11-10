@@ -6,14 +6,14 @@ bool BossAI::Maraudon() {
 			// Creeping Sludge
 			if (Moving != MoveTypes::BossMechanic && localPlayer->position.DistanceTo(ListUnits[i].position) < 10.0f) {
 				ThreadSynchronizer::RunOnMainThread([i]() {
-					Functions::StepBack(&ListUnits[i], MoveTypes::BossMechanic, 15.0f);
+					Functions::StepBack(&ListUnits[i], MoveTypes::BossMechanic, 20.0f);
 				});
 				return true;
 			}
 		}
 		else if (ListUnits[i].isdead && ListUnits[i].entryID == 12221) {
 			// Noxious Slime
-			if (Moving != MoveTypes::BossMechanic && localPlayer->position.DistanceTo(ListUnits[i].position) < 10.0f) {
+			if (Moving != MoveTypes::BossMechanic && localPlayer->position.DistanceTo(ListUnits[i].position) < 7.0f) {
 				ThreadSynchronizer::RunOnMainThread([i]() {
 					Functions::StepBack(&ListUnits[i], MoveTypes::BossMechanic, 10.0f);
 				});

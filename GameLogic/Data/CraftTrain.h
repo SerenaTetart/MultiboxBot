@@ -196,9 +196,9 @@ inline const Profession alchemyCrafts = {
     { 929, 110, 155,{ { 2453, 1 },{ 2450, 1 },{ 3372, 1 } } }, // Healing Potion
     { 3385, 120, 155,{ { 785, 1 },{ 3820, 1 },{ 3371, 1 } } }, // Lesser Mana Potion
     { 3390, 140, 165,{ { 3355, 1 },{ 2452, 1 },{ 3372, 1 } }, 0, 0, 0, false }, // Elixir of Lesser Agility
-    { 3388, 155, 170,{ { 2453, 2 },{ 2450, 2 },{ 3372, 1 } } }, // Strong Troll's Blood Potion
-    { 1710, 155, 185,{ { 3357, 1 },{ 3356, 1 },{ 3372, 1 } } }, // Greater Healing Potion
-    { 3823, 165, 185,{ { 3818, 1 },{ 3355, 1 },{ 3372, 1 } } }, // Lesser invisibility potion
+    { 3388, 155, 190,{ { 2453, 2 },{ 2450, 2 },{ 3372, 1 } } }, // Strong Troll's Blood Potion
+    { 1710, 155, 195,{ { 3357, 1 },{ 3356, 1 },{ 3372, 1 } } }, // Greater Healing Potion
+    { 3823, 165, 205,{ { 3818, 1 },{ 3355, 1 },{ 3372, 1 } } }, // Lesser invisibility potion
     { 8949, 185, 210,{ { 3820, 1 },{ 3821, 1 },{ 3372, 1 } } }, // Elixir of Agility
     { 8951, 195, 215,{ { 3355, 1 },{ 3821, 1 },{ 3372, 1 } } }, // Elixir of Greater Defense
     { 3928, 215, 230,{ { 8838, 1 },{ 3358, 1 },{ 8925, 1 } } }, // Superior Healing Potion

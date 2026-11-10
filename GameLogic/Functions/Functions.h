@@ -53,6 +53,7 @@ class Functions {
         static int getNbrCreatureType(int range, CreatureType type1, CreatureType type2=Null, CreatureType type3=Null);
         static bool PlayerIsRanged();
 		static WoWUnit* GetGroupDead(int mode = 0);
+		static WoWUnit* GetUnitByGUID(unsigned long long unitGUID);
         static WoWUnit* GetLeader();
 		static SpellSlotData GetSpellData(std::string spell_name);
 		static bool IsPlayerSpell(std::string spell_name);

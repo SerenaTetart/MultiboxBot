@@ -99,7 +99,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Prayer of Healing
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Prayer of Healing");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -107,7 +107,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Power Word: Shield
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Power Word: Shield");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -115,7 +115,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Flash Heal
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Flash Heal");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -123,7 +123,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Renew
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Renew");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -131,7 +131,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Greater Heal
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Greater Heal");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -139,7 +139,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Heal
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Heal");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -147,7 +147,7 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 		//Lesser Heal
 		localPlayer->SetTarget(healGuid);
 		FunctionsLua::CastSpellByName("Lesser Heal");
-		LastTarget = indexP;
+		LastTarget = ListUnits[indexP].Guid;
 		if (!los_heal) Moving = MoveTypes::MoveLoSAlly;
 		return 0;
 	}
@@ -157,10 +157,17 @@ static int HealGroup(unsigned int indexP) { //Heal Players and Npcs
 void ListAI::PriestHeal() {
 	int LesserHealIDs[3] = { 2050, 2052, 2053 }; int FlashHealIDs[7] = { 2061, 9472, 9473, 9474, 10915, 10916, 10917 };
 	int GreaterHealIDs[5] = { 2060, 10963, 10964, 10965, 25314 }; int HealIDs[4] = { 2054, 2055, 6093, 6064 };
-	if ((ListUnits.size() > LastTarget) && ((localPlayer->isCasting(LesserHealIDs, 3) && (ListUnits[LastTarget].hpLost < LesserHealComputed * 0.9))
-		|| (localPlayer->isCasting(HealIDs, 4) && (ListUnits[LastTarget].hpLost < HealComputed * 0.9))
-		|| (localPlayer->isCasting(GreaterHealIDs, 5) && (ListUnits[LastTarget].hpLost < GreaterHealComputed * 0.9))
-		|| (localPlayer->isCasting(FlashHealIDs, 7) && (ListUnits[LastTarget].prctHP > 80)))) {
+	int ResurrectionIDs[5] = { 2006, 2010, 10880, 10881, 20770 };
+	WoWUnit* LastTargeted = Functions::GetUnitByGUID(LastTarget);
+	if (LastTargeted != NULL && ((localPlayer->isCasting(LesserHealIDs, 3) && (LastTargeted->hpLost < LesserHealComputed * 0.9))
+		|| (localPlayer->isCasting(HealIDs, 4) && (LastTargeted->hpLost < HealComputed * 0.9))
+		|| (localPlayer->isCasting(GreaterHealIDs, 5) && (LastTargeted->hpLost < GreaterHealComputed * 0.9))
+		|| (localPlayer->isCasting(FlashHealIDs, 7) && (LastTargeted->prctHP > 80)))) {
+		ThreadSynchronizer::pressKey(0x28);
+		ThreadSynchronizer::releaseKey(0x28);
+	}
+	else if (LastTargeted != NULL && localPlayer->isCasting(ResurrectionIDs, 5) && !LastTargeted->isdead) {
+		// Cancel Rez
 		ThreadSynchronizer::pressKey(0x28);
 		ThreadSynchronizer::releaseKey(0x28);
 	}
@@ -197,6 +204,7 @@ void ListAI::PriestHeal() {
 			if (!Combat && !localPlayer->isMoving && Functions::IsSpellReady("Resurrection") && (deadPlayer != NULL)) {
 				//Resurrection
 				localPlayer->SetTarget(deadPlayer->Guid);
+				LastTarget = deadPlayer->Guid;
 				FunctionsLua::CastSpellByName("Resurrection");
 			}
 			else if (!Combat && (PWFortitudeTarget != NULL) && Functions::IsSpellReady("Prayer of Fortitude")) {
@@ -245,15 +253,25 @@ void ListAI::PriestHeal() {
 				//Psychic Scream
 				FunctionsLua::CastSpellByName("Psychic Scream");
 			}
-			else if ((localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Disease") && Functions::IsSpellReady("Cure Disease")) {
+			else if ((localPlayer->prctMana > 25) && !Functions::IsPlayerSpell("Abolish Disease") && FunctionsLua::GetUnitDispel("player", "Disease") && Functions::IsSpellReady("Cure Disease")) {
 				//Cure Disease (self)
 				localPlayer->SetTarget(localPlayer->Guid);
 				FunctionsLua::CastSpellByName("Cure Disease");
 			}
-			else if ((CureDiseaseTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Cure Disease")) {
+			else if ((CureDiseaseTarget != NULL) && (localPlayer->prctMana > 25) && !Functions::IsPlayerSpell("Abolish Disease") && Functions::IsSpellReady("Cure Disease")) {
 				//Cure Disease (Group)
 				localPlayer->SetTarget(CureDiseaseTarget->Guid);
 				FunctionsLua::CastSpellByName("Cure Disease");
+			}
+			else if ((localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Disease") && Functions::IsSpellReady("Abolish Disease")) {
+				//Abolish Disease (self)
+				localPlayer->SetTarget(localPlayer->Guid);
+				FunctionsLua::CastSpellByName("Abolish Disease");
+			}
+			else if ((CureDiseaseTarget != NULL) && (localPlayer->prctMana > 25) && Functions::IsSpellReady("Abolish Disease")) {
+				//Abolish Disease (Group)
+				localPlayer->SetTarget(CureDiseaseTarget->Guid);
+				FunctionsLua::CastSpellByName("Abolish Disease");
 			}
 			else if ((localPlayer->prctMana > 25) && FunctionsLua::GetUnitDispel("player", "Magic") && Functions::IsSpellReady("Dispel Magic")) {
 				//Dispel Magic (self)

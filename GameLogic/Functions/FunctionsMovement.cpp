@@ -273,14 +273,14 @@ namespace {
         const auto now = std::chrono::steady_clock::now();
         FailedHeadings.erase(std::remove_if(FailedHeadings.begin(), FailedHeadings.end(),
             [now](const FailedHeading& failure) {
-                return now - failure.Since > std::chrono::seconds(8);
+                return now - failure.Since > std::chrono::milliseconds(1800);
             }), FailedHeadings.end());
 
         const float dx = candidate.X - start.X, dy = candidate.Y - start.Y;
         const float length = std::hypot(dx, dy);
         if (length < MIN_MOVE_DISTANCE) return false;
         for (const auto& failure : FailedHeadings) {
-            if (failure.MapId != mapID || start.DistanceTo2D(failure.Origin) > 5.0f) continue;
+            if (failure.MapId != mapID || start.DistanceTo2D(failure.Origin) > 2.5f) continue;
             const float fx = failure.Destination.X - failure.Origin.X;
             const float fy = failure.Destination.Y - failure.Origin.Y;
             const float flength = std::hypot(fx, fy);
@@ -322,7 +322,7 @@ namespace {
             if (accepted) {
                 nextFailedFollowRetry = {};
             } else {
-                nextFailedFollowRetry = now + std::chrono::milliseconds(1000);
+                nextFailedFollowRetry = now + std::chrono::milliseconds(350);
                 lastFailedFollowStart = start;
                 lastFailedFollowGoal = goal;
                 lastFailedFollowMap = mapID;
@@ -348,9 +348,9 @@ namespace {
             if (Navigation::IsCurrentMovementUnsafe(mapID, localPlayer->position) ||
                 Navigation::IsCurrentMovementStalled(localPlayer->position)) {
                 Functions::StopMovement();
-            } else {
-                Moving = type;
+                return false;
             }
+            Moving = type;
             return true;
         }
 
@@ -358,10 +358,10 @@ namespace {
                 type == MoveTypes::GoToTarget || type == MoveTypes::MoveLoS || type == MoveTypes::MoveLoSAoE)) {
             Moving = type;
             RememberGoal(goal, type, targetSwimming, waterOnRoute, waterEntry);
-        } else {
-            Navigation::ClearMovement();
+            return true;
         }
-        return true;
+        Navigation::ClearMovement();
+        return false;
     }
 
     void resetMovement() { Functions::StopMovement(); }
@@ -372,6 +372,8 @@ namespace {
         MoveTypes Type = MoveTypes::NotMoving;
         int LastSide = 0;
         Position Destination{};
+        Position LastProgressPosition{};
+        std::chrono::steady_clock::time_point LastProgressAt{};
         std::chrono::steady_clock::time_point Expires{};
         ActiveGoal ResumeDetour{};
     };
@@ -944,9 +946,15 @@ bool Functions::UpdateLateralRecovery() {
         Functions::StopMovement();
         return false;
     }
+    const auto now = std::chrono::steady_clock::now();
+    if (localPlayer->position.DistanceTo2D(LateralRecovery.LastProgressPosition) >= 0.3f) {
+        LateralRecovery.LastProgressPosition = localPlayer->position;
+        LateralRecovery.LastProgressAt = now;
+    }
     const bool arrived = localPlayer->position.DistanceTo2D(LateralRecovery.Destination) <= 0.85f;
-    const bool expired = std::chrono::steady_clock::now() >= LateralRecovery.Expires;
-    if (arrived || expired) {
+    const bool expired = now >= LateralRecovery.Expires;
+    const bool interrupted = now - LateralRecovery.LastProgressAt >= std::chrono::milliseconds(650);
+    if (arrived || expired || interrupted) {
         const ActiveGoal resumeDetour = LateralRecovery.ResumeDetour;
         Functions::StopMovement();
         if (resumeDetour.Valid && resumeDetour.NavigationWaypoint &&
@@ -979,7 +987,7 @@ void Functions::HandleMovementStall() {
 
     constexpr float SIDE_DISTANCE = 3.5f;
     constexpr int SAMPLE_COUNT = 5;
-    constexpr float BODY_MARGIN = 0.5f;
+    constexpr float OUTER_EDGE_MARGIN = 0.35f;
     constexpr float MAX_HEIGHT_FROM_START = 1.5f;
     constexpr float MAX_STEP_HEIGHT = 0.65f;
 
@@ -991,7 +999,6 @@ void Functions::HandleMovementStall() {
     for (const float distanceToSide : {SIDE_DISTANCE, 2.5f}) {
         for (int side : {preferred, -preferred}) {
             const float dirX = leftX * side, dirY = leftY * side;
-            const float forwardX = -dirY, forwardY = dirX;
             Position previous = start;
             Position candidate;
             bool safe = true;
@@ -1008,16 +1015,14 @@ void Functions::HandleMovementStall() {
                     break;
                 }
                 if (sample == 3 || sample == SAMPLE_COUNT) {
-                    for (float offset : {-BODY_MARGIN, BODY_MARGIN}) {
-                        const Position edge(point.X + forwardX * offset,
-                            point.Y + forwardY * offset, start.Z);
-                        const Position edgeGround = Functions::ProjectPos(edge);
-                        if (!std::isfinite(edgeGround.Z) ||
-                            std::abs(edgeGround.Z - ground.Z) > MAX_STEP_HEIGHT ||
-                            Navigation::IsPositionDangerous(zones, edgeGround)) {
-                            safe = false;
-                            break;
-                        }
+                    const Position outerEdge(point.X + dirX * OUTER_EDGE_MARGIN,
+                        point.Y + dirY * OUTER_EDGE_MARGIN, start.Z);
+                    const Position outerGround = Functions::ProjectPos(outerEdge);
+                    if (!std::isfinite(outerGround.Z) ||
+                        std::abs(outerGround.Z - ground.Z) > MAX_STEP_HEIGHT ||
+                        Navigation::IsPositionDangerous(zones, outerGround) ||
+                        !Navigation::IsSegmentSafe(zones, ground, outerGround)) {
+                        safe = false;
                     }
                 }
                 if (!safe) break;
@@ -1032,7 +1037,9 @@ void Functions::HandleMovementStall() {
             LateralRecovery.Type = previousType;
             LateralRecovery.LastSide = side;
             LateralRecovery.Destination = candidate;
-            LateralRecovery.Expires = std::chrono::steady_clock::now() + std::chrono::milliseconds(1800);
+            LateralRecovery.LastProgressPosition = start;
+            LateralRecovery.LastProgressAt = std::chrono::steady_clock::now();
+            LateralRecovery.Expires = LateralRecovery.LastProgressAt + std::chrono::milliseconds(1350);
             if (previousGoal.Valid && previousGoal.NavigationWaypoint &&
                 previousGoal.Map == mapID && previousGoal.Type == previousType)
                 LateralRecovery.ResumeDetour = previousGoal;

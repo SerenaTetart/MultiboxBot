@@ -64,7 +64,7 @@ public:
     static void RecordMovement(const Position& start, const Position& destination);
     static bool HasCurrentMovement();
     static bool IsMovingTowards(const Position& destination);
-    static bool IsCurrentMovementStalled(const Position& from);
+    static bool IsCurrentMovementStalled(const Position& from, bool movementReported = true);
     static bool GetCurrentMovementDestination(Position& destination);
     static void ClearMovement();
     static bool IsCurrentMovementUnsafe(unsigned int mapId, const Position& from);
