@@ -1,13 +1,47 @@
 #include "BossAI.h"
 #include <algorithm>
 #include <array>
+#include <cmath>
+
+bool BossAI::PositionBehind(WoWUnit* boss) {
+    const Position& start = localPlayer->position;
+    const float reach = localPlayer->combatReach + boss->combatReach;
+    const float distance = start.DistanceTo(boss->position);
+    if (distance > reach + 6.0f) return false;
+
+    if (distance <= reach + 0.3f && start.DistanceTo2D(boss->position) > 0.1f && localPlayer->isBehind(boss)) {
+        if (Moving == MoveTypes::GoToTarget) Functions::StopMovement();
+        return true;
+    }
+
+    constexpr float PI = 3.14159265358979323846f;
+    const float angle = boss->facing + PI + (static_cast<int>(localPlayer->Guid % 3ULL) - 1) * 0.12f;
+    const float range = (std::max)(1.5f, reach - 0.45f);
+    Position destination(boss->position.X + std::cos(angle) * range, boss->position.Y + std::sin(angle) * range, boss->position.Z);
+
+    const bool targetSwimming = (boss->movement_flags & MOVEFLAG_SWIMMING) != 0;
+    if (!(localPlayer->movement_flags & MOVEFLAG_SWIMMING) && !targetSwimming) {
+        ThreadSynchronizer::RunOnMainThread([&destination]() {
+            destination = Functions::ProjectPos(destination);
+        });
+        if (std::abs(destination.Z - boss->position.Z) > 2.0f) return false;
+    }
+    if (start.DistanceTo(destination) < 2.0f || Navigation::IsPositionDangerous(mapID, destination)) return false;
+
+    bool started = false;
+    const unsigned long long guid = boss->Guid;
+    ThreadSynchronizer::RunOnMainThread([destination, targetSwimming, guid, &started]() {
+        if (!localPlayer || !targetUnit || targetUnit->Guid != guid || Moving == MoveTypes::BossMechanic || Moving == MoveTypes::RunAway) return;
+        Functions::MoveTo(destination, MoveTypes::GoToTarget, true, targetSwimming);
+        started = Moving == MoveTypes::GoToTarget && Navigation::HasCurrentMovement();
+    });
+    return started;
+}
 
 bool BossAI::BossAIAction() {
 	bool result = false;
-	if (!Combat) {
-		if (Moving == MoveTypes::BossMechanic) {
-            Functions::StopMovement();
-		}
+	if (!Combat || localPlayer->isCrowdControlled()) {
+		if (Moving == MoveTypes::BossMechanic) Functions::StopMovement();
 		return false;
 	}
 	else if (mapID == 90 && localPlayer->zoneID == 721) {

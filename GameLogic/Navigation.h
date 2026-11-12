@@ -35,8 +35,7 @@ public:
     static Position CalculatePath(
         unsigned int mapId,
         const Position start,
-        const Position end,
-        bool throttleFailedRequests = false // combat only; fast follow/journey bypass backoff
+        const Position end
     );
 
     static bool AddBlacklist(
@@ -63,7 +62,6 @@ public:
 
     static void RecordMovement(const Position& start, const Position& destination);
     static bool HasCurrentMovement();
-    static bool IsMovingTowards(const Position& destination);
     static bool IsCurrentMovementStalled(const Position& from, bool movementReported = true);
     static bool GetCurrentMovementDestination(Position& destination);
     static void ClearMovement();

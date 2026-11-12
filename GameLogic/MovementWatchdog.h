@@ -43,12 +43,6 @@ public:
         return now - lastProgress_ >= (movementReported ? StallTimeout : InterruptedTimeout);
     }
 
-    template<class Point>
-    bool Towards(const Point& goal) const {
-        return active_ && XYDistance(goal.X, goal.Y, goalX_, goalY_) <= ArrivalThreshold &&
-            std::abs(goal.Z - goalZ_) <= ArrivalThreshold;
-    }
-
     bool Active() const { return active_; }
     void Clear() { active_ = false; }
 

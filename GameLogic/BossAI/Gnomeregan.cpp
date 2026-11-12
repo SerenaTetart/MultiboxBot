@@ -6,9 +6,8 @@ bool BossAI::Gnomeregan() {
 			// Walking Bomb || Dark Iron Land Mine
 			unit.isEncounterUnit = true;
 		}
-		else if (unit.entryID == 6229 && (unit.flags & UNIT_FLAG_IN_COMBAT) && localPlayer->role == 0 && unit.targetGuid == localPlayer->Guid) {
-			// Crowd Pummeler 9-60
-			// Tank: Move the pummeler away
+		else if (unit.entryID == 6229 && (unit.flags & UNIT_FLAG_IN_COMBAT) && localPlayer->role == 0 && unit.targetGuid == localPlayer->Guid && targetUnit && targetUnit->Guid == unit.Guid) {
+			// Crowd Pummeler 9-60 - Tank: Move the pummeler away
 			Position safePosition = Position(-904.907043f, 329.250092f, -272.596649f);
 			if (localPlayer->position.DistanceTo(safePosition) > 10.0f) {
 				ThreadSynchronizer::RunOnMainThread([safePosition]() {

@@ -22,6 +22,7 @@ class Functions {
 		static void InteractObject(uintptr_t object_ptr, int autoloot);
 		static bool StepBack(WoWUnit* target, MoveTypes MoveType, float dist_away=15.0f);
 		static bool EscapeDangerZone();
+		static bool AscendForBreath();
         static void HandleMovementStall();
         // All movement orders and explicit stops pass through these two methods.
         static bool StartMovement(const Position& destination, bool emergency = false,

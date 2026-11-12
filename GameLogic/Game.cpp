@@ -5,47 +5,44 @@
 #include "ListAI.h"
 #include "./BossAI/BossAI.h"
 #include "Navigation.h"
+#include "WaterMap.h"
 #include "FactionTemplate.h"
 
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <cstdlib>
 #include <cmath>
 #include <mutex>
-
-static time_t jumpCD = time(0);
 
 static unsigned long long playerGuid = 0;
 static unsigned long long pastPlayerGuid = 0;
 static bool TradeShow = false, TradePendingSelf = false;
 
 void Game::MainLoop() {
-	while (Client::client_running == true) {
-		if (playerGuid == 0 || playerGuid != pastPlayerGuid) {
-			ThreadSynchronizer::RunOnMainThread(
-				[]() {
-					playerGuid = Functions::GetPlayerGuid();
-					if (playerGuid > 0 && playerGuid != pastPlayerGuid) {
-						Functions::EnumerateVisibleObjects(0);
-
-						if (localPlayer != NULL) {
-							pastPlayerGuid = playerGuid;
-							std::string msg =
-								"Name " + FunctionsLua::UnitName("player") +
-								" Class " + localPlayer->className +
-								" Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0");
-							Client::sendMessage(msg);
-
-							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
-							int skills[] = { 0, 0 };
-							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, std::size(listSkills));
-							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
-							Client::sendMessage(msg);
-						}
-					}
-				}
-			);
-		}
+    const auto syncCharacter = []() {
+        playerGuid = Functions::GetPlayerGuid();
+        if (!playerGuid) { localPlayer = nullptr; return; }
+        if (playerGuid == pastPlayerGuid) {
+            if (!localPlayer) Functions::EnumerateVisibleObjects(0);
+            return;
+        }
+        localPlayer = nullptr;
+        Functions::EnumerateVisibleObjects(0);
+        if (!localPlayer || localPlayer->Guid != playerGuid) return;
+        const std::string name = FunctionsLua::UnitName("player");
+        if (name.empty()) return;
+        Client::sendMessage("Name " + name + " Class " + localPlayer->className +
+            " Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0"));
+        std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
+        int skills[] = { 0, 0 };
+        std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, std::size(listSkills));
+        Client::sendMessage("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
+        pastPlayerGuid = playerGuid;
+    };
+    bool recoveringBreath = false, holdingSurface = false;
+    while (Client::client_running == true) {
+        ThreadSynchronizer::RunOnMainThread(syncCharacter);
 
 		while (Client::bot_running == true && ((Leader != NULL && (Leader->Guid != playerGuid)) || !MCNoAuto)) {
 			// ========================================== //
@@ -55,8 +52,8 @@ void Game::MainLoop() {
 			std::cout << "Initialisation start\n";*/
 
 			ThreadSynchronizer::RunOnMainThread(
-				[]() {
-					playerGuid = Functions::GetPlayerGuid();
+				[syncCharacter]() {
+					syncCharacter();
 					if (playerGuid > 0) {
 						NumGroupMembers = FunctionsLua::GetNumGroupMembers();
 						tarType = "party";
@@ -71,20 +68,6 @@ void Game::MainLoop() {
 						Functions::EnumerateVisibleObjects(0);
                         if (localPlayer != nullptr) BossAI::UpdateDangerZones();
 
-						if (playerGuid != pastPlayerGuid && localPlayer != NULL) {
-							pastPlayerGuid = playerGuid;
-							std::string msg =
-								"Name " + FunctionsLua::UnitName("player") +
-								" Class " + localPlayer->className +
-								" Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0");
-							Client::sendMessage(msg);
-
-							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
-							int skills[] = { 0, 0 };
-							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, std::size(listSkills));
-							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
-							Client::sendMessage(msg);
-						}
 
 						if (localPlayer != NULL) {
 							targetUnit = localPlayer->getTarget();
@@ -150,8 +133,9 @@ void Game::MainLoop() {
 										elapsed = (1/GetFramerate())
 										AATimer = AATimer - elapsed
 										if(AATimer < 0) then AATimer = 0 end
-										Multibox_BreathTimer = Multibox_BreathTimer - elapsed
-										if(Multibox_BreathTimer < 0) then Multibox_BreathTimer = 0 end
+										if(Multibox_BreathTimer >= 0) then
+											Multibox_BreathTimer = math.max(0, Multibox_BreathTimer - elapsed)
+										end
 									end)
 								)");
 							}
@@ -172,7 +156,7 @@ void Game::MainLoop() {
 									Functions::LuaCall("AcceptTrade()");
 								}
 								const char* breathTimer_char = (const char*)Functions::GetText("Multibox_BreathTimer");
-								breathTimer = GetFloatFromChar(breathTimer_char);
+								breathTimer = breathTimer_char && *breathTimer_char ? std::strtof(breathTimer_char, nullptr) : -1.0f;
 							}
 
 							if (localPlayer->isMounted && (Combat || ((Leader != NULL && !Leader->isMounted) && localPlayer->speed == 0 && !autoChores))) {
@@ -184,6 +168,7 @@ void Game::MainLoop() {
 			);
 
 			if (localPlayer == NULL || playerGuid == 0) {
+                recoveringBreath = holdingSurface = false;
 				Sleep(500);
 				break;
 			}
@@ -192,29 +177,36 @@ void Game::MainLoop() {
 			Functions::countEnemies(nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, ccTarget);
 
 			Combat = (localPlayer->flags & UNIT_FLAG_IN_COMBAT) == UNIT_FLAG_IN_COMBAT;
-            // Combat takes priority over travel, following and looting. Preserve tactical
-            // movements (target approach, line of sight, boss mechanics and recovery).
-            if (Combat && (Moving == MoveTypes::Journey || Moving == MoveTypes::Follow ||
-                           Moving == MoveTypes::Looting)) {
+            if (Combat && (Moving == MoveTypes::Journey || Moving == MoveTypes::Follow || Moving == MoveTypes::Looting)) {
                 ThreadSynchronizer::RunOnMainThread([]() {
-                    if (localPlayer && (Moving == MoveTypes::Journey || Moving == MoveTypes::Follow ||
-                                        Moving == MoveTypes::Looting))
-                        Functions::StopMovement();
+                    if (localPlayer && (Moving == MoveTypes::Journey || Moving == MoveTypes::Follow || Moving == MoveTypes::Looting)) Functions::StopMovement();
                 });
             }
             if (!Combat && Navigation::HasBlacklists()) Navigation::ClearBlacklists();
+            if (!(localPlayer->movement_flags & MOVEFLAG_SWIMMING) || breathTimer < 0.0f)
+                recoveringBreath = holdingSurface = false;
+            else if (breathTimer < 15.0f) recoveringBreath = true;
+            const bool breathEmergency = recoveringBreath;
+            bool atSurface = false;
+            if (breathEmergency) {
+                const auto water = WaterMap::At(mapID, localPlayer->position.X, localPlayer->position.Y, localPlayer->position.Z);
+                atSurface = water.CanSwim() && localPlayer->position.Z >= water.surface - 1.8f;
+            }
             bool lateralRecovering = false;
-            ThreadSynchronizer::RunOnMainThread([&lateralRecovering]() {
+            if (!breathEmergency) ThreadSynchronizer::RunOnMainThread([&lateralRecovering]() {
                 lateralRecovering = Functions::UpdateLateralRecovery();
             });
-            if (Moving != MoveTypes::NotMoving && Navigation::HasCurrentMovement() &&
-                (localPlayer->movement_flags & MOVEFLAG_ROOT)) {
+            if (Moving != MoveTypes::NotMoving && Navigation::HasCurrentMovement() && (localPlayer->movement_flags & MOVEFLAG_ROOT)) {
                 ThreadSynchronizer::RunOnMainThread([]() {
                     Functions::StopMovement();
                 });
             }
+            Position aquaticDestination;
+            const bool aquaticMovement = (localPlayer->movement_flags & MOVEFLAG_SWIMMING) ||
+                (Navigation::GetCurrentMovementDestination(aquaticDestination) &&
+                    WaterMap::At(mapID, aquaticDestination.X, aquaticDestination.Y, aquaticDestination.Z).CanSwim());
             // Being stationary during a cast/channel is intentional, not a stuck path.
-            if (!lateralRecovering && !(Combat && (localPlayer->castInfo || localPlayer->channelInfo)) &&
+            if (!aquaticMovement && !breathEmergency && !lateralRecovering && !(Combat && (localPlayer->castInfo || localPlayer->channelInfo)) &&
                 Moving != MoveTypes::NotMoving && Navigation::HasCurrentMovement() &&
                 !(localPlayer->movement_flags & (MOVEFLAG_ROOT | MOVEFLAG_FALLING | MOVEFLAG_FALLINGFAR)) &&
                 Navigation::IsCurrentMovementStalled(localPlayer->position,
@@ -264,13 +256,12 @@ void Game::MainLoop() {
                     escapingDanger = Functions::EscapeDangerZone();
                 });
             }
-            if (escapingDanger) { }
-            else if (!lateralRecovering && breathTimer < 15.0f && breathTimer > 0.0f && (time(0) - jumpCD) >= 1.0f) {
-				// Breathe quickly !
-				ThreadSynchronizer::pressKey(0x20);
-				ThreadSynchronizer::releaseKey(0x20);
-				jumpCD = time(0);
-			}
+            if (breathEmergency && !escapingDanger) {
+                if (!atSurface) ThreadSynchronizer::RunOnMainThread([]() { Functions::AscendForBreath(); });
+                else if (!holdingSurface) ThreadSynchronizer::RunOnMainThread([]() { Functions::StopMovement(); });
+            }
+            holdingSurface = breathEmergency && atSurface && !escapingDanger;
+            if (escapingDanger || breathEmergency) { }
 			else if (BossAI::BossAIAction()) { }
             else if (lateralRecovering) { }
 			else if ((localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
@@ -548,7 +539,7 @@ bool groundAoERepositionRequested = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoChores = 0;
 unsigned long long LastTarget = 0;
-float distTarget = 0, autoAttackTimer = 0, breathTimer = 0;
+float distTarget = 0, autoAttackTimer = 0, breathTimer = -1;
 MoveTypes Moving;
 std::string tarType = "party";
 std::mutex leaderInfosMutex;

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <array>
 #include <algorithm>
@@ -14,8 +14,8 @@
 #include <vector>
 
 #include "FactionTemplate.h"
+#include "VMapReader.h"
 
-// Reads the CMaNGOS TBC .map terrain/liquid chunks. VMAP WMO liquids are not covered.
 class WaterMap final {
 public:
     enum class Kind { Unknown, Dry, Shallow, Swimmable, Hazard };
@@ -43,6 +43,14 @@ public:
         const int gridX = static_cast<int>(32.0f - x / GridSize);
         const int gridY = static_cast<int>(32.0f - y / GridSize);
         if (gridX < 0 || gridX > 63 || gridY < 0 || gridY > 63) return {};
+        const auto vmap = VMapReader::At(mapId, gridX, gridY, x, y, z);
+        if (vmap.found) {
+            if (vmap.type == 3 || vmap.type == 4 || vmap.type == 21)
+                return { Kind::Hazard, vmap.surface, vmap.ground };
+            if (vmap.type == 1 || vmap.type == 2 || vmap.type == 41 || vmap.type == 61)
+                return { vmap.surface - vmap.ground < 1.6f ? Kind::Shallow : Kind::Swimmable,
+                    vmap.surface, vmap.ground };
+        }
         const std::uint64_t key = (std::uint64_t(mapId) << 12) |
             (std::uint64_t(gridX) << 6) | std::uint64_t(gridY);
         static std::mutex mutex;
@@ -67,7 +75,8 @@ public:
                 static_assert(sizeof(FileHeader) == 40);
                 file.read(reinterpret_cast<char*>(&header), sizeof(header));
                 if (file && std::memcmp(header.magic, "MAPS", 4) == 0 &&
-                    std::memcmp(header.version, "s1.4", 4) == 0 &&
+                    (std::memcmp(header.version, "z1.4", 4) == 0 ||
+                     std::memcmp(header.version, "s1.4", 4) == 0) &&
                     header.heightOffset >= sizeof(header) && header.heightOffset < 4'000'000 &&
                     header.heightSize >= 16 && header.heightSize < 250'000 &&
                     ((header.liquidOffset == 0 && header.liquidSize == 0) ||

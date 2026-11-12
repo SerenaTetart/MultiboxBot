@@ -3,8 +3,6 @@
 
 #include "../MemoryManager.h"
 #include "../Game.h"
-#include "FunctionsLua.h"
-#include "../rng.h"
 #include "../Navigation.h"
 #include "../FactionTemplate.h"
 #include "../DangerZoneGeometry.h"
@@ -13,7 +11,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdint>
 #include <chrono>
 #include <vector>
 
@@ -21,8 +18,8 @@ namespace {
     constexpr float PI = 3.14159265358979323846f;
     constexpr float ANGLE_STEP = PI / 8.0f;
     constexpr float MIN_MOVE_DISTANCE = 2.0f;
-    constexpr float SWIM_STEP = 2.5f;
-    constexpr float SWIM_VERTICAL_STEP = 1.0f;
+    constexpr float SWIM_BOTTOM_CLEARANCE = 0.60f;
+    constexpr float SWIM_SURFACE_CLEARANCE = 0.35f;
     constexpr std::array<int, 13> MOVE_OFFSETS = { 0, +1, -1, +2, -2, +3, -3, +4, -4, +5, -5, +6, -6 };
 
     Position ClosestPointOnSegment(const Position& point, const Position& start, const Position& end) {
@@ -34,24 +31,20 @@ namespace {
         return Position(start.X + t * dx, start.Y + t * dy, start.Z + t * dz);
     }
 
-    bool IsPathSafeFromEnemies(const Position& start, const Position& end,
-        unsigned long long ignoredGuid = 0) {
+    bool IsPathSafeFromEnemies(const Position& start, const Position& end, unsigned long long ignoredGuid = 0) {
         for (auto& enemy : ListUnits) {
-            if (enemy.Guid == ignoredGuid || !enemy.attackable || enemy.isdead ||
-                enemy.unitReaction >= Neutral ||
+            if (enemy.Guid == ignoredGuid || !enemy.attackable || enemy.isdead || FactionTemplate.isNeutral(enemy.factionTemplateID) ||
+                enemy.unitReaction >= Neutral || enemy.isInCombatOrEncounter() ||
                 (enemy.flags & UNIT_FLAG_PLAYER_CONTROLLED) || enemy.creatureType == Totem || enemy.createdBy != 0 ||
-                ((enemy.movement_flags & MOVEFLAG_SWIMMING) &&
-                    !(localPlayer->movement_flags & MOVEFLAG_SWIMMING))) continue;
+                ((enemy.movement_flags & MOVEFLAG_SWIMMING) && !(localPlayer->movement_flags & MOVEFLAG_SWIMMING))) continue;
             const float radius = 21.0f + static_cast<float>(enemy.level - localPlayer->level);
             if (radius <= 0.0f) continue;
             const Position nearest = ClosestPointOnSegment(enemy.position, start, end);
             const float current = enemy.position.DistanceTo(start);
             const float closest = enemy.position.DistanceTo(nearest);
-            if (std::abs(enemy.position.Z - nearest.Z) < 20.0f && closest < radius &&
-                (current >= radius || closest + 0.001f < current) &&
-                !enemy.isInCombatOrEncounter() &&
-                !FactionTemplate.isNeutral(enemy.factionTemplateID) &&
-                !Functions::Intersect(enemy.position, nearest)) return false;
+            if (((localPlayer->movement_flags & MOVEFLAG_SWIMMING) ||
+                std::abs(enemy.position.Z - nearest.Z) < 20.0f) && closest < radius &&
+                (current >= radius || closest + 0.001f < current) && !Functions::Intersect(enemy.position, nearest)) return false;
         }
         return true;
     }
@@ -68,7 +61,6 @@ namespace {
         const float length = start.DistanceTo2D(goal);
         const float checked = (std::min)(length, horizon);
         if (checked < 0.01f) return result;
-
         const int samples = static_cast<int>(std::ceil(checked / 2.0f));
         for (int i = 1; i <= samples; ++i) {
             const float distance = (std::min)(checked, i * 2.0f);
@@ -78,14 +70,12 @@ namespace {
                 start.Z + (goal.Z - start.Z) * t);
             const auto water = WaterMap::At(mapID, point.X, point.Y, point.Z);
             if (!water.CanSwim()) continue;
-
             if (water.RelativeTo(point.Z) == WaterMap::Level::Above &&
                 start.Z > water.surface + 1.5f && goal.Z > water.surface + 1.5f) {
                 const Position ground = Functions::ProjectPos(point);
                 if (ground.DistanceTo(point) <= 1.25f &&
                     ground.Z > water.surface + 0.75f) continue;
             }
-
             result.crosses = true;
             result.entryNear = distance <= 4.0f;
             result.groundHorizon = (std::max)(2.5f, distance - 2.0f);
@@ -106,14 +96,12 @@ namespace {
             }
             return values;
             }();
-
         for (int i = 0; i < POINT_COUNT; i += sampleCount == 4 ? 2 : 1) {
             Position probe(
                 center.X + directions[i][0] * radius,
                 center.Y + directions[i][1] * radius,
                 center.Z
             );
-
             Position projected = Functions::ProjectPos(probe);
             if (projected.DistanceTo(probe) >= 2.0f || Functions::Intersect(projected, center, 1.5f)) return false;
         }
@@ -155,7 +143,6 @@ namespace {
         const float distance = from.DistanceTo2D(goal);
         if (distance < 0.01f || distance > STEP * MAX_STEPS ||
             !Navigation::IsSegmentSafe(zones, from, goal)) return false;
-
         const int steps = static_cast<int>(std::ceil(distance / STEP));
         Position previous = from;
         for (int i = 1; i <= steps; ++i) {
@@ -193,80 +180,16 @@ namespace {
     };
     std::vector<FailedHeading> FailedHeadings;
 
-    struct ActiveGoal {
-        Position Goal{};
-        int Map = -1;
-        MoveTypes Type = MoveTypes::NotMoving;
-        bool Swimming = false;
-        bool TargetSwimming = false;
-        bool WaterOnRoute = false;
-        bool WaterEntry = false;
-        bool NavigationWaypoint = false;
-        bool Valid = false;
-    };
-    ActiveGoal CurrentGoal;
-
-    struct MeleeApproach {
-        unsigned long long Guid = 0;
-        int Map = -1;
-        Position Boss{};
-        Position Goal{};
-        bool Swimming = false;
-        bool Valid = false;
-    };
-    MeleeApproach LastMeleeApproach;
-
-    struct CombatDetour {
-        unsigned long long Guid = 0;
-        int Map = -1;
-        int Side = 0;
-        Position Center{};
-        Position Goal{};
-    };
-    CombatDetour LastCombatDetour;
-
-    bool ReuseActiveWaypoint(const Position& goal, MoveTypes type, bool targetSwimming = false,
-        bool waterOnRoute = false, bool waterEntry = false) {
-        const bool combatReposition = type == MoveTypes::GoToTarget ||
-            type == MoveTypes::MoveLoS || type == MoveTypes::MoveLoSAoE || type == MoveTypes::MoveLoSAlly;
-        const float goalTolerance = type == MoveTypes::Follow ?
-            (CurrentGoal.NavigationWaypoint ? 24.0f : 6.0f) :
-            (combatReposition && !CurrentGoal.NavigationWaypoint ? 1.0f : 2.5f);
-        if (!CurrentGoal.Valid || CurrentGoal.Map != mapID || CurrentGoal.Type != type ||
-            Moving != type || CurrentGoal.Goal.DistanceTo2D(goal) > goalTolerance ||
-            CurrentGoal.Swimming != bool(localPlayer->movement_flags & MOVEFLAG_SWIMMING) ||
-            CurrentGoal.TargetSwimming != targetSwimming) return false;
-        if (!CurrentGoal.NavigationWaypoint &&
-            (CurrentGoal.WaterOnRoute != waterOnRoute || CurrentGoal.WaterEntry != waterEntry))
-            return false;
-        if (!CurrentGoal.NavigationWaypoint &&
-            !(localPlayer->movement_flags & MOVEFLAG_FORWARD) && !localPlayer->isMoving)
-            return false;
-        Position waypoint;
-        if (!Navigation::GetCurrentMovementDestination(waypoint) ||
-            localPlayer->position.DistanceTo2D(waypoint) <= 1.5f ||
-            Navigation::IsCurrentMovementStalled(localPlayer->position) ||
-            Navigation::IsCurrentMovementUnsafe(mapID, localPlayer->position)) return false;
-        if (type == MoveTypes::Follow && !CurrentGoal.NavigationWaypoint) {
-            const Position& position = localPlayer->position;
-            const float goalX = goal.X - position.X, goalY = goal.Y - position.Y;
-            const float previousX = CurrentGoal.Goal.X - position.X;
-            const float previousY = CurrentGoal.Goal.Y - position.Y;
-            const float goalDistance = std::hypot(goalX, goalY);
-            const float previousDistance = std::hypot(previousX, previousY);
-            if (goalDistance < 2.5f || previousDistance < 2.5f ||
-                (goalX * previousX + goalY * previousY) < 0.75f * goalDistance * previousDistance ||
-                std::abs(previousX * goalY - previousY * goalX) > 3.5f * previousDistance)
-                return false;
-        }
-        return true;
+    Position SwimDestination(const Position& target, const WaterMap::Sample& water) {
+        if (!water.CanSwim() || target.Z > water.surface + 0.75f) return target;
+        return Position(target.X, target.Y,
+            std::clamp(target.Z, water.ground + SWIM_BOTTOM_CLEARANCE,
+                water.surface - SWIM_SURFACE_CLEARANCE));
     }
 
-    void RememberGoal(const Position& goal, MoveTypes type, bool targetSwimming = false,
-        bool waterOnRoute = false, bool waterEntry = false) {
-        CurrentGoal = { goal, mapID, type,
-            bool(localPlayer->movement_flags & MOVEFLAG_SWIMMING), targetSwimming,
-            waterOnRoute, waterEntry, CurrentGoal.NavigationWaypoint, true };
+    void CompleteMovement(bool started, MoveTypes type) {
+        if (started) Moving = type;
+        else Functions::StopMovement();
     }
 
     bool IsRecentlyFailedHeading(const Position& start, const Position& candidate) {
@@ -275,7 +198,6 @@ namespace {
             [now](const FailedHeading& failure) {
                 return now - failure.Since > std::chrono::milliseconds(1800);
             }), FailedHeadings.end());
-
         const float dx = candidate.X - start.X, dy = candidate.Y - start.Y;
         const float length = std::hypot(dx, dy);
         if (length < MIN_MOVE_DISTANCE) return false;
@@ -284,87 +206,20 @@ namespace {
             const float fx = failure.Destination.X - failure.Origin.X;
             const float fy = failure.Destination.Y - failure.Origin.Y;
             const float flength = std::hypot(fx, fy);
-            if (flength > MIN_MOVE_DISTANCE && (dx * fx + dy * fy) / (length * flength) > 0.85f)
-                return true;
+            if (flength > MIN_MOVE_DISTANCE && (dx * fx + dy * fy) / (length * flength) > 0.85f) return true;
         }
         return false;
-    }
-
-    bool SafeClickToMove(const Position& destination, unsigned long long guid,
-        bool emergency = false, bool navigationWaypoint = false) {
-        return Functions::StartMovement(destination, emergency, navigationWaypoint, guid);
     }
 
     bool TryServerWaypoint(const Position& goal, bool avoidEnemies,
-        bool followFallback = false, unsigned long long ignoredGuid = 0,
-        bool combatReplan = false) {
-        const Position start = localPlayer->position;
-        static std::chrono::steady_clock::time_point nextFailedFollowRetry{};
-        static Position lastFailedFollowStart{};
-        static Position lastFailedFollowGoal{};
-        static int lastFailedFollowMap = -1;
-        const auto now = std::chrono::steady_clock::now();
-        if (followFallback && lastFailedFollowMap == mapID &&
-            now < nextFailedFollowRetry &&
-            start.DistanceTo2D(lastFailedFollowStart) < 3.0f &&
-            goal.DistanceTo2D(lastFailedFollowGoal) < 8.0f) return false;
-
-        const Position waypoint = Navigation::CalculatePath(mapID, start, goal, !combatReplan);
-        bool accepted = start.DistanceTo(waypoint) >= MIN_MOVE_DISTANCE &&
-            (!avoidEnemies || IsPathSafeFromEnemies(start, waypoint, ignoredGuid)) &&
-            Navigation::IsSegmentSafe(mapID, start, waypoint);
-        if (accepted && (localPlayer->movement_flags & MOVEFLAG_FORWARD) &&
-            Navigation::IsMovingTowards(waypoint) &&
-            !Navigation::IsCurrentMovementStalled(start)) return true;
-        if (accepted)
-            accepted = SafeClickToMove(waypoint, localPlayer->Guid, false, true);
-        if (followFallback) {
-            if (accepted) {
-                nextFailedFollowRetry = {};
-            } else {
-                nextFailedFollowRetry = now + std::chrono::milliseconds(350);
-                lastFailedFollowStart = start;
-                lastFailedFollowGoal = goal;
-                lastFailedFollowMap = mapID;
-            }
-        }
-        return accepted;
-    }
-
-    bool ContinueDetour(const Position& goal, MoveTypes type, bool avoidEnemies,
-        bool targetSwimming, bool waterOnRoute, bool waterEntry,
         unsigned long long ignoredGuid = 0) {
-        if (!CurrentGoal.Valid || !CurrentGoal.NavigationWaypoint ||
-            CurrentGoal.Map != mapID || CurrentGoal.Type != type ||
-            (Moving != type && Moving != MoveTypes::NotMoving) ||
-            CurrentGoal.Swimming != bool(localPlayer->movement_flags & MOVEFLAG_SWIMMING) ||
-            CurrentGoal.TargetSwimming != targetSwimming ||
-            CurrentGoal.Goal.DistanceTo2D(goal) > (type == MoveTypes::Follow ? 24.0f : 2.5f))
-            return false;
-
-        Position waypoint;
-        if (Navigation::GetCurrentMovementDestination(waypoint) &&
-            localPlayer->position.DistanceTo2D(waypoint) > 1.5f) {
-            if (Navigation::IsCurrentMovementUnsafe(mapID, localPlayer->position) ||
-                Navigation::IsCurrentMovementStalled(localPlayer->position)) {
-                Functions::StopMovement();
-                return false;
-            }
-            Moving = type;
-            return true;
-        }
-
-        if (TryServerWaypoint(goal, avoidEnemies, type == MoveTypes::Follow, ignoredGuid,
-                type == MoveTypes::GoToTarget || type == MoveTypes::MoveLoS || type == MoveTypes::MoveLoSAoE)) {
-            Moving = type;
-            RememberGoal(goal, type, targetSwimming, waterOnRoute, waterEntry);
-            return true;
-        }
-        Navigation::ClearMovement();
-        return false;
+        const Position start = localPlayer->position;
+        const Position waypoint = Navigation::CalculatePath(mapID, start, goal);
+        return start.DistanceTo(waypoint) >= MIN_MOVE_DISTANCE &&
+            Navigation::IsSegmentSafe(mapID, start, waypoint) &&
+            (!avoidEnemies || IsPathSafeFromEnemies(start, waypoint, ignoredGuid)) &&
+            Functions::StartMovement(waypoint, false, true);
     }
-
-    void resetMovement() { Functions::StopMovement(); }
 
     struct LateralRecoveryState {
         bool Active = false;
@@ -375,14 +230,8 @@ namespace {
         Position LastProgressPosition{};
         std::chrono::steady_clock::time_point LastProgressAt{};
         std::chrono::steady_clock::time_point Expires{};
-        ActiveGoal ResumeDetour{};
     };
     LateralRecoveryState LateralRecovery;
-
-    Position BuildSwimStep(const Position& from, const Position& target, float cosDir, float sinDir, float step) {
-        const float dz = std::clamp(target.Z - from.Z, -SWIM_VERTICAL_STEP, SWIM_VERTICAL_STEP);
-        return Position(from.X + cosDir * step, from.Y + sinDir * step, from.Z + dz);
-    }
 
     bool TryLocalRecoveryStep(const Position& destination, bool checkEnemyClose,
         bool allowPartial = false, unsigned long long ignoredGuid = 0) {
@@ -390,55 +239,34 @@ namespace {
         const auto zones = Navigation::GetAvoidanceSnapshot(mapID);
         if (Navigation::IsPositionDangerous(zones, destination) ||
             start.DistanceTo2D(destination) < MIN_MOVE_DISTANCE) return false;
-
         const float base = std::atan2(destination.Y - start.Y, destination.X - start.X);
-        const bool swimming = (localPlayer->movement_flags & MOVEFLAG_SWIMMING) != 0;
-        for (const float stride : {3.0f, 5.0f, 8.0f}) {
+        for (float stride : {3.0f, 5.0f, 8.0f}) {
             std::vector<std::pair<float, Position>> candidates;
             candidates.reserve(MOVE_OFFSETS.size());
             for (int off : MOVE_OFFSETS) {
                 const float dir = base + off * ANGLE_STEP;
-                const float cosDir = std::cos(dir), sinDir = std::sin(dir);
-                Position wanted(start.X + cosDir * stride,
-                    start.Y + sinDir * stride, start.Z);
-                if (IsRecentlyFailedHeading(start, wanted) ||
-                    !Navigation::IsSegmentSafe(zones, start, wanted)) continue;
+                const Position wanted(start.X + std::cos(dir) * stride,
+                    start.Y + std::sin(dir) * stride, start.Z);
                 Position next;
-                if (swimming) {
-                    next = BuildSwimStep(start, destination, cosDir, sinDir, stride);
-                    const auto water = WaterMap::At(mapID, next.X, next.Y, next.Z);
-                    if (!water.CanSwim()) continue;
-                    next.Z = std::clamp(water.surface - 0.6f,
-                        start.Z - SWIM_VERTICAL_STEP, start.Z + SWIM_VERTICAL_STEP);
-                    if (next.Z < water.ground + 0.5f || next.Z >= water.surface ||
-                        Functions::Intersect(start, next, 1.25f)) continue;
-                }
-                else if (!ProjectSafeGroundStep(start, wanted, next, 1.25f, zones, false)) continue;
-
-                if (!Navigation::IsSegmentSafe(zones, start, next) ||
+                if (IsRecentlyFailedHeading(start, wanted) ||
+                    !ProjectSafeGroundStep(start, wanted, next, 1.25f, zones, false) ||
+                    !Navigation::IsSegmentSafe(zones, start, next) ||
                     IsRecentlyFailedHeading(start, next) ||
                     start.DistanceTo(next) < MIN_MOVE_DISTANCE ||
                     (checkEnemyClose && !IsPathSafeFromEnemies(start, next, ignoredGuid))) continue;
-                const float score = next.DistanceTo2D(destination) +
-                    std::abs(off) * 0.08f + stride * 0.08f;
-                candidates.emplace_back(score, next);
+                candidates.emplace_back(next.DistanceTo2D(destination) +
+                    std::abs(off) * 0.08f + stride * 0.08f, next);
             }
             std::sort(candidates.begin(), candidates.end(),
                 [](const auto& a, const auto& b) { return a.first < b.first; });
-            for (const auto& candidate : candidates) {
-                if (!swimming) {
-                    const bool partialRecovery = allowPartial &&
-                        start.DistanceTo2D(destination) > 30.0f &&
-                        candidate.second.DistanceTo2D(destination) + MIN_MOVE_DISTANCE <
-                            start.DistanceTo2D(destination);
-                    if (partialRecovery) {
-                        if (!HasSafeGroundContinuation(candidate.second, destination, zones) ||
-                            !HasDirectGroundRoute(start, candidate.second, zones)) continue;
-                    } else if (!HasValidatedPivot(start, candidate.second, destination, zones)) {
-                        continue;
-                    }
-                }
-                if (SafeClickToMove(candidate.second, localPlayer->Guid)) return true;
+            for (const auto& entry : candidates) {
+                const Position& candidate = entry.second;
+                const bool partial = allowPartial && start.DistanceTo2D(destination) > 30.0f &&
+                    candidate.DistanceTo2D(destination) + MIN_MOVE_DISTANCE < start.DistanceTo2D(destination);
+                if (partial ? (!HasSafeGroundContinuation(candidate, destination, zones) ||
+                    !HasDirectGroundRoute(start, candidate, zones)) :
+                    !HasValidatedPivot(start, candidate, destination, zones)) continue;
+                if (Functions::StartMovement(candidate)) return true;
             }
         }
         return false;
@@ -450,16 +278,13 @@ namespace {
         const Position start = localPlayer->position;
         const auto zones = Navigation::GetAvoidanceSnapshot(mapID);
         if (!findLineOfSight && Navigation::IsPositionDangerous(zones, goal)) return false;
-
         const float distance = start.DistanceTo2D(goal);
-        if (!allowPartial && !findLineOfSight && start.DistanceTo(goal) > 40.0f)
-            return false;
+        if (!allowPartial && !findLineOfSight && start.DistanceTo(goal) > 40.0f) return false;
         if (!findLineOfSight) {
             if (distance >= MIN_MOVE_DISTANCE && distance <= (allowPartial ? partialHorizon : 30.0f) &&
                 HasDirectGroundRoute(start, goal, zones) &&
                 (!avoidEnemies || IsPathSafeFromEnemies(start, goal, ignoredGuid)))
-                return SafeClickToMove(goal, localPlayer->Guid);
-
+                return Functions::StartMovement(goal);
             if (allowPartial && distance > partialHorizon) {
                 const float t = partialHorizon / distance;
                 const Position horizon(start.X + (goal.X - start.X) * t,
@@ -468,16 +293,14 @@ namespace {
                 if (HasDirectGroundRoute(start, horizon, zones) &&
                     !IsRecentlyFailedHeading(start, horizon) &&
                     (!avoidEnemies || IsPathSafeFromEnemies(start, horizon, ignoredGuid)) &&
-                    SafeClickToMove(horizon, localPlayer->Guid)) return true;
+                    Functions::StartMovement(horizon)) return true;
             }
         }
-
         const float step = findLineOfSight ? 2.5f : 2.0f;
         const int maxSteps = findLineOfSight ? 12 : 8;
         const float base = std::atan2(goal.Y - start.Y, goal.X - start.X);
         std::vector<std::pair<float, Position>> partialCandidates;
         partialCandidates.reserve(MOVE_OFFSETS.size());
-
         const size_t directionCount = allowPartial && !findLineOfSight ? 9 : MOVE_OFFSETS.size();
         for (size_t directionIndex = 0; directionIndex < directionCount; ++directionIndex) {
             const int offset = MOVE_OFFSETS[directionIndex];
@@ -491,13 +314,12 @@ namespace {
                 const Position wanted(previous.X + stepX, previous.Y + stepY, previous.Z);
                 Position candidate;
                 if (!ProjectSafeGroundStep(previous, wanted, candidate, 1.25f, zones, false)) break;
-
                 if (findLineOfSight) {
                     if (!Functions::Intersect(candidate, goal)) {
                         if (start.DistanceTo(candidate) >= MIN_MOVE_DISTANCE &&
                             HasDirectGroundRoute(start, candidate, zones) &&
                             (!avoidEnemies || IsPathSafeFromEnemies(start, candidate, ignoredGuid)) &&
-                            SafeClickToMove(candidate, localPlayer->Guid)) return true;
+                            Functions::StartMovement(candidate)) return true;
                         break;
                     }
                 } else if (i >= 2 && i % 3 == 2 &&
@@ -506,10 +328,9 @@ namespace {
                            candidate.DistanceTo2D(goal) <= 30.0f &&
                            HasValidatedPivot(start, candidate, goal, zones) &&
                            (!avoidEnemies || IsPathSafeFromEnemies(start, candidate, ignoredGuid)) &&
-                           SafeClickToMove(candidate, localPlayer->Guid)) {
+                           Functions::StartMovement(candidate)) {
                     return true;
                 }
-
                 if (allowPartial && !findLineOfSight && i >= 2 &&
                     start.DistanceTo2D(goal) - candidate.DistanceTo2D(goal) > MIN_MOVE_DISTANCE) {
                     furthest = candidate;
@@ -522,7 +343,6 @@ namespace {
                 partialCandidates.emplace_back(score, furthest);
             }
         }
-
         if (allowPartial && !findLineOfSight) {
             std::sort(partialCandidates.begin(), partialCandidates.end(),
                 [](const auto& a, const auto& b) { return a.first < b.first; });
@@ -532,7 +352,7 @@ namespace {
                 if (HasSafeGroundContinuation(candidate.second, goal, zones) &&
                     HasDirectGroundRoute(start, candidate.second, zones) &&
                     (!avoidEnemies || IsPathSafeFromEnemies(start, candidate.second, ignoredGuid)) &&
-                    SafeClickToMove(candidate.second, localPlayer->Guid)) return true;
+                    Functions::StartMovement(candidate.second)) return true;
             }
         }
         return false;
@@ -541,150 +361,33 @@ namespace {
     bool TrySwimMove(const Position& goal, bool avoidEnemies, bool findLineOfSight,
         unsigned long long ignoredGuid = 0) {
         const Position start = localPlayer->position;
-        const float distance = start.DistanceTo2D(goal);
-        if (distance < MIN_MOVE_DISTANCE) {
-            if (std::abs(goal.Z - start.Z) > 0.75f) {
-                const Position vertical(start.X, start.Y,
-                    start.Z + std::clamp(goal.Z - start.Z, -SWIM_VERTICAL_STEP, SWIM_VERTICAL_STEP));
-                return !Functions::Intersect(start, vertical, 1.25f) &&
-                    (!avoidEnemies || IsPathSafeFromEnemies(start, vertical, ignoredGuid)) &&
-                    SafeClickToMove(vertical, localPlayer->Guid);
-            }
-            return findLineOfSight && !Functions::Intersect(start, goal);
+        const auto water = WaterMap::At(mapID, goal.X, goal.Y, goal.Z);
+        if (water.kind == WaterMap::Kind::Hazard) return false;
+        Position destination = SwimDestination(goal, water);
+        if (start.DistanceTo(destination) <= 0.75f) return true;
+        if (std::isfinite(localPlayer->facing) && start.DistanceTo2D(destination) < 0.75f &&
+            std::abs(start.Z - destination.Z) > 1.5f) {
+            const Position angled(destination.X + std::cos(localPlayer->facing) * 2.0f,
+                destination.Y + std::sin(localPlayer->facing) * 2.0f, destination.Z);
+            if (Navigation::IsSegmentSafe(mapID, start, angled) &&
+                !Functions::Intersect(start, angled, 0.0f) &&
+                WaterMap::At(mapID, angled.X, angled.Y, angled.Z).kind != WaterMap::Kind::Hazard)
+                destination = angled;
         }
-
-        const float step = (std::min)(distance, SWIM_STEP);
-        const float base = std::atan2(goal.Y - start.Y, goal.X - start.X);
-        const auto targetWater = WaterMap::At(mapID, goal.X, goal.Y, goal.Z);
-        const bool targetInWater = targetWater.CanSwim();
-
-        if (distance > SWIM_STEP + 0.5f) {
-            const float longStep = (std::min)(distance, 14.0f);
-            float validStep = 0.0f;
-            const int samples = static_cast<int>(std::ceil(longStep / 2.0f));
-            for (int i = 1; i <= samples; ++i) {
-                const float travelled = (std::min)(longStep, i * 2.0f);
-                const float fraction = travelled / distance;
-                const auto water = WaterMap::At(mapID,
-                    start.X + (goal.X - start.X) * fraction,
-                    start.Y + (goal.Y - start.Y) * fraction, start.Z);
-                if (water.kind == WaterMap::Kind::Hazard ||
-                    (water.Known() && !water.CanSwim()) ||
-                    (!water.Known() && travelled > 6.0f)) break;
-                validStep = travelled;
-            }
-            if (validStep > SWIM_STEP + 0.5f) {
-                const float t = validStep / distance;
-                Position direct(start.X + (goal.X - start.X) * t,
-                    start.Y + (goal.Y - start.Y) * t, start.Z);
-                const auto destinationWater = WaterMap::At(mapID, direct.X, direct.Y, direct.Z);
-                bool validHeight = true;
-                if (destinationWater.CanSwim()) {
-                    const bool submergedTarget = targetInWater && goal.Z < targetWater.surface - 2.0f;
-                    const float desiredZ = submergedTarget ? goal.Z : destinationWater.surface - 0.6f;
-                    direct.Z = std::clamp(desiredZ,
-                        start.Z - SWIM_VERTICAL_STEP, start.Z + SWIM_VERTICAL_STEP);
-                    validHeight = direct.Z >= destinationWater.ground + 0.5f &&
-                        direct.Z < destinationWater.surface;
-                }
-                if (validHeight &&
-                    !Functions::Intersect(start, direct, 1.25f) &&
-                    (!avoidEnemies || IsPathSafeFromEnemies(start, direct, ignoredGuid)) &&
-                    (!findLineOfSight || !Functions::Intersect(direct, goal)) &&
-                    SafeClickToMove(direct, localPlayer->Guid)) return true;
-            }
-        }
-
-        Position fallback{};
-        bool hasFallback = false;
-        for (int offset : MOVE_OFFSETS) {
-            const float dir = base + offset * ANGLE_STEP;
-            Position candidate = BuildSwimStep(start, goal, std::cos(dir), std::sin(dir), step);
-            const auto water = WaterMap::At(mapID, candidate.X, candidate.Y, candidate.Z);
-            if (water.kind == WaterMap::Kind::Hazard ||
-                (water.Known() && !water.CanSwim() && targetInWater)) continue;
-            if (water.CanSwim()) {
-                const bool submergedTarget = targetInWater && goal.Z < targetWater.surface - 2.0f;
-                const float desiredZ = submergedTarget ? goal.Z : water.surface - 0.6f;
-                candidate.Z = std::clamp(desiredZ,
-                    start.Z - SWIM_VERTICAL_STEP, start.Z + SWIM_VERTICAL_STEP);
-                if (candidate.Z < water.ground + 0.5f || candidate.Z >= water.surface) continue;
-            } else if (water.kind == WaterMap::Kind::Dry ||
-                       water.kind == WaterMap::Kind::Shallow) {
-                const Position projected = Functions::ProjectPos(candidate);
-                if (std::abs(projected.Z - candidate.Z) > 1.5f) continue;
-                candidate = projected;
-            }
-            if (start.DistanceTo(candidate) < MIN_MOVE_DISTANCE ||
-                Functions::Intersect(start, candidate, 1.25f) ||
-                (avoidEnemies && !IsPathSafeFromEnemies(start, candidate, ignoredGuid))) continue;
-
-            if (!findLineOfSight || !Functions::Intersect(candidate, goal)) {
-                if (SafeClickToMove(candidate, localPlayer->Guid)) return true;
-            } else if (!hasFallback) {
-                fallback = candidate;
-                hasFallback = true;
-            }
-        }
-        return findLineOfSight && hasFallback && SafeClickToMove(fallback, localPlayer->Guid);
+        if (!Navigation::IsSegmentSafe(mapID, start, destination) ||
+            Functions::Intersect(start, destination, 0.0f) ||
+            (avoidEnemies && !IsPathSafeFromEnemies(start, destination, ignoredGuid)) ||
+            (findLineOfSight && Functions::Intersect(destination, goal))) return false;
+        return Functions::StartMovement(destination);
     }
 
-    bool TryWaterEntryMove(const Position& goal, bool avoidEnemies, bool targetSwimming = false,
+    bool TryWaterEntryMove(const Position& goal, bool avoidEnemies,
         unsigned long long ignoredGuid = 0, const Position* retreatFrom = nullptr) {
         const Position start = localPlayer->position;
-        const float distance = start.DistanceTo2D(goal);
-        if (distance < MIN_MOVE_DISTANCE) return false;
-
-        const auto currentWater = WaterMap::At(mapID, start.X, start.Y, start.Z);
-        const auto immersion = currentWater.RelativeTo(start.Z);
-        const bool alreadyInWater = immersion == WaterMap::Level::In ||
-            immersion == WaterMap::Level::Under;
-        const float step = (std::min)(distance, SWIM_STEP);
-        const float base = std::atan2(goal.Y - start.Y, goal.X - start.X);
-        bool longRayChecked = false;
-        bool clearToSwimmer = false;
-        for (int offset : MOVE_OFFSETS) {
-            if (std::abs(offset) > 4) continue;
-            const float angle = base + offset * ANGLE_STEP;
-            const Position wanted(start.X + std::cos(angle) * step,
-                start.Y + std::sin(angle) * step, start.Z);
-            const auto water = WaterMap::At(mapID, wanted.X, wanted.Y, wanted.Z);
-            if (water.kind == WaterMap::Kind::Hazard) continue;
-            Position next = wanted;
-            if (water.CanSwim()) {
-                if (!alreadyInWater && start.Z > water.surface + 1.5f) continue;
-                const float desiredZ = alreadyInWater ?
-                    std::clamp(goal.Z, water.ground + 0.6f,
-                        (std::max)(water.ground + 0.6f, water.surface - 0.35f)) :
-                    water.surface - 0.6f;
-                next.Z = std::clamp(desiredZ,
-                    start.Z - SWIM_VERTICAL_STEP, start.Z + SWIM_VERTICAL_STEP);
-            } else {
-                const Position projected = Functions::ProjectPos(wanted);
-                if (projected.DistanceTo(wanted) < 2.0f) {
-                    next = projected;
-                } else {
-                    if ((water.Known() && !targetSwimming) || std::abs(offset) > 2) continue;
-                    if (!longRayChecked) {
-                        clearToSwimmer = !Functions::Intersect(start, goal, 1.25f);
-                        longRayChecked = true;
-                    }
-                    if (!clearToSwimmer) continue;
-                    next.Z += std::clamp(goal.Z - start.Z,
-                        -SWIM_VERTICAL_STEP, SWIM_VERTICAL_STEP);
-                }
-            }
-
-            if (next.DistanceTo2D(goal) >= distance - 0.25f ||
-                start.DistanceTo(next) < MIN_MOVE_DISTANCE ||
-                (retreatFrom && next.DistanceTo2D(*retreatFrom) <=
-                    start.DistanceTo2D(*retreatFrom) + 0.25f) ||
-                Functions::Intersect(start, next, 1.25f) ||
-                (retreatFrom && Functions::Intersect(next, *retreatFrom)) ||
-                (avoidEnemies && !IsPathSafeFromEnemies(start, next, ignoredGuid))) continue;
-            if (SafeClickToMove(next, localPlayer->Guid)) return true;
-        }
-        return false;
+        return start.DistanceTo(goal) >= MIN_MOVE_DISTANCE &&
+            (!retreatFrom || goal.DistanceTo(*retreatFrom) >
+                start.DistanceTo(*retreatFrom) + 0.25f) &&
+            TrySwimMove(goal, avoidEnemies, false, ignoredGuid);
     }
 
     bool ChooseMeleeApproach(Position& target_pos, bool meleeTarget, bool checkEnemyClose,
@@ -692,66 +395,46 @@ namespace {
         if (Navigation::IsPositionDangerous(zones, target_pos) && meleeTarget) {
             const bool swimming = (localPlayer->movement_flags & MOVEFLAG_SWIMMING) != 0;
             const float range = localPlayer->combatReach + targetUnit->combatReach + 1.0f;
-            const bool previousValid = LastMeleeApproach.Valid && LastMeleeApproach.Map == mapID &&
-                LastMeleeApproach.Guid == targetUnit->Guid &&
-                LastMeleeApproach.Swimming == swimming &&
-                LastMeleeApproach.Boss.DistanceTo(target_pos) < 1.5f &&
-                LastMeleeApproach.Goal.DistanceTo(target_pos) <=
-                localPlayer->combatReach + targetUnit->combatReach + 1.5f &&
-                !Navigation::IsPositionDangerous(zones, LastMeleeApproach.Goal) &&
-                !Functions::Intersect(LastMeleeApproach.Goal, target_pos);
-            if (previousValid) {
-                target_pos = LastMeleeApproach.Goal;
+            bool found = false;
+            Position best;
+            const float base = std::atan2(localPlayer->position.Y - target_pos.Y,
+                localPlayer->position.X - target_pos.X);
+            std::array<std::pair<float, Position>, 24> positions{};
+            for (int i = 0; i < 24; ++i) {
+                const float angle = base + i * (2.0f * PI / 24.0f);
+                const Position desired(target_pos.X + std::cos(angle) * range,
+                    target_pos.Y + std::sin(angle) * range, target_pos.Z);
+                positions[i] = { swimming ? localPlayer->position.DistanceTo(desired) :
+                    localPlayer->position.DistanceTo2D(desired), desired };
             }
-            else {
-                bool found = false;
-                Position best;
-                const float base = std::atan2(localPlayer->position.Y - target_pos.Y,
-                    localPlayer->position.X - target_pos.X);
-                std::array<std::pair<float, Position>, 24> positions{};
-                for (int i = 0; i < 24; ++i) {
-                    const float angle = base + i * (2.0f * PI / 24.0f);
-                    const Position desired(target_pos.X + std::cos(angle) * range,
-                        target_pos.Y + std::sin(angle) * range, target_pos.Z);
-                    positions[i] = { localPlayer->position.DistanceTo2D(desired), desired };
+            std::sort(positions.begin(), positions.end(),
+                [](const auto& a, const auto& b) { return a.first < b.first; });
+            int checked = 0;
+            for (const auto& [score, desired] : positions) {
+                if (++checked > 10) break;
+                if (Navigation::IsPositionDangerous(zones, desired)) continue;
+                Position candidate = desired;
+                if (swimming) {
+                    const auto water = WaterMap::At(mapID, desired.X, desired.Y, desired.Z);
+                    if (water.Known() && !water.CanSwim()) continue;
+                    if (water.CanSwim()) candidate.Z = std::clamp(target_pos.Z, water.ground + 0.6f,
+                        (std::max)(water.ground + 0.6f, water.surface - 0.35f));
+                    if (Functions::Intersect(localPlayer->position, candidate, 1.25f)) continue;
+                } else {
+                    candidate = Functions::ProjectPos(desired);
+                    if (candidate.DistanceTo(desired) >= 2.0f ||
+                        !IsGroundSafe8Points(candidate, 1.0f)) continue;
                 }
-                std::sort(positions.begin(), positions.end(),
-                    [](const auto& a, const auto& b) { return a.first < b.first; });
-                int checked = 0;
-                for (const auto& [score, desired] : positions) {
-                    if (++checked > 10) break;
-                    if (Navigation::IsPositionDangerous(zones, desired)) continue;
-                    Position candidate = desired;
-                    if (swimming) {
-                        const auto water = WaterMap::At(mapID, desired.X, desired.Y, desired.Z);
-                        if (!water.CanSwim()) continue;
-                        candidate.Z = std::clamp(target_pos.Z, water.ground + 0.6f,
-                            (std::max)(water.ground + 0.6f, water.surface - 0.35f));
-                        if (Functions::Intersect(localPlayer->position, candidate, 1.25f)) continue;
-                    } else {
-                        candidate = Functions::ProjectPos(desired);
-                        if (candidate.DistanceTo(desired) >= 2.0f ||
-                            !IsGroundSafe8Points(candidate, 1.0f)) continue;
-                    }
-                    if (Navigation::IsPositionDangerous(zones, candidate) ||
-                        (checkEnemyClose && !IsPathSafeFromEnemies(
-                            localPlayer->position, candidate, targetUnit->Guid)) ||
-                        Functions::Intersect(candidate, target_pos)) continue;
-                    best = candidate;
-                    found = true;
-                    break;
-                }
-                if (!found) {
-                    LastMeleeApproach.Valid = false;
-                    return false;
-                }
-                LastMeleeApproach = { targetUnit->Guid, mapID, target_pos, best,
-                    swimming, true };
-                target_pos = best;
+                if (Navigation::IsPositionDangerous(zones, candidate) ||
+                    (checkEnemyClose && !IsPathSafeFromEnemies(
+                        localPlayer->position, candidate, targetUnit->Guid)) ||
+                    Functions::Intersect(candidate, target_pos)) continue;
+                best = candidate;
+                found = true;
+                break;
             }
-        }
-        else {
-            LastMeleeApproach.Valid = false;
+            if (!found) return false;
+            target_pos = best;
         }
         return true;
     }
@@ -782,14 +465,8 @@ namespace {
                 target_pos.X - blocking->Center.X);
             const float angleDifference = std::atan2(std::sin(goalAngle - startAngle),
                 std::cos(goalAngle - startAngle));
-            const bool sameDetour = LastCombatDetour.Map == mapID &&
-                LastCombatDetour.Guid == blocking->Guid &&
-                LastCombatDetour.Center.DistanceTo2D(blocking->Center) < 3.0f &&
-                LastCombatDetour.Goal.DistanceTo2D(target_pos) < 3.0f;
-            const int side = sameDetour ? LastCombatDetour.Side :
-                (std::abs(angleDifference) < 0.05f ?
-                    (localPlayer->Guid % 2ULL ? 1 : -1) :
-                    (angleDifference > 0.0f ? 1 : -1));
+            const int side = std::abs(angleDifference) < 0.05f ?
+                (localPlayer->Guid % 2ULL ? 1 : -1) : (angleDifference > 0.0f ? 1 : -1);
             const float radius = blocking->Radius + DangerZoneGeometry::SafetyMargin + 2.5f;
             for (int direction : {side, -side}) {
                 for (float angle : {0.25f, 0.45f, 0.65f, 0.90f}) {
@@ -813,11 +490,7 @@ namespace {
                         !HasDirectGroundRoute(start, candidate, zones) ||
                         (checkEnemyClose && !IsPathSafeFromEnemies(start, candidate,
                             targetUnit ? targetUnit->Guid : 0))) continue;
-                    if (SafeClickToMove(candidate, localPlayer->Guid)) {
-                        LastCombatDetour = { blocking->Guid, mapID, direction,
-                                            blocking->Center, target_pos };
-                        return true;
-                    }
+                    if (Functions::StartMovement(candidate)) return true;
                 }
             }
         }
@@ -827,31 +500,18 @@ namespace {
 
 bool Functions::StartMovement(const Position& destination, bool emergency,
     bool navigationWaypoint, unsigned long long guid) {
-    if (!localPlayer) return false;
+    if (!localPlayer || !std::isfinite(destination.X) || !std::isfinite(destination.Y) ||
+        !std::isfinite(destination.Z)) return false;
     const Position start = localPlayer->position;
-    if (!std::isfinite(destination.X) || !std::isfinite(destination.Y) || !std::isfinite(destination.Z)) {
-        return false;
+    if (!emergency && !(localPlayer->movement_flags & MOVEFLAG_SWIMMING) &&
+        IsRecentlyFailedHeading(start, destination)) {
+        if (!navigationWaypoint) return false;
+        for (const auto& failed : FailedHeadings)
+            if (failed.MapId == mapID && start.DistanceTo2D(failed.Origin) <= 5.0f &&
+                destination.DistanceTo2D(failed.Destination) <= 2.0f) return false;
     }
-    if (!emergency && IsRecentlyFailedHeading(start, destination)) {
-        bool rejected = !navigationWaypoint;
-        if (navigationWaypoint) {
-            for (const auto& failed : FailedHeadings) {
-                if (failed.MapId == mapID && start.DistanceTo2D(failed.Origin) <= 5.0f &&
-                    destination.DistanceTo2D(failed.Destination) <= 2.0f) {
-                    rejected = true;
-                    break;
-                }
-            }
-        }
-        if (rejected) {
-            return false;
-        }
-    }
-    if (!Navigation::IsSegmentSafe(mapID, start, destination)) {
-        return false;
-    }
+    if (!Navigation::IsSegmentSafe(mapID, start, destination)) return false;
     localPlayer->ClickToMove(Move, guid ? guid : localPlayer->Guid, destination);
-    CurrentGoal.NavigationWaypoint = navigationWaypoint;
     Navigation::RecordMovement(start, destination);
     return true;
 }
@@ -865,20 +525,30 @@ void Functions::StopMovement() {
             ThreadSynchronizer::releaseKey(0x28);
         }
     }
-    CurrentGoal.Valid = false;
-    CurrentGoal.NavigationWaypoint = false;
     LateralRecovery.Active = false;
-    LateralRecovery.ResumeDetour = {};
     Navigation::ClearMovement();
     Moving = MoveTypes::NotMoving;
+}
+
+bool Functions::AscendForBreath() {
+    if (!localPlayer || !(localPlayer->movement_flags & MOVEFLAG_SWIMMING)) return false;
+    const Position start = localPlayer->position;
+    const auto water = WaterMap::At(mapID, start.X, start.Y, start.Z);
+    if (!water.CanSwim()) return false;
+    const Position surface(
+        start.X + std::cos(localPlayer->facing) * 2.0f,
+        start.Y + std::sin(localPlayer->facing) * 2.0f,
+        water.surface
+    );
+    if (start.Z >= surface.Z) return true;
+    if (!Navigation::IsSegmentSafe(mapID, start, surface) ||
+        Functions::Intersect(start, surface, 0.0f)) return false;
+    return Functions::StartMovement(surface, true);
 }
 
 bool Functions::EscapeDangerZone() {
     const Position start = localPlayer->position;
     if (!Navigation::IsPositionDangerous(mapID, start)) return false;
-
-    if (Moving == MoveTypes::BossMechanic && localPlayer->isMoving &&
-        !Navigation::IsCurrentMovementUnsafe(mapID, start)) return true;
 
     const auto zones = Navigation::GetAvoidanceSnapshot(mapID);
     const DangerZone* nearest = nullptr;
@@ -909,7 +579,6 @@ bool Functions::EscapeDangerZone() {
                 if (Functions::Intersect(start, candidate, 1.25f)) continue;
             }
             else if (!ProjectSafeGroundStep(start, wanted, candidate, 3.0f, zones)) continue;
-
             if (!Navigation::IsSegmentSafe(zones, start, candidate)) continue;
             if (start.DistanceTo(candidate) < MIN_MOVE_DISTANCE) continue;
             float clearance = 1.0e9f;
@@ -928,7 +597,7 @@ bool Functions::EscapeDangerZone() {
             }
         }
     }
-    if (found && SafeClickToMove(best, localPlayer->Guid, true)) {
+    if (found && Functions::StartMovement(best, true)) {
         Moving = MoveTypes::BossMechanic;
     } else Functions::StopMovement();
     return true;
@@ -955,11 +624,7 @@ bool Functions::UpdateLateralRecovery() {
     const bool expired = now >= LateralRecovery.Expires;
     const bool interrupted = now - LateralRecovery.LastProgressAt >= std::chrono::milliseconds(650);
     if (arrived || expired || interrupted) {
-        const ActiveGoal resumeDetour = LateralRecovery.ResumeDetour;
         Functions::StopMovement();
-        if (resumeDetour.Valid && resumeDetour.NavigationWaypoint &&
-            resumeDetour.Map == mapID)
-            CurrentGoal = resumeDetour;
         return false;
     }
     return true;
@@ -969,7 +634,6 @@ void Functions::HandleMovementStall() {
     if (LateralRecovery.Active || localPlayer == nullptr) return;
     Position failedDestination;
     const MoveTypes previousType = Moving;
-    const ActiveGoal previousGoal = CurrentGoal;
     const bool hasFailedWaypoint = Navigation::GetCurrentMovementDestination(failedDestination) &&
         localPlayer->position.DistanceTo2D(failedDestination) >= MIN_MOVE_DISTANCE;
     if (hasFailedWaypoint) {
@@ -977,7 +641,7 @@ void Functions::HandleMovementStall() {
                                   std::chrono::steady_clock::now() });
         if (FailedHeadings.size() > 8) FailedHeadings.erase(FailedHeadings.begin());
     }
-    resetMovement();
+    Functions::StopMovement();
     const unsigned int flags = localPlayer->movement_flags;
     if (!hasFailedWaypoint ||
         previousType == MoveTypes::NotMoving || previousType == MoveTypes::BossMechanic ||
@@ -1029,9 +693,8 @@ void Functions::HandleMovementStall() {
                 candidate = ground;
                 previous = ground;
             }
-            if (!safe) continue;
-            if (IsRecentlyFailedHeading(start, candidate) ||
-                !SafeClickToMove(candidate, localPlayer->Guid)) continue;
+            if (!safe || IsRecentlyFailedHeading(start, candidate) ||
+                !Functions::StartMovement(candidate)) continue;
             LateralRecovery.Active = true;
             LateralRecovery.MapId = mapID;
             LateralRecovery.Type = previousType;
@@ -1040,9 +703,6 @@ void Functions::HandleMovementStall() {
             LateralRecovery.LastProgressPosition = start;
             LateralRecovery.LastProgressAt = std::chrono::steady_clock::now();
             LateralRecovery.Expires = LateralRecovery.LastProgressAt + std::chrono::milliseconds(1350);
-            if (previousGoal.Valid && previousGoal.NavigationWaypoint &&
-                previousGoal.Map == mapID && previousGoal.Type == previousType)
-                LateralRecovery.ResumeDetour = previousGoal;
             Moving = previousType;
             return;
         }
@@ -1054,19 +714,12 @@ bool Functions::StepBack(WoWUnit* target, MoveTypes moveType, float dist_away) {
     const Position start = localPlayer->position;
     const auto zones = Navigation::GetAvoidanceSnapshot(mapID);
     const float needed = dist_away + localPlayer->combatReach + target->combatReach;
-    if (start.DistanceTo2D(target->position) >= needed) return true;
-    Position waypoint;
-    if (Moving == moveType && Navigation::GetCurrentMovementDestination(waypoint) &&
-        !Navigation::IsCurrentMovementStalled(start) &&
-        !Navigation::IsCurrentMovementUnsafe(mapID, start) &&
-        waypoint.DistanceTo2D(target->position) >= needed &&
-        IsPathSafeFromEnemies(start, waypoint, target->Guid) &&
-        !Functions::Intersect(waypoint, target->position)) return true;
-
+    const bool swimming = (localPlayer->movement_flags & MOVEFLAG_SWIMMING) != 0;
+    const float currentDistance = swimming ? start.DistanceTo(target->position) : start.DistanceTo2D(target->position);
+    if (currentDistance >= needed) return true;
     const float angle = start.DistanceTo2D(target->position) > 0.01f ?
         std::atan2(start.Y - target->position.Y, start.X - target->position.X) :
         localPlayer->facing + PI;
-    const bool swimming = (localPlayer->movement_flags & MOVEFLAG_SWIMMING) != 0;
     struct Retreat { float score; Position point; };
     std::vector<Retreat> candidates;
     candidates.reserve(52);
@@ -1075,11 +728,11 @@ bool Functions::StepBack(WoWUnit* target, MoveTypes moveType, float dist_away) {
             const float dir = angle + offset * ANGLE_STEP;
             const Position wanted(start.X + std::cos(dir) * stride,
                 start.Y + std::sin(dir) * stride, start.Z);
-            if (wanted.DistanceTo2D(target->position) < needed ||
-                wanted.DistanceTo2D(target->position) <= start.DistanceTo2D(target->position) ||
+            const float distance = swimming ? wanted.DistanceTo(target->position) : wanted.DistanceTo2D(target->position);
+            if (distance < needed || distance <= currentDistance ||
                 Navigation::IsPositionDangerous(zones, wanted) ||
                 !Navigation::IsSegmentSafe(zones, start, wanted) ||
-                IsRecentlyFailedHeading(start, wanted)) continue;
+                (!swimming && IsRecentlyFailedHeading(start, wanted))) continue;
             const float score = stride + std::abs(offset) * 0.35f;
             candidates.push_back({score, wanted});
         }
@@ -1099,7 +752,7 @@ bool Functions::StepBack(WoWUnit* target, MoveTypes moveType, float dist_away) {
             } else if (water.kind == WaterMap::Kind::Dry ||
                        water.kind == WaterMap::Kind::Shallow) {
                 const Position projected = Functions::ProjectPos(chosen);
-                if (std::abs(projected.Z - chosen.Z) > 1.5f) continue;
+                if (std::abs(projected.Z - chosen.Z) > 2.0f) continue;
                 chosen = projected;
             }
             if (Functions::Intersect(start, chosen, 1.25f)) continue;
@@ -1109,11 +762,11 @@ bool Functions::StepBack(WoWUnit* target, MoveTypes moveType, float dist_away) {
                 !HasDirectGroundRoute(start, projected, zones)) continue;
             chosen = projected;
         }
-        if (IsPathSafeFromEnemies(start, chosen, target->Guid) &&
+        if ((!swimming || chosen.DistanceTo(target->position) >= needed) &&
+            IsPathSafeFromEnemies(start, chosen, target->Guid) &&
             !Functions::Intersect(chosen, target->position) &&
-            SafeClickToMove(chosen, localPlayer->Guid)) {
+            Functions::StartMovement(chosen)) {
             Moving = moveType;
-            RememberGoal(chosen, moveType);
             return true;
         }
     }
@@ -1123,15 +776,14 @@ bool Functions::StepBack(WoWUnit* target, MoveTypes moveType, float dist_away) {
             if (++checked > 10) break;
             const auto water = InspectWaterCorridor(start, candidate.point);
             if (!water.crosses || !water.entryNear) continue;
-            if (TryWaterEntryMove(candidate.point, true, false, target->Guid,
+            if (TryWaterEntryMove(candidate.point, true, target->Guid,
                 &target->position)) {
                 Moving = moveType;
-                RememberGoal(candidate.point, moveType, false, water.crosses, water.entryNear);
                 return true;
             }
         }
     }
-    resetMovement();
+    Functions::StopMovement();
     return false;
 }
 
@@ -1140,7 +792,6 @@ void Functions::FollowMultibox(int placement) {
 
     ThreadSynchronizer::RunOnMainThread([placement]() {
         if (!Leader || !localPlayer) return;
-
         float range = 2.0f;
         float offset = 0.30f;
         if (placement == 2) offset = -0.30f;
@@ -1152,7 +803,6 @@ void Functions::FollowMultibox(int placement) {
             range = 4.0f;
             offset = localPlayer->isMounted ? -0.45f : -0.15f;
         }
-
         const float angle = Leader->facing + PI + offset;
         const Position target_pos(Leader->position.X + std::cos(angle) * range,
             Leader->position.Y + std::sin(angle) * range, Leader->position.Z);
@@ -1168,20 +818,15 @@ void Functions::FollowMultibox(int placement) {
 }
 
 void Functions::MoveToFast(Position target_pos, MoveTypes moveType) {
-    if (!localPlayer) return;
-    if (LateralRecovery.Active) {
-        if (moveType != MoveTypes::BossMechanic) return;
-        LateralRecovery.Active = false;
-    }
+    if (!localPlayer || (LateralRecovery.Active && moveType != MoveTypes::BossMechanic)) return;
+    LateralRecovery.Active = false;
     const Position start = localPlayer->position;
     const bool swimming = (localPlayer->movement_flags & MOVEFLAG_SWIMMING) != 0;
-    if (start.DistanceTo(target_pos) < MIN_MOVE_DISTANCE) {
+    if (start.DistanceTo(target_pos) < (swimming ? 0.75f : MIN_MOVE_DISTANCE)) {
         if (Moving == moveType) StopMovement();
         return;
     }
     const auto water = swimming ? WaterCorridor{} : InspectWaterCorridor(start, target_pos);
-    if (ReuseActiveWaypoint(target_pos, moveType, false, water.crosses, water.entryNear)) return;
-    if (ContinueDetour(target_pos, moveType, true, false, water.crosses, water.entryNear)) return;
     const auto zones = Navigation::GetAvoidanceSnapshot(mapID);
     if (Navigation::IsPositionDangerous(zones, target_pos)) {
         StopMovement();
@@ -1199,27 +844,18 @@ void Functions::MoveToFast(Position target_pos, MoveTypes moveType) {
             started = StartMovement(target_pos);
         if (!started && water.crosses && !water.entryNear)
             started = TryGroundMove(target_pos, true, false, true, water.groundHorizon);
-        if (!started)
-            started = TryServerWaypoint(target_pos, true);
+        if (!started) started = TryServerWaypoint(target_pos, true);
     }
-    if (started) {
-        Moving = moveType;
-        RememberGoal(target_pos, moveType, false, water.crosses, water.entryNear);
-    } else {
-        StopMovement();
-    }
+    CompleteMovement(started, moveType);
 }
 
 void Functions::MoveTo(Position target_pos, MoveTypes moveType, bool checkEnemyClose, bool targetSwim) {
-    if (!localPlayer) return;
-    if (LateralRecovery.Active) {
-        if (moveType != MoveTypes::BossMechanic) return;
-        LateralRecovery.Active = false;
-    }
+    if (!localPlayer || (LateralRecovery.Active && moveType != MoveTypes::BossMechanic)) return;
+    LateralRecovery.Active = false;
     const auto zones = Navigation::GetAvoidanceSnapshot(mapID);
     const bool meleeTarget = moveType == MoveTypes::GoToTarget && targetUnit &&
         targetUnit->attackable && !targetUnit->isdead &&
-        target_pos.DistanceTo2D(targetUnit->position) < 2.0f &&
+        target_pos.DistanceTo(targetUnit->position) < 2.0f &&
         !Functions::PlayerIsRanged();
 
     if (!ChooseMeleeApproach(target_pos, meleeTarget, checkEnemyClose, zones)) {
@@ -1238,37 +874,20 @@ void Functions::MoveTo(Position target_pos, MoveTypes moveType, bool checkEnemyC
     const float distanceToGoal = start.DistanceTo2D(target_pos);
     const auto water = swimming ? WaterCorridor{} : InspectWaterCorridor(start, target_pos);
 
-    if (ReuseActiveWaypoint(target_pos, moveType, targetSwim, water.crosses, water.entryNear)) return;
-    if (ContinueDetour(target_pos, moveType, checkEnemyClose, targetSwim, water.crosses, water.entryNear, ignoredGuid)) return;
-
     if (swimming) {
-        if (TrySwimMove(target_pos, checkEnemyClose, false, ignoredGuid) ||
-            TryLocalRecoveryStep(target_pos, checkEnemyClose, follow, ignoredGuid)) {
-            Moving = moveType;
-            RememberGoal(target_pos, moveType, targetSwim, water.crosses, water.entryNear);
-        }
-        else if (!follow || !ReuseActiveWaypoint(target_pos, moveType, targetSwim, water.crosses, water.entryNear)) {
-            StopMovement();
-        }
+        CompleteMovement(TrySwimMove(target_pos, checkEnemyClose, false, ignoredGuid), moveType);
         return;
     }
 
-    if (water.entryNear || (targetSwim && distanceToGoal <= 5.0f)) {
-        bool started = TryWaterEntryMove(target_pos, checkEnemyClose, targetSwim, ignoredGuid);
+    if (water.entryNear || (targetSwim && start.DistanceTo(target_pos) <= 5.0f)) {
+        bool started = TryWaterEntryMove(target_pos, checkEnemyClose, ignoredGuid);
         if (!started && water.crosses)
             started = TryGroundMove(target_pos, checkEnemyClose, false, true,
                 water.groundHorizon, ignoredGuid);
         if (!started)
-            started = TryServerWaypoint(target_pos, checkEnemyClose, follow, ignoredGuid,
-                moveType == MoveTypes::GoToTarget);
-        if (!started)
-            started = TryLocalRecoveryStep(target_pos, checkEnemyClose, follow, ignoredGuid);
-        if (started) {
-            Moving = moveType;
-            RememberGoal(target_pos, moveType, targetSwim, water.crosses, water.entryNear);
-        } else if (!follow || !ReuseActiveWaypoint(target_pos, moveType, targetSwim, water.crosses, water.entryNear)) {
-            StopMovement();
-        }
+            started = TryServerWaypoint(target_pos, checkEnemyClose, ignoredGuid);
+        if (!started) started = TryLocalRecoveryStep(target_pos, checkEnemyClose, follow, ignoredGuid);
+        CompleteMovement(started, moveType);
         return;
     }
 
@@ -1281,43 +900,28 @@ void Functions::MoveTo(Position target_pos, MoveTypes moveType, bool checkEnemyC
          !Navigation::IsSegmentSafe(zones, start, target_pos));
 
     bool started = false;
-    if (serverFirst) started = TryServerWaypoint(target_pos, checkEnemyClose,
-        follow, ignoredGuid, moveType == MoveTypes::GoToTarget);
+    if (serverFirst) started = TryServerWaypoint(target_pos, checkEnemyClose, ignoredGuid);
     if (!started) started = TryGroundMove(target_pos, checkEnemyClose, false,
         (follow || water.crosses) && !steepHeightChange && !failedHeading,
         water.groundHorizon, ignoredGuid);
-    if (!started && targetSwim && distanceToGoal <= 5.0f)
-        started = TryWaterEntryMove(target_pos, checkEnemyClose, targetSwim, ignoredGuid);
     if (!started && !serverFirst)
-        started = TryServerWaypoint(target_pos, checkEnemyClose, follow, ignoredGuid,
-            moveType == MoveTypes::GoToTarget);
+        started = TryServerWaypoint(target_pos, checkEnemyClose, ignoredGuid);
 
     if (!started && meleeTarget && !Navigation::IsSegmentSafe(zones, start, target_pos))
         started = TryCombatDetour(target_pos, checkEnemyClose, zones);
 
     if (!started) started = TryLocalRecoveryStep(target_pos, checkEnemyClose, follow, ignoredGuid);
-    if (started) {
-        Moving = moveType;
-        RememberGoal(target_pos, moveType, targetSwim, water.crosses, water.entryNear);
-    }
-    else if (!follow || !ReuseActiveWaypoint(target_pos, moveType, targetSwim, water.crosses, water.entryNear)) {
-        StopMovement();
-    }
+    CompleteMovement(started, moveType);
 }
 
 void Functions::MoveToLoS(Position target_pos, MoveTypes moveType, bool targetSwim) {
-    if (!localPlayer) return;
-    if (LateralRecovery.Active) {
-        if (moveType != MoveTypes::BossMechanic) return;
-        LateralRecovery.Active = false;
-    }
+    if (!localPlayer || (LateralRecovery.Active && moveType != MoveTypes::BossMechanic)) return;
+    LateralRecovery.Active = false;
     const Position start = localPlayer->position;
     const bool swimming = (localPlayer->movement_flags & MOVEFLAG_SWIMMING) != 0;
     const auto water = swimming ? WaterCorridor{} : InspectWaterCorridor(start, target_pos);
     const unsigned long long ignoredGuid = targetUnit &&
-        target_pos.DistanceTo2D(targetUnit->position) < 2.0f ? targetUnit->Guid : 0;
-    if (ReuseActiveWaypoint(target_pos, moveType, targetSwim, water.crosses, water.entryNear)) return;
-    if (ContinueDetour(target_pos, moveType, true, targetSwim, water.crosses, water.entryNear, ignoredGuid)) return;
+        target_pos.DistanceTo(targetUnit->position) < 2.0f ? targetUnit->Guid : 0;
 
     bool started = false;
     if (swimming) {
@@ -1325,18 +929,13 @@ void Functions::MoveToLoS(Position target_pos, MoveTypes moveType, bool targetSw
     } else {
         started = TryGroundMove(target_pos, true, true, false, 16.0f, ignoredGuid);
         if (!started && (water.entryNear ||
-            (targetSwim && start.DistanceTo2D(target_pos) <= 5.0f)))
-            started = TryWaterEntryMove(target_pos, true, targetSwim, ignoredGuid);
+            (targetSwim && start.DistanceTo(target_pos) <= 5.0f)))
+            started = TryWaterEntryMove(target_pos, true, ignoredGuid);
         if (!started && water.crosses && !water.entryNear)
             started = TryGroundMove(target_pos, true, false, true, water.groundHorizon, ignoredGuid);
         if (!started)
-            started = TryServerWaypoint(target_pos, true, false, ignoredGuid,
-                moveType == MoveTypes::MoveLoS || moveType == MoveTypes::MoveLoSAoE);
+            started = TryServerWaypoint(target_pos, true, ignoredGuid);
     }
-    if (!started)
-        started = TryLocalRecoveryStep(target_pos, true, false, ignoredGuid);
-    if (started) {
-        Moving = moveType;
-        RememberGoal(target_pos, moveType, targetSwim, water.crosses, water.entryNear);
-    } else StopMovement();
+    if (!started && !swimming) started = TryLocalRecoveryStep(target_pos, true, false, ignoredGuid);
+    CompleteMovement(started, moveType);
 }

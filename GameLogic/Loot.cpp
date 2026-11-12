@@ -11,8 +11,7 @@ bool LootNodes() {
 	float MIN_DIST = INFINITY; int indexGather = -1;
 	for (unsigned int i = 0; i < ListGameObjects.size(); i++) {
 		if (ListGameObjects[i].gatherType == 0) continue;
-		else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f)
-			continue;
+		else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListGameObjects[i].position) > 40.0f) continue;
 		else if (Functions::enemyClose(ListGameObjects[i].position)) continue;
 		int skillLevel = localPlayer->herbalismLevel[0]; if (ListGameObjects[i].gatherType == 1) skillLevel = localPlayer->miningLevel[0];
 		if ((ListGameObjects[i].gatherType == 1 && skillLevel >= ListGameObjects[i].level && skillLevel < ListGameObjects[i].level + 150)
@@ -26,10 +25,9 @@ bool LootNodes() {
 	}
 	if (indexGather < 0) return false;
 	else if (ListGameObjects[indexGather].position.DistanceTo(localPlayer->position) < 5.0f) {
-		if (localPlayer->movement_flags & MOVEFLAG_FORWARD) {
-			ThreadSynchronizer::pressKey(0x28);
-			ThreadSynchronizer::releaseKey(0x28);
-			Moving = MoveTypes::NotMoving;
+		if (localPlayer->isMoving || (localPlayer->movement_flags & MOVEFLAG_FORWARD)) {
+			ThreadSynchronizer::RunOnMainThread([]() { Functions::StopMovement(); });
+			return true;
 		}
 		ThreadSynchronizer::RunOnMainThread([indexGather]() {
 			if (localPlayer->isMounted) Game::Dismount();
@@ -37,7 +35,7 @@ bool LootNodes() {
 		});
 		return true;
 	}
-	else if (!localPlayer->isMoving) {
+	else if (Moving != MoveTypes::Looting || !localPlayer->isMoving) {
 		ThreadSynchronizer::RunOnMainThread([indexGather]() {
 			Functions::MoveTo(ListGameObjects[indexGather].position, MoveTypes::Looting);
 		});
@@ -57,7 +55,8 @@ bool LootNPC() {
 		bool lootable = (ListUnits[i].dynamic_flags & DYNAMICFLAG_CANBELOOTED);
 		float min_dist = localPlayer->position.DistanceTo(ListUnits[i].position);
 		if (min_dist > 40.0f) continue;
-		if (lootable) {
+		else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListUnits[i].position) > 40.0f) continue;
+		else if (lootable) {
 			bool skip = false;
 			for (unsigned int y = 0; y < LootHistory.size(); y++) {
 				if (get<0>(LootHistory[y]) == ListUnits[i].Guid) {
@@ -109,7 +108,9 @@ bool SkinNPC() {
 	float MIN_DIST = INFINITY; int indexGather = -1;
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		bool skinnable = (ListUnits[i].flags & UNIT_FLAG_SKINNABLE);
-		if (skinnable && !Functions::enemyClose(ListUnits[i].position) && (ListUnits[i].level*5 > (localPlayer->skinningLevel[0] - 100)) && (ListUnits[i].level <= 10 || (ListUnits[i].level <= 20 && (((ListUnits[i].level - 10) * 10) <= localPlayer->skinningLevel[0])) || (ListUnits[i].level * 5 <= localPlayer->skinningLevel[0]))) {
+		if (!skinnable) continue;
+		else if (IsInGroup && Leader != NULL && Leader->position.DistanceTo(ListUnits[i].position) > 40.0f) continue;
+		else if (!Functions::enemyClose(ListUnits[i].position) && (ListUnits[i].level*5 > (localPlayer->skinningLevel[0] - 100)) && (ListUnits[i].level <= 10 || (ListUnits[i].level <= 20 && (((ListUnits[i].level - 10) * 10) <= localPlayer->skinningLevel[0])) || (ListUnits[i].level * 5 <= localPlayer->skinningLevel[0]))) {
 			float dist = localPlayer->position.DistanceTo(ListUnits[i].position);
 			if (dist < MIN_DIST) {
 				MIN_DIST = dist;

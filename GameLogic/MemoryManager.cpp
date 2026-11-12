@@ -9,7 +9,7 @@
 static HWND windowHandle;
 static WNDPROC newCallback;
 static WNDPROC oldCallback;
-static constexpr UINT RUN_ACTION_MESSAGE = WM_USER;
+static UINT RUN_ACTION_MESSAGE = WM_APP + 0x431;
 
 void ThreadSynchronizer::pressKey(unsigned int key) {
     SendMessageW(windowHandle, WM_KEYDOWN, key, 0);
@@ -36,6 +36,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Msg, WPARAM wparam, LPARAM lparam) {
 }
 
 void ThreadSynchronizer::Init() {
+    const UINT message = RegisterWindowMessageW(L"GameLogic.ThreadSynchronizer.RunAction.0f51a28f-6a18-43eb-912d-80304ae0d80b");
+    if (message) RUN_ACTION_MESSAGE = message;
     windowHandle = FindWindowW(NULL, L"World of Warcraft");
     while (windowHandle == 0) {
         Sleep(250);

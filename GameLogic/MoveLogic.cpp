@@ -86,14 +86,10 @@ void Game::CorpseRun() {
 			MoveToMap(Position(-1475.534912f, 2617.167969f, 75.827087f));
 		}
 		else {
-            if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) ||
-                !Navigation::HasCurrentMovement() ||
-                Navigation::IsCurrentMovementStalled(localPlayer->position)) {
-                Position corpsePosition = localPlayer->corpse_position;
-                ThreadSynchronizer::RunOnMainThread([corpsePosition]() {
-                    Functions::MoveTo(corpsePosition, MoveTypes::Journey);
-                });
-            }
+            const Position corpsePosition = localPlayer->corpse_position;
+            ThreadSynchronizer::RunOnMainThread([corpsePosition]() {
+                Functions::MoveTo(corpsePosition, MoveTypes::Journey);
+            });
 		}
 	}
 }
