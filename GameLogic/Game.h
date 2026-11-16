@@ -26,7 +26,7 @@ private:
 };
 
 //Global Variables
-extern bool Combat, IsSitting, IsFacing, hasTargetAggro, MCNoAuto, MCAutoMove, los_target, passiveGroup, inInstance, inventoryFull;
+extern bool Combat, IsSitting, IsFacing, MCNoAuto, MCAutoMove, los_target, passiveGroup, inInstance, inventoryFull;
 extern bool groundAoERepositionRequested;
 extern float distTarget, autoAttackTimer, breathTimer;
 extern std::vector<WoWUnit*> HasAggro[40];

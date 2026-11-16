@@ -1,6 +1,5 @@
 #include "Navigation.h"
 #include "DangerZoneGeometry.h"
-#include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -18,16 +17,6 @@ std::unordered_map<unsigned int, std::pair<std::uint64_t, Navigation::AvoidanceS
 
 namespace {
     using Clock = std::chrono::steady_clock;
-    struct FailedPathRequest {
-        unsigned int MapId = 0;
-        Position Start{};
-        Position Goal{};
-        Clock::time_point RetryAfter{};
-        bool Valid = false;
-    };
-    std::mutex PathRetryMutex;
-    FailedPathRequest LastFailedPath;
-    constexpr auto FailedPathCooldown = std::chrono::milliseconds(400);
     constexpr auto ReconnectCooldown = std::chrono::milliseconds(400);
     constexpr size_t MaxFrameSize = 4096;
     std::mutex NetworkMutex;
@@ -37,22 +26,6 @@ namespace {
     // Local avoidance must clear immediately; server removals can be retried later.
     // Protected by NetworkMutex.
     std::vector<std::string> PendingBlacklistRemovals;
-
-    void ForgetFailedPath() {
-        std::lock_guard<std::mutex> guard(PathRetryMutex);
-        LastFailedPath.Valid = false;
-    }
-    bool RecentlyFailed(unsigned int mapId, const Position& start, const Position& end) {
-        std::lock_guard<std::mutex> guard(PathRetryMutex);
-        return LastFailedPath.Valid && LastFailedPath.MapId == mapId &&
-            Clock::now() < LastFailedPath.RetryAfter &&
-            start.DistanceTo2D(LastFailedPath.Start) <= 4.0f &&
-            end.DistanceTo2D(LastFailedPath.Goal) <= 3.0f;
-    }
-    void NoteFailed(unsigned int mapId, const Position& start, const Position& end) {
-        std::lock_guard<std::mutex> guard(PathRetryMutex);
-        LastFailedPath = {mapId, start, end, Clock::now() + FailedPathCooldown, true};
-    }
 }
 Position Navigation::LastMoveDestination;
 bool Navigation::HasLastMove = false;
@@ -161,18 +134,14 @@ void appendPosition(std::string& msg, const Position& pos) {
 	msg += oss.str();
 }
 
-Position Navigation::CalculatePath(unsigned int mapID, Position start, Position end, bool throttleFailedRequests) {
+Position Navigation::CalculatePath(unsigned int mapID, Position start, Position end) {
     if (!std::isfinite(start.X) || !std::isfinite(start.Y) || !std::isfinite(start.Z) ||
         !std::isfinite(end.X) || !std::isfinite(end.Y) || !std::isfinite(end.Z)) return start;
     if (end.DistanceTo(start) < 2.0f) return start;
-    if (throttleFailedRequests && RecentlyFailed(mapID, start, end)) return start;
 
     std::lock_guard<std::mutex> networkGuard(NetworkMutex);
     if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002) ||
-        !FlushPendingBlacklistRemovals(sock)) {
-        if (throttleFailedRequests) NoteFailed(mapID, start, end);
-        return start;
-    }
+        !FlushPendingBlacklistRemovals(sock)) return start;
 
     // Build and send: "C" + "sx,sy,sz ex,ey,ez mapID"
     std::string msg = "C";
@@ -184,27 +153,18 @@ Position Navigation::CalculatePath(unsigned int mapID, Position start, Position 
     std::string response;
     if (!SendAll(sock, msg) || !ReceiveLine(sock, response)) {
         RetryNavigationLater(sock);
-        if (throttleFailedRequests) NoteFailed(mapID, start, end);
         return start;
     }
 
-    if (response == "ERROR") {
-        if (throttleFailedRequests) NoteFailed(mapID, start, end);
-        return start;
-    }
+    if (response == "ERROR") return start;
 
     Position waypoint{};
     if (std::sscanf(response.c_str(), " %f , %f , %f", &waypoint.X, &waypoint.Y, &waypoint.Z) != 3 ||
         !std::isfinite(waypoint.X) || !std::isfinite(waypoint.Y) || !std::isfinite(waypoint.Z)) {
         RetryNavigationLater(sock);
-        if (throttleFailedRequests) NoteFailed(mapID, start, end);
         return start;
     }
-    if (waypoint.DistanceTo(start) < 2.0f) {
-        if (throttleFailedRequests) NoteFailed(mapID, start, end);
-        return start;
-    }
-    ForgetFailedPath();
+    if (waypoint.DistanceTo(start) < 2.0f) return start;
     return waypoint;
 }
 
@@ -225,7 +185,6 @@ bool Navigation::AddBlacklist(unsigned int mapId, const std::string& name, const
         Blacklists.push_back({name, position, radius, mapId});
         ++ZoneVersion;
     }
-    ForgetFailedPath();
 
     std::lock_guard<std::mutex> networkGuard(NetworkMutex);
     if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002) ||
@@ -264,7 +223,6 @@ bool Navigation::RemoveBlacklist(const std::string& name) {
             [&](const BlacklistEntry& entry) { return entry.Name == name; }), Blacklists.end());
         if (Blacklists.size() != oldSize) ++ZoneVersion;
     }
-    ForgetFailedPath();
     return synced;
 }
 
@@ -293,7 +251,6 @@ void Navigation::ClearBlacklists() {
                 PendingBlacklistRemovals.push_back(name);
         }
     }
-    ForgetFailedPath();
 }
 
 void Navigation::SetNpcDangerZones(unsigned int mapId, const std::vector<DangerZone>& zones) {
@@ -366,11 +323,6 @@ bool Navigation::HasCurrentMovement() {
     return HasLastMove && MoveWatchdog.Active();
 }
 
-bool Navigation::IsMovingTowards(const Position& destination) {
-    std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    return HasLastMove && MoveWatchdog.Towards(destination);
-}
-
 bool Navigation::GetCurrentMovementDestination(Position& destination) {
     std::lock_guard<std::mutex> guard(AvoidanceMutex);
     if (!HasLastMove) return false;
@@ -413,5 +365,4 @@ void Navigation::DisconnectClient() {
         WinsockActive = false;
     }
     ReconnectAfter = {};
-    ForgetFailedPath();
 }

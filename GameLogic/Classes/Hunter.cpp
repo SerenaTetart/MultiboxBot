@@ -106,7 +106,7 @@ void ListAI::HunterDps() {
 					//Concussive Shot (PvP)
 					FunctionsLua::CastSpellByName("Concussive Shot");
 				}
-				else if (IsFacing && !targetPlayer && hasTargetAggro && (distTarget < 5.0f) && Functions::IsSpellReady("Disengage")) {
+				else if (IsFacing && !targetPlayer && targetUnit->targetGuid == localPlayer->Guid && (distTarget < 5.0f) && Functions::IsSpellReady("Disengage")) {
 					//Disengage
 					FunctionsLua::CastSpellByName("Disengage");
 				}

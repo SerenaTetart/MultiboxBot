@@ -62,7 +62,7 @@ void ListAI::WarriorTank() {
 						// Charge
 						FunctionsLua::CastSpellByName("Charge");
 					}
-					else if (!hasTargetAggro && !targetPlayer && Functions::IsSpellReady("Mocking Blow", false)) {
+					else if (!(targetUnit->targetGuid == localPlayer->Guid) && !targetPlayer && Functions::IsSpellReady("Mocking Blow", false)) {
 						// Mocking Blow
 						FunctionsLua::CastSpellByName("Mocking Blow");
 					}
@@ -98,7 +98,7 @@ void ListAI::WarriorTank() {
 						// Heroic Strike
 						FunctionsLua::CastSpellByName("Heroic Strike");
 					}
-					else if (Functions::IsSpellReady("Sunder Armor", false) && FunctionsLua::UnitIsElite("target")) {
+					else if (Functions::IsSpellReady("Sunder Armor", false) && targetUnit->rank > 0) {
 						// Sunder Armor
 						FunctionsLua::CastSpellByName("Sunder Armor");
 					}
@@ -112,7 +112,7 @@ void ListAI::WarriorTank() {
 					int nbrAggroParty = 0; for (int i = 1; i <= NumGroupMembers; i++) { nbrAggroParty += HasAggro[i].size(); }
 					int RendIDs[7] = { 772, 6546, 6547, 6548, 11572, 11573, 11574 };
 					bool RendDebuff = targetUnit->hasDebuff(RendIDs, 7);
-					if (!Combat && (distTarget > 10.0f) && (FunctionsLua::GetSpellCooldownDuration("Charge") < 1.0f)) {
+					if (!Combat && (distTarget > 10.0f) && (Functions::IsSpellReady("Charge", false) < 1.0f)) {
 						// Battle Stance
 						FunctionsLua::CastSpellByName("Battle Stance");
 					}
@@ -120,7 +120,7 @@ void ListAI::WarriorTank() {
 						// Challenging Shout
 						FunctionsLua::CastSpellByName("Challenging Shout");
 					}
-					else if (!hasTargetAggro && !targetPlayer && targetUnit->targetGuid != 0 && Functions::IsSpellReady("Taunt", false)) {
+					else if (!(targetUnit->targetGuid == localPlayer->Guid) && !targetPlayer && targetUnit->targetGuid != 0 && Functions::IsSpellReady("Taunt", false)) {
 						// Taunt
 						FunctionsLua::CastSpellByName("Taunt");
 					}
@@ -132,7 +132,7 @@ void ListAI::WarriorTank() {
 						// Shield Bash (Caster)
 						FunctionsLua::CastSpellByName("Shield Bash");
 					}
-					else if ((nbrCloseEnemyFacing >= 1) && hasTargetAggro && !ShieldBlockBuff && !FunctionsLua::UnitIsCaster("target") && Functions::IsSpellReady("Shield Block", false)) {
+					else if ((nbrCloseEnemyFacing >= 1) && targetUnit->targetGuid == localPlayer->Guid && !ShieldBlockBuff && !FunctionsLua::UnitIsCaster("target") && Functions::IsSpellReady("Shield Block", false)) {
 						// Shield Block
 						FunctionsLua::CastSpellByName("Shield Block");
 					}

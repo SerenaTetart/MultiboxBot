@@ -227,9 +227,9 @@ class WoWUnit : public WoWObject {
 
 class LocalPlayer : public WoWUnit {
     public:
-        bool isOutdoor = false;
+        bool isOutdoor = false, missAggro = false;
         std::string className;
-        int castInfo, zoneID, bonusHealing = 0, money = 0;
+        int castInfo, zoneID, areaID, bonusHealing = 0, money = 0;
         // == Craft skills == //
         int leatherworkingLevel[2] = {0, 0}, tailoringLevel[2] = {0, 0}, enchantingLevel[2] = {0, 0}, blacksmithingLevel[2] = {0, 0}, herbalismLevel[2] = {0, 0},
             miningLevel[2] = {0, 0}, skinningLevel[2] = {0, 0}, engineeringLevel[2] = {0, 0}, alchemyLevel[2] = {0, 0}, cookingLevel[2] = {0, 0}, fishingLevel[2] = {0, 0},
@@ -306,6 +306,7 @@ const uintptr_t PLAYER_CORPSE_POSITION_X = 0x00B4E284;
 const uintptr_t PLAYER_CORPSE_POSITION_Y = 0x00B4E288;
 const uintptr_t PLAYER_CORPSE_POSITION_Z = 0x00B4E28C;
 const uintptr_t ZONE_ID_OFFSET = 0x00B4E314;
+const uintptr_t AREA_ID_OFFSET = 0x00B4E318;
 
 extern std::vector<WoWUnit> ListUnits;
 extern std::vector<WoWGameObject> ListGameObjects;

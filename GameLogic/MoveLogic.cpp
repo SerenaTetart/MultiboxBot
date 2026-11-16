@@ -24,21 +24,21 @@
 #include <vector>
 
 void MoveToMap(Position targetpos) {
-    if (!localPlayer || (Combat && !localPlayer->isdead)) return;
-    if (localPlayer->position.DistanceTo(targetpos) < 2.0f) {
-        ThreadSynchronizer::RunOnMainThread([]() { Functions::StopMovement(); });
-        return;
-    }
-    if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) &&
-        targetpos.DistanceTo(localPlayer->position) > 40.0f &&
-        !localPlayer->isdead && Game::CanUseMount()) {
-        ThreadSynchronizer::RunOnMainThread([]() { Game::UseMount(); });
-        return;
-    }
-    ThreadSynchronizer::RunOnMainThread([targetpos]() {
-        if (!localPlayer || (Combat && !localPlayer->isdead)) return;
-        Functions::MoveToFast(targetpos, MoveTypes::Journey);
-    });
+	if (!localPlayer || (Combat && !localPlayer->isdead)) return;
+	if (localPlayer->position.DistanceTo(targetpos) < 2.0f) {
+		Functions::StopMovement();
+		return;
+	}
+	if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) &&
+		targetpos.DistanceTo(localPlayer->position) > 40.0f &&
+		!localPlayer->isdead && Game::CanUseMount()) {
+		ThreadSynchronizer::RunOnMainThread([]() { Game::UseMount(); });
+		return;
+	}
+	ThreadSynchronizer::RunOnMainThread([targetpos]() {
+		if (!localPlayer || (Combat && !localPlayer->isdead)) return;
+		Functions::MoveTo(targetpos, MoveTypes::Journey);
+	});
 }
 
 void Game::CorpseRun() {
@@ -86,64 +86,65 @@ void Game::CorpseRun() {
 			MoveToMap(Position(-1475.534912f, 2617.167969f, 75.827087f));
 		}
 		else {
-            if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) ||
-                !Navigation::HasCurrentMovement() ||
-                Navigation::IsCurrentMovementStalled(localPlayer->position)) {
-                Position corpsePosition = localPlayer->corpse_position;
-                ThreadSynchronizer::RunOnMainThread([corpsePosition]() {
-                    Functions::MoveTo(corpsePosition, MoveTypes::Journey);
-                });
-            }
+			const Position corpsePosition = localPlayer->corpse_position;
+			ThreadSynchronizer::RunOnMainThread([corpsePosition]() {
+				Functions::MoveTo(corpsePosition, MoveTypes::Journey);
+			});
 		}
 	}
 }
 
+void SellToNPC(Position npcPos, int npcID) {
+	if (localPlayer->position.DistanceTo(npcPos) < 2.0f) {
+		for (unsigned int i = 0; i < ListUnits.size(); i++) {
+			if (ListUnits[i].entryID == npcID) {
+				ThreadSynchronizer::RunOnMainThread([i]() {
+					Functions::InteractUnit(ListUnits[i].Pointer, 0);
+					FunctionsLua::SelectGossipOption(1);
+				});
+				break;
+			}
+		}
+	}
+	else MoveToMap(npcPos);
+}
+
 void SellItems() {
-	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Stormwind
-		Position dest = Position(-8793.933594f, 701.635376f, 102.282463f);
-		if (localPlayer->position.DistanceTo(dest) < 2.0f) {
-			for (unsigned int i = 0; i < ListUnits.size(); i++) {
-				if (ListUnits[i].entryID == 1297) {
-					ThreadSynchronizer::RunOnMainThread([i]() {
-						Functions::InteractUnit(ListUnits[i].Pointer, 0);
-						FunctionsLua::SelectGossipOption(1);
-						});
-					break;
-				}
-			}
-		}
-		else MoveToMap(dest);
+	if (mapID == 0 && localPlayer->zoneID == 33) {
+		// Stranglethorn Vale
+		SellToNPC(Position(-14465.166016f, 469.127380f, 15.051262f), 2843);
 	}
-	else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Ironforge
-		Position dest = Position(-4794.620117f, -1120.365356f, 498.807526f);
-		if (localPlayer->position.DistanceTo(dest) < 2.0f) {
-			for (unsigned int i = 0; i < ListUnits.size(); i++) {
-				if (ListUnits[i].entryID == 4259) {
-					ThreadSynchronizer::RunOnMainThread([i]() {
-						Functions::InteractUnit(ListUnits[i].Pointer, 0);
-						});
-					break;
-				}
+	else if (FactionTemplate.IsAlliance(localPlayer->factionTemplateID)) {
+		// Alliance
+		if (mapID == 0) {
+			// Eastern Kingdoms
+			if (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) {
+				// Stormwind
+				SellToNPC(Position(-8793.933594f, 701.635376f, 102.282463f), 1297);
+			}
+			else if (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) {
+				// Ironforge
+				SellToNPC(Position(-4794.620117f, -1120.365356f, 498.807526f), 4259);
+			}
+			else if (localPlayer->zoneID == 47) {
+				// The Hinterlands
+				SellToNPC(Position(336.024597f, -2092.887207f, 131.564224f), 8161);
 			}
 		}
-		else MoveToMap(dest);
+		else if (mapID == 1) {
+			// Kalimdor
+			if (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141) {
+				// Darnassus
+				SellToNPC(Position(9922.597656f, 2317.589111f, 1330.787964f), 4203);
+			}
+			else if (localPlayer->zoneID == 357) {
+				// Feralas
+				SellToNPC(Position(-4369.340820f, 3302.738037f, 13.566149f), 10293);
+			}
+		}
 	}
-	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Darnassus
-		Position dest = Position(9922.597656f, 2317.589111f, 1330.787964f);
-		if (localPlayer->position.DistanceTo(dest) < 2.0f) {
-			for (unsigned int i = 0; i < ListUnits.size(); i++) {
-				if (ListUnits[i].entryID == 4203) {
-					ThreadSynchronizer::RunOnMainThread([i]() {
-						Functions::InteractUnit(ListUnits[i].Pointer, 0);
-						});
-					break;
-				}
-			}
-		}
-		else MoveToMap(dest);
+	else {
+		// Horde
 	}
 }
 
@@ -155,7 +156,7 @@ void GoToTrainer(Position trainerPos, int trainerID) {
 					Functions::InteractUnit(ListUnits[i].Pointer, 0);
 					FunctionsLua::SelectGossipOption(1);
 					FunctionsLua::BuyTrainerService(0);
-					});
+				});
 				break;
 			}
 		}
@@ -177,7 +178,7 @@ bool TrainSpell() {
 							Functions::InteractUnit(ListUnits[i].Pointer, 0);
 							FunctionsLua::SelectGossipOption(1);
 							FunctionsLua::BuyTrainerService(0);
-							});
+						});
 						break;
 					}
 				}
@@ -235,7 +236,7 @@ bool GoToVendor(Position vendorPos, int vendorID, int item_id, int item_quantity
 				return;
 			}
 			Functions::LuaCall("CloseMerchant()");
-			});
+		});
 		return true;
 	}
 
@@ -324,76 +325,68 @@ inline bool MatchesEnchantCraftLink(const std::string& link, const Craft& recipe
 
 namespace {
 
-enum class CraftStationType { Forge, Anvil };
+	enum class CraftStationType { Forge, Anvil };
 
-struct CraftStationConfig {
-    std::optional<Position> forge;
-    std::optional<Position> anvil;
-};
+	std::optional<CraftStationType> RequiredStationFor(ProfessionId profession) {
+		switch (profession) {
+		case ProfessionId::Mining: return CraftStationType::Forge;
+		case ProfessionId::Blacksmithing: return CraftStationType::Anvil;
+		default: return std::nullopt;
+		}
+	}
 
-struct CraftAreaConfig {
-    int map_id;
-    int zone_id;
-    int neighboring_zone_id;
-    CraftStationConfig stations;
-};
+	struct CraftLocation {
+		bool available;
+		std::optional<Position> destination;
+	};
 
-const std::array<CraftAreaConfig, 3>& GetCraftAreas() {
-    static const std::array<CraftAreaConfig, 3> areas = {{
-        // Stormwind
-        { 0, 1519, 12, {
-            Position(-8427.233398f, 609.402161f, 95.222618f),
-            Position(-8427.233398f, 609.402161f, 95.222618f)
-        } },
-        // Ironforge
-        { 0, 1537, 1, {
-            Position(-4791.228516f, -1123.044312f, 498.806091f),
-            Position(-4791.228516f, -1123.044312f, 498.806091f)
-        } },
-        // Darnassus
-        { 1, 1657, 141, {
-            Position(9915.537109f, 2311.028564f, 1330.787964f),
-            std::nullopt
-        } }
-    }};
-    return areas;
-}
+	CraftLocation ResolveCraftLocation(ProfessionId profession) {
+		const auto required = RequiredStationFor(profession);
+		if (!required) return { true, std::nullopt };
+		if (!localPlayer) return { false, std::nullopt };
 
-std::optional<CraftStationType> RequiredStationFor(ProfessionId profession) {
-    switch (profession) {
-    case ProfessionId::Mining: return CraftStationType::Forge;
-    case ProfessionId::Blacksmithing: return CraftStationType::Anvil;
-    default: return std::nullopt;
-    }
-}
+		if (mapID == 0 && localPlayer->zoneID == 33) {
+			// Stranglethorn Vale
+			return { true, Position(-14380.182617f, 368.299469f, 23.930796f) };
+		}
+		else if (FactionTemplate.IsAlliance(localPlayer->factionTemplateID)) {
+			// Alliance
+			if (mapID == 0) {
+				// Eastern Kingdoms
+				if (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) {
+					// Stormwind
+					return { true, Position(-8427.233398f, 609.402161f, 95.222618f) };
+				}
+				else if (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) {
+					// Ironforge
+					return { true, Position(-4791.228516f, -1123.044312f, 498.806091f) };
+				}
+				else if (localPlayer->zoneID == 47) {
+					// The Hinterlands
+					return { true, Position(209.342392f, -1961.030396f, 140.199234f) };
+				}
+			}
+			else if (mapID == 1) {
+				// Kalimdor
+				if (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141) {
+					// Darnassus
+					if (*required == CraftStationType::Forge) {
+						return { true, Position(9915.537109f, 2311.028564f, 1330.787964f) };
+					}
+				}
+			}
+		}
+		else {
+			// Horde
+		}
 
-struct CraftLocation {
-    bool available;
-    std::optional<Position> destination;
-};
+		return { false, std::nullopt };
+	}
 
-CraftLocation ResolveCraftLocation(ProfessionId profession) {
-    const auto required = RequiredStationFor(profession);
-    if (!required) return { true, std::nullopt };
-    if (!localPlayer || !FactionTemplate.IsAlliance(localPlayer->factionTemplateID))
-        return { false, std::nullopt };
-
-    for (const auto& area : GetCraftAreas()) {
-        if (area.map_id != mapID) continue;
-        if (localPlayer->zoneID != area.zone_id &&
-            localPlayer->zoneID != area.neighboring_zone_id) continue;
-
-        const auto& station = *required == CraftStationType::Forge
-            ? area.stations.forge : area.stations.anvil;
-        return { station.has_value(), station };
-    }
-    return { false, std::nullopt };
-}
-
-struct SelectedCraft {
-    CraftPlan plan;
-    std::optional<Position> station_position;
-};
+	struct SelectedCraft {
+		CraftPlan plan;
+		std::optional<Position> station_position;
+	};
 
 }
 
@@ -440,28 +433,58 @@ inline void EnsureProfessionWindow(ProfessionId profession_id) {
 }
 
 bool BuyItem(ProfessionId professionID, int item_id, int item_quantity) {
-	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Stormwind
-		if (professionID == ProfessionId::Leatherworking || professionID == ProfessionId::Blacksmithing) { return GoToVendor(Position(-8722.855469f, 476.512756f, 98.613060f), 5565, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Mining) { return GoToVendor(Position(-8430.214844f, 622.596191f, 95.429405f), 5512, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Tailoring) { return GoToVendor(Position(-8940.175781f, 797.109863f, 90.941017f), 1347, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Alchemy) { return GoToVendor(Position(-8987.740234f, 751.758972f, 98.414497f), 1313, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Enchanting) { return GoToVendor(Position(-8854.016602f, 801.867798f, 96.334518f), 1318, item_id, item_quantity); }
+	if (mapID == 0 && localPlayer->zoneID == 33) {
+		// Stranglethorn Vale
+		if (professionID == ProfessionId::Leatherworking || professionID == ProfessionId::Blacksmithing) { return GoToVendor(Position(-14402.894531f, 404.896942f, 23.060671f), 2699, item_id, item_quantity); }
+		else if (professionID == ProfessionId::Mining) { return GoToVendor(Position(-14380.182617f, 368.299469f, 23.930796f), 2847, item_id, item_quantity); }
+		else if (professionID == ProfessionId::Tailoring) { return GoToVendor(Position(-14437.302734f, 387.324127f, 32.318886f), 2670, item_id, item_quantity); }
+		else if (professionID == ProfessionId::Alchemy) { return GoToVendor(Position(-14488.485352f, 428.073547f, 34.597145f), 2848, item_id, item_quantity); }
 	}
-	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Darnassus
-		if (professionID == ProfessionId::Leatherworking || professionID == ProfessionId::Blacksmithing) { return GoToVendor(Position(10082.842773f, 2262.257080f, 1343.310303f), 4225, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Tailoring) { return GoToVendor(Position(10086.066406f, 2258.160156f, 1333.000244f), 4168, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Alchemy) { return GoToVendor(Position(10064.889648f, 2343.624023f, 1321.567871f), 4226, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Enchanting) { return GoToVendor(Position(10134.400391f, 2318.459961f, 1333.079956f), 4228, item_id, item_quantity); }
+	else if (FactionTemplate.IsAlliance(localPlayer->factionTemplateID)) {
+		// Alliance
+		if (mapID == 0) {
+			// Eastern Kingdoms
+			if (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) {
+				// Stormwind
+				if (professionID == ProfessionId::Leatherworking || professionID == ProfessionId::Blacksmithing) { return GoToVendor(Position(-8722.855469f, 476.512756f, 98.613060f), 5565, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Mining) { return GoToVendor(Position(-8430.214844f, 622.596191f, 95.429405f), 5512, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Tailoring) { return GoToVendor(Position(-8940.175781f, 797.109863f, 90.941017f), 1347, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Alchemy) { return GoToVendor(Position(-8987.740234f, 751.758972f, 98.414497f), 1313, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Enchanting) { return GoToVendor(Position(-8854.016602f, 801.867798f, 96.334518f), 1318, item_id, item_quantity); }
+			}
+			else if (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) {
+				// Ironforge
+				if (professionID == ProfessionId::Leatherworking || professionID == ProfessionId::Blacksmithing) { return GoToVendor(Position(-4747.828125f, -1027.840332f, 504.429565f), 5128, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Mining) { return GoToVendor(Position(-4790.252441f, -1124.262573f, 498.806061f), 4259, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Tailoring) { return GoToVendor(Position(-4718.244629f, -1057.059814f, 504.196594f), 5154, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Alchemy) { return GoToVendor(Position(-4859.929688f, -1238.931030f, 501.722473f), 5178, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Enchanting) { return GoToVendor(Position(-4804.781250f, -1192.949463f, 505.814331f), 5158, item_id, item_quantity); }
+			}
+			else if (localPlayer->zoneID == 47) {
+				// The Hinterlands
+				if (professionID == ProfessionId::Leatherworking || professionID == ProfessionId::Blacksmithing) { return GoToVendor(Position(352.283264f, -2089.308838f, 113.784805f), 8160, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Mining) { return GoToVendor(Position(336.024597f, -2092.887207f, 131.564224f), 8161, item_id, item_quantity); }
+			}
+		}
+		else if (mapID == 1) {
+			// Kalimdor
+			if (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141) {
+				// Darnassus
+				if (professionID == ProfessionId::Leatherworking || professionID == ProfessionId::Blacksmithing) { return GoToVendor(Position(10082.842773f, 2262.257080f, 1343.310303f), 4225, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Tailoring) { return GoToVendor(Position(10086.066406f, 2258.160156f, 1333.000244f), 4168, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Alchemy) { return GoToVendor(Position(10064.889648f, 2343.624023f, 1321.567871f), 4226, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Enchanting) { return GoToVendor(Position(10134.400391f, 2318.459961f, 1333.079956f), 4228, item_id, item_quantity); }
+			}
+			else if (localPlayer->zoneID == 357) {
+				// Feralas
+				if (professionID == ProfessionId::Tailoring || professionID == ProfessionId::Mining) { return GoToVendor(Position(-4377.789551f, 3266.962402f, 13.557297f), 7947, item_id, item_quantity); }
+				else if (professionID == ProfessionId::Alchemy) { return GoToVendor(Position(-4408.231934f, 3174.427734f, 17.590160f), 8157, item_id, item_quantity); }
+			}
+		}
 	}
-	else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Ironforge
-		if (professionID == ProfessionId::Leatherworking || professionID == ProfessionId::Blacksmithing) { return GoToVendor(Position(-4747.828125f, -1027.840332f, 504.429565f), 5128, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Mining) { return GoToVendor(Position(-4790.252441f, -1124.262573f, 498.806061f), 4259, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Tailoring) { return GoToVendor(Position(-4718.244629f, -1057.059814f, 504.196594f), 5154, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Alchemy) { return GoToVendor(Position(-4859.929688f, -1238.931030f, 501.722473f), 5178, item_id, item_quantity); }
-		else if (professionID == ProfessionId::Enchanting) { return GoToVendor(Position(-4804.781250f, -1192.949463f, 505.814331f), 5158, item_id, item_quantity); }
+	else {
+		// Horde
+
 	}
 	return false;
 }
@@ -469,81 +492,121 @@ bool BuyItem(ProfessionId professionID, int item_id, int item_quantity) {
 bool TrainTradeSkill(ProfessionId professionID, bool higherRank = false, bool checkAvailabilityOnly = false) {
 	Position trainerPos = localPlayer->position;
 	int trainerID = 0;
-	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Stormwind
-		if (professionID == ProfessionId::Leatherworking) {
-			if (localPlayer->leatherworkingLevel[0] < 75 && !(localPlayer->leatherworkingLevel[0] >= 50 && localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(-8721.037109f, 469.952026f, 98.614304f); trainerID = 11096; }
-			else if (localPlayer->leatherworkingLevel[0] < 150 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(-8722.855469f, 476.512756f, 98.613060f); trainerID = 5564; }
-		}
-		else if (professionID == ProfessionId::Blacksmithing) {
-			if (localPlayer->blacksmithingLevel[0] < 75 && !(localPlayer->blacksmithingLevel[0] >= 50 && localPlayer->blacksmithingLevel[1] <= 75)) { trainerPos = Position(-8427.233398f, 609.402161f, 95.222618f); trainerID = 957; }
-			else if (localPlayer->blacksmithingLevel[0] < 150 && (!higherRank || localPlayer->blacksmithingLevel[1] <= 75)) { trainerPos = Position(-8427.312500f, 619.320312f, 95.453270f); trainerID = 5511; }
-		}
-		else if (professionID == ProfessionId::Mining) {
-			trainerPos = Position(-8433.015625f, 696.366699f, 103.364143f); trainerID = 5513;
+	if (mapID == 0 && localPlayer->zoneID == 33) {
+		// Stranglethorn Vale
+		if (professionID == ProfessionId::Blacksmithing) {
+			if (localPlayer->blacksmithingLevel[0] >= 200 && (!higherRank || localPlayer->blacksmithingLevel[1] <= 225)) { trainerPos = Position(-14380.182617f, 368.299469f, 23.930796f); trainerID = 2836; }
 		}
 		else if (professionID == ProfessionId::Tailoring) {
-			if (localPlayer->tailoringLevel[0] < 75 && !(localPlayer->tailoringLevel[0] >= 50 && localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-8940.175781f, 797.109863f, 90.941017f); trainerID = 1300; }
-			else if (localPlayer->tailoringLevel[0] < 150 && (!higherRank || localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-8940.175781f, 797.109863f, 90.941017f); trainerID = 1346; }
-			else if (localPlayer->tailoringLevel[0] < 225 && (!higherRank || localPlayer->tailoringLevel[1] <= 150)) { trainerPos = Position(-8940.175781f, 797.109863f, 90.941017f); trainerID = 1346; }
+			if (localPlayer->tailoringLevel[0] >= 50 && localPlayer->tailoringLevel[0] <= 150 && (!higherRank || localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-14437.302734f, 387.324127f, 32.318886f); trainerID = 2627; }
 		}
 		else if (professionID == ProfessionId::Alchemy) {
-			if (localPlayer->alchemyLevel[0] < 75 && !(localPlayer->alchemyLevel[0] >= 50 && localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-8987.740234f, 751.758972f, 98.414497f); trainerID = 5500; }
-			else if (localPlayer->alchemyLevel[0] < 150 && (!higherRank || localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-8987.740234f, 751.758972f, 98.414497f); trainerID = 5499; }
-		}
-		else if (professionID == ProfessionId::Enchanting) {
-			if (localPlayer->enchantingLevel[0] < 75 && !(localPlayer->enchantingLevel[0] >= 50 && localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-8854.016602f, 801.867798f, 96.334518f); trainerID = 11068; }
-			else if (localPlayer->enchantingLevel[0] < 150 && (!higherRank || localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-8854.016602f, 801.867798f, 96.334518f); trainerID = 1317; }
-			else if (localPlayer->enchantingLevel[0] < 225 && (!higherRank || localPlayer->enchantingLevel[1] <= 150)) { trainerPos = Position(-9573.968750f, -716.192200f, 99.125626f); trainerID = 11072; }
+			if (localPlayer->alchemyLevel[0] >= 50 && localPlayer->alchemyLevel[0] <= 150 && (!higherRank || localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-14488.485352f, 428.073547f, 34.597145f); trainerID = 2837; }
 		}
 	}
-	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Darnassus
-		if (professionID == ProfessionId::Leatherworking) {
-			if (localPlayer->leatherworkingLevel[0] < 75 && !(localPlayer->leatherworkingLevel[0] >= 50 && localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(10087.839844f, 2254.337646f, 1343.310303f); trainerID = 11083; }
-			else if (localPlayer->leatherworkingLevel[0] < 150 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(10087.839844f, 2254.337646f, 1343.310303f); trainerID = 11081; }
-			else if (localPlayer->leatherworkingLevel[0] < 225 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 150)) { trainerPos = Position(10087.839844f, 2254.337646f, 1343.310303f); trainerID = 4212; }
+	else if (FactionTemplate.IsAlliance(localPlayer->factionTemplateID)) {
+		// Alliance
+		if (mapID == 0) {
+			// Eastern Kingdoms
+			if (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) {
+				// Stormwind
+				if (professionID == ProfessionId::Leatherworking) {
+					if (localPlayer->leatherworkingLevel[0] < 75 && !(localPlayer->leatherworkingLevel[0] >= 50 && localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(-8721.037109f, 469.952026f, 98.614304f); trainerID = 11096; }
+					else if (localPlayer->leatherworkingLevel[0] < 150 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(-8722.855469f, 476.512756f, 98.613060f); trainerID = 5564; }
+				}
+				else if (professionID == ProfessionId::Blacksmithing) {
+					if (localPlayer->blacksmithingLevel[0] < 75 && !(localPlayer->blacksmithingLevel[0] >= 50 && localPlayer->blacksmithingLevel[1] <= 75)) { trainerPos = Position(-8427.233398f, 609.402161f, 95.222618f); trainerID = 957; }
+					else if (localPlayer->blacksmithingLevel[0] < 150 && (!higherRank || localPlayer->blacksmithingLevel[1] <= 75)) { trainerPos = Position(-8427.312500f, 619.320312f, 95.453270f); trainerID = 5511; }
+				}
+				else if (professionID == ProfessionId::Mining) {
+					trainerPos = Position(-8433.015625f, 696.366699f, 103.364143f); trainerID = 5513;
+				}
+				else if (professionID == ProfessionId::Tailoring) {
+					if (localPlayer->tailoringLevel[0] < 75 && !(localPlayer->tailoringLevel[0] >= 50 && localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-8940.175781f, 797.109863f, 90.941017f); trainerID = 1300; }
+					else if (localPlayer->tailoringLevel[0] < 150 && (!higherRank || localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-8940.175781f, 797.109863f, 90.941017f); trainerID = 1346; }
+					else if (localPlayer->tailoringLevel[0] < 225 && (!higherRank || localPlayer->tailoringLevel[1] <= 150)) { trainerPos = Position(-8940.175781f, 797.109863f, 90.941017f); trainerID = 1346; }
+				}
+				else if (professionID == ProfessionId::Alchemy) {
+					if (localPlayer->alchemyLevel[0] < 75 && !(localPlayer->alchemyLevel[0] >= 50 && localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-8987.740234f, 751.758972f, 98.414497f); trainerID = 5500; }
+					else if (localPlayer->alchemyLevel[0] < 150 && (!higherRank || localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-8987.740234f, 751.758972f, 98.414497f); trainerID = 5499; }
+				}
+				else if (professionID == ProfessionId::Enchanting) {
+					if (localPlayer->enchantingLevel[0] < 75 && !(localPlayer->enchantingLevel[0] >= 50 && localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-8854.016602f, 801.867798f, 96.334518f); trainerID = 11068; }
+					else if (localPlayer->enchantingLevel[0] < 150 && (!higherRank || localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-8854.016602f, 801.867798f, 96.334518f); trainerID = 1317; }
+					else if (localPlayer->enchantingLevel[0] < 225 && (!higherRank || localPlayer->enchantingLevel[1] <= 150)) { trainerPos = Position(-9573.968750f, -716.192200f, 99.125626f); trainerID = 11072; }
+				}
+			}
+			else if (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) {
+				// Ironforge
+				if (professionID == ProfessionId::Leatherworking) {
+					if (localPlayer->leatherworkingLevel[0] < 75 && !(localPlayer->leatherworkingLevel[0] >= 50 && localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(-4740.405762f, -1022.217102f, 504.428131f); trainerID = 1466; }
+					else if (localPlayer->leatherworkingLevel[0] < 150 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(-4747.828125f, -1027.840332f, 504.429565f); trainerID = 5127; }
+				}
+				else if (professionID == ProfessionId::Blacksmithing) {
+					if (localPlayer->blacksmithingLevel[0] < 75 && !(localPlayer->blacksmithingLevel[0] >= 50 && localPlayer->blacksmithingLevel[1] <= 75)) { trainerPos = Position(-4790.252441f, -1124.262573f, 498.806061f); trainerID = 10277; }
+					else if (localPlayer->blacksmithingLevel[0] < 150 && (!higherRank || localPlayer->blacksmithingLevel[1] <= 75)) { trainerPos = Position(-4790.252441f, -1124.262573f, 498.806061f); trainerID = 10276; }
+					else if (localPlayer->blacksmithingLevel[0] < 225 && (!higherRank || localPlayer->blacksmithingLevel[1] <= 150)) { trainerPos = Position(-4786.446289f, -1126.741211f, 498.805603f); trainerID = 4258; }
+				}
+				else if (professionID == ProfessionId::Mining) {
+					trainerPos = Position(-4707.959961f, -1108.910034f, 504.528992f); trainerID = 4254;
+				}
+				else if (professionID == ProfessionId::Tailoring) {
+					if (localPlayer->tailoringLevel[0] < 75 && !(localPlayer->tailoringLevel[0] >= 50 && localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-4718.244629f, -1057.059814f, 504.196594f); trainerID = 1703; }
+					else if (localPlayer->tailoringLevel[0] < 150 && (!higherRank || localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-4724.120117, -1054.709961f, 504.279999f); trainerID = 5153; }
+				}
+				else if (professionID == ProfessionId::Alchemy) {
+					if (localPlayer->alchemyLevel[0] < 75 && !(localPlayer->alchemyLevel[0] >= 50 && localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-4859.929688f, -1238.931030f, 501.722473f); trainerID = 1246; }
+					else if (localPlayer->alchemyLevel[0] < 150 && (!higherRank || localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-4859.929688f, -1238.931030f, 501.722473f); trainerID = 5177; }
+				}
+				else if (professionID == ProfessionId::Enchanting) {
+					if (localPlayer->enchantingLevel[0] < 75 && !(localPlayer->enchantingLevel[0] >= 50 && localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-4804.781250f, -1192.949463f, 505.814331f); trainerID = 11065; }
+					else if (localPlayer->enchantingLevel[0] < 150 && (!higherRank || localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-4809.029785f, -1186.130005f, 512.564026f); trainerID = 5157; }
+				}
+			}
+
+			else if (localPlayer->zoneID == 47) {
+				// The Hinterlands
+				if (professionID == ProfessionId::Leatherworking) {
+					if (localPlayer->leatherworkingLevel[0] >= 200 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 225)) { trainerPos = Position(352.283264f, -2089.308838f, 113.784805f); trainerID = 11097; }
+				}
+			}
 		}
-		else if (professionID == ProfessionId::Tailoring) {
-			if (localPlayer->tailoringLevel[0] < 75 && !(localPlayer->tailoringLevel[0] >= 50 && localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(10084.529297f, 2266.178223f, 1333.000244f); trainerID = 11050; }
-			else if (localPlayer->tailoringLevel[0] < 150 && (!higherRank || localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(10084.529297f, 2266.178223f, 1333.000244f); trainerID = 4159; }
-		}
-		else if (professionID == ProfessionId::Alchemy) {
-			if (localPlayer->alchemyLevel[0] < 75 && !(localPlayer->alchemyLevel[0] >= 50 && localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(10073.293945f, 2355.213135f, 1321.582153f); trainerID = 11041; }
-			else if (localPlayer->alchemyLevel[0] < 150 && (!higherRank || localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(10064.889648f, 2343.624023f, 1321.567871f); trainerID = 11042; }
-			else if (localPlayer->alchemyLevel[0] < 225 && (!higherRank || localPlayer->alchemyLevel[1] <= 150)) { trainerPos = Position(10073.293945f, 2355.213135f, 1321.582153f); trainerID = 4160; }
-		}
-		else if (professionID == ProfessionId::Enchanting) {
-			if (localPlayer->enchantingLevel[0] < 75 && !(localPlayer->enchantingLevel[0] >= 50 && localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(10144.823242f, 2317.142334f, 1333.000366f); trainerID = 11070; }
-			else if (localPlayer->enchantingLevel[0] < 150 && (!higherRank || localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(10144.823242f, 2317.142334f, 1333.000366f); trainerID = 4213; }
+		else if (mapID == 1) {
+			// Kalimdor
+			if (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141) {
+				// Darnassus
+				if (professionID == ProfessionId::Leatherworking) {
+					if (localPlayer->leatherworkingLevel[0] < 75 && !(localPlayer->leatherworkingLevel[0] >= 50 && localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(10087.839844f, 2254.337646f, 1343.310303f); trainerID = 11083; }
+					else if (localPlayer->leatherworkingLevel[0] < 150 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(10087.839844f, 2254.337646f, 1343.310303f); trainerID = 11081; }
+					else if (localPlayer->leatherworkingLevel[0] < 225 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 150)) { trainerPos = Position(10087.839844f, 2254.337646f, 1343.310303f); trainerID = 4212; }
+				}
+				else if (professionID == ProfessionId::Tailoring) {
+					if (localPlayer->tailoringLevel[0] < 75 && !(localPlayer->tailoringLevel[0] >= 50 && localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(10084.529297f, 2266.178223f, 1333.000244f); trainerID = 11050; }
+					else if (localPlayer->tailoringLevel[0] < 150 && (!higherRank || localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(10084.529297f, 2266.178223f, 1333.000244f); trainerID = 4159; }
+				}
+				else if (professionID == ProfessionId::Alchemy) {
+					if (localPlayer->alchemyLevel[0] < 75 && !(localPlayer->alchemyLevel[0] >= 50 && localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(10073.293945f, 2355.213135f, 1321.582153f); trainerID = 11041; }
+					else if (localPlayer->alchemyLevel[0] < 150 && (!higherRank || localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(10064.889648f, 2343.624023f, 1321.567871f); trainerID = 11042; }
+					else if (localPlayer->alchemyLevel[0] < 225 && (!higherRank || localPlayer->alchemyLevel[1] <= 150)) { trainerPos = Position(10073.293945f, 2355.213135f, 1321.582153f); trainerID = 4160; }
+				}
+				else if (professionID == ProfessionId::Enchanting) {
+					if (localPlayer->enchantingLevel[0] < 75 && !(localPlayer->enchantingLevel[0] >= 50 && localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(10144.823242f, 2317.142334f, 1333.000366f); trainerID = 11070; }
+					else if (localPlayer->enchantingLevel[0] < 150 && (!higherRank || localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(10144.823242f, 2317.142334f, 1333.000366f); trainerID = 4213; }
+				}
+			}
+			else if (localPlayer->zoneID == 357) {
+				// Feralas
+				if (professionID == ProfessionId::Alchemy) {
+					if (localPlayer->alchemyLevel[0] >= 200 && (!higherRank || localPlayer->alchemyLevel[1] <= 225)) { trainerPos = Position(-4395.004395f, 3177.780762f, 17.590046f); trainerID = 7948; }
+				} else if (professionID == ProfessionId::Enchanting) {
+					if (localPlayer->enchantingLevel[0] >= 50 && localPlayer->enchantingLevel[0] <= 150 && (!higherRank || localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-4412.923340f, 3249.635986f, 12.323092f); trainerID = 7949; }
+				}
+			}
 		}
 	}
-	else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) && (FactionTemplate.IsAlliance(localPlayer->factionTemplateID))) {
-		// Ironforge
-		if (professionID == ProfessionId::Leatherworking) {
-			if (localPlayer->leatherworkingLevel[0] < 75 && !(localPlayer->leatherworkingLevel[0] >= 50 && localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(-4740.405762f, -1022.217102f, 504.428131f); trainerID = 1466; }
-			else if (localPlayer->leatherworkingLevel[0] < 150 && (!higherRank || localPlayer->leatherworkingLevel[1] <= 75)) { trainerPos = Position(-4747.828125f, -1027.840332f, 504.429565f); trainerID = 5127; }
-		}
-		else if (professionID == ProfessionId::Blacksmithing) {
-			if (localPlayer->blacksmithingLevel[0] < 75 && !(localPlayer->blacksmithingLevel[0] >= 50 && localPlayer->blacksmithingLevel[1] <= 75)) { trainerPos = Position(-4790.252441f, -1124.262573f, 498.806061f); trainerID = 10277; }
-			else if (localPlayer->blacksmithingLevel[0] < 150 && (!higherRank || localPlayer->blacksmithingLevel[1] <= 75)) { trainerPos = Position(-4790.252441f, -1124.262573f, 498.806061f); trainerID = 10276; }
-			else if (localPlayer->blacksmithingLevel[0] < 225 && (!higherRank || localPlayer->blacksmithingLevel[1] <= 150)) { trainerPos = Position(-4786.446289f, -1126.741211f, 498.805603f); trainerID = 4258; }
-		}
-		else if (professionID == ProfessionId::Mining) {
-			trainerPos = Position(-4707.959961f, -1108.910034f, 504.528992f); trainerID = 4254;
-		}
-		else if (professionID == ProfessionId::Tailoring) {
-			if (localPlayer->tailoringLevel[0] < 75 && !(localPlayer->tailoringLevel[0] >= 50 && localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-4718.244629f, -1057.059814f, 504.196594f); trainerID = 1703; }
-			else if (localPlayer->tailoringLevel[0] < 150 && (!higherRank || localPlayer->tailoringLevel[1] <= 75)) { trainerPos = Position(-4724.120117, -1054.709961f, 504.279999f); trainerID = 5153; }
-		}
-		else if (professionID == ProfessionId::Alchemy) {
-			if (localPlayer->alchemyLevel[0] < 75 && !(localPlayer->alchemyLevel[0] >= 50 && localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-4859.929688f, -1238.931030f, 501.722473f); trainerID = 1246; }
-			else if (localPlayer->alchemyLevel[0] < 150 && (!higherRank || localPlayer->alchemyLevel[1] <= 75)) { trainerPos = Position(-4859.929688f, -1238.931030f, 501.722473f); trainerID = 5177; }
-		}
-		else if (professionID == ProfessionId::Enchanting) {
-			if (localPlayer->enchantingLevel[0] < 75 && !(localPlayer->enchantingLevel[0] >= 50 && localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-4804.781250f, -1192.949463f, 505.814331f); trainerID = 11065; }
-			else if (localPlayer->enchantingLevel[0] < 150 && (!higherRank || localPlayer->enchantingLevel[1] <= 75)) { trainerPos = Position(-4809.029785f, -1186.130005f, 512.564026f); trainerID = 5157; }
-		}
+	else {
+		// Horde
+
 	}
 	if (!trainerID) return false;
 	if (checkAvailabilityOnly) return true;
@@ -581,7 +644,7 @@ static std::optional<SelectedCraft> GetCraftPlan(int max_crafts = 20) {
 				const int blacksmithLevel = localPlayer->blacksmithingLevel[0];
 				if (blacksmithLevel > 0 &&
 					((craft.crafted_id == 2841 && blacksmithLevel < 100) ||
-					 (craft.crafted_id == 3859 && blacksmithLevel < 205))) continue;
+						(craft.crafted_id == 3859 && blacksmithLevel < 205))) continue;
 			}
 			if (!craft.learnable_from_trainer) {
 				std::lock_guard<std::mutex> lock(craftKnowledgeCache.mutex);
@@ -671,7 +734,7 @@ CraftKnowledge CheckCraftKnowledge(ProfessionId profession_id, int crafted_id) {
 		if (craftKnowledgeCache.profession_id != profession_id || craftKnowledgeCache.crafted_id != crafted_id) return;
 		craftKnowledgeCache.status = status;
 		craftKnowledgeCache.queued = false;
-		});
+	});
 	return CraftKnowledge::Checking;
 }
 
@@ -683,7 +746,7 @@ bool EnchantItem(int crafted_id) {
 		const Craft* recipe = FindEnchantRecipe(crafted_id);
 		if (!recipe) return;
 		FunctionsLua::EnchantCraft(recipe->spell_id ? recipe->spell_id : crafted_id, recipe->target_slot);
-		});
+	});
 	return true;
 }
 
@@ -702,7 +765,7 @@ bool CraftItem(ProfessionId professionID, int item_id, int amount) {
 			FunctionsLua::DoTradeSkill(i, amount);
 			return;
 		}
-		});
+	});
 	return true;
 }
 
@@ -739,7 +802,6 @@ inline bool MakeCraft() {
 		ThreadSynchronizer::RunOnMainThread([]() {
 			if (!localPlayer || !localPlayer->isMounted) return;
 			Game::Dismount();
-			if (localPlayer->isMounted) Functions::LuaCall("if IsMounted() then Dismount() end");
 		});
 		return true;
 	}
@@ -747,19 +809,43 @@ inline bool MakeCraft() {
 }
 
 void AssembleBack() {
-	if (mapID == 0 && (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12)) {
-		// Stormwind
-		Position mageDimension = Position(-9019.012695f, 888.367188f, 29.620701f);
-		if (localPlayer->position.DistanceTo(mageDimension) < 25.0f) MoveToMap(Position(-9019.012695f, 888.367188f, 29.620701f));
-		else MoveToMap(Position(-8830.489258f, 625.553711f, 93.943695f));
+	if (mapID == 0 && localPlayer->zoneID == 33) {
+		// Stranglethorn Vale
+		MoveToMap(Position(-14442.648438f, 471.443939f, 15.292953f));
 	}
-	else if (mapID == 0 && (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1)) {
-		// Ironforge
-		MoveToMap(Position(-4756.274902f, -1154.143677f, 502.211273f));
+	else if (FactionTemplate.IsAlliance(localPlayer->factionTemplateID)) {
+		// Alliance
+		if (mapID == 0) {
+			// Eastern Kingdoms
+			if (localPlayer->zoneID == 1519 || localPlayer->zoneID == 12) {
+				// Stormwind
+				Position mageDimension = Position(-9019.012695f, 888.367188f, 29.620701f);
+				if (localPlayer->position.DistanceTo(mageDimension) < 25.0f) MoveToMap(Position(-9019.012695f, 888.367188f, 29.620701f));
+				else MoveToMap(Position(-8830.489258f, 625.553711f, 93.943695f));
+			}
+			else if (localPlayer->zoneID == 1537 || localPlayer->zoneID == 1) {
+				// Ironforge
+				MoveToMap(Position(-4756.274902f, -1154.143677f, 502.211273f));
+			}
+			else if (localPlayer->zoneID == 47) {
+				// The Hinterlands
+				MoveToMap(Position(227.914337f, -2117.942627f, 117.153587f));
+			}
+		}
+		else if (mapID == 1) {
+			// Kalimdor
+			if (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141) {
+				// Darnassus
+				MoveToMap(Position(9952.135742f, 2280.563965f, 1341.394409f));
+			}
+			else if (localPlayer->zoneID == 357) {
+				// Feralas
+				MoveToMap(Position(-4434.246094f, 3278.910400f, 11.727551f));
+			}
+		}
 	}
-	else if (mapID == 1 && (localPlayer->zoneID == 1657 || localPlayer->zoneID == 141)) {
-		// Darnassus
-		MoveToMap(Position(9952.135742f, 2280.563965f, 1341.394409f));
+	else {
+		// Horde
 	}
 }
 

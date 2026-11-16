@@ -6,6 +6,8 @@
 #include "../rng.h"
 
 #include "../Navigation.h"
+#include "../WaterMap.h"
+#include "../VMapReader.h"
 
 #include "../FactionTemplate.h"
 
@@ -42,22 +44,65 @@ float Functions::GetDepth(Position pos, float height) {
 	return distance;
 }
 
-Position Functions::ProjectPos(Position pos, float height) {
-	typedef bool __fastcall func(Position* p1, Position* p2, int ignore, Position* intersection, float* distance, unsigned int flags);
-	func* function = (func*)INTERSECT_FUN_PTR;
-	Position p1 = Position(pos.X, pos.Y, pos.Z + height);
-	Position p2 = Position(pos.X, pos.Y, pos.Z - 10.0f);
-	Position intersection = Position(0, 0, 0);
-	float distance = float(p1.DistanceTo(p2));
-	bool res = function(&p1, &p2, 0, &intersection, &distance, 0x00100111);
-	if (res) { // Obstacle
-		Position result = Position(pos.X, pos.Y, intersection.Z);
-		return result;
-	} // All fine
-	else {
-		Position result = Position(pos.X, pos.Y, pos.Z-10.0f);
-		return result;
+Position Functions::ProjectPos(Position pos) {
+	const float top = pos.Z + 3.0f, bottom = pos.Z - 3.0f;
+
+	if (mapID >= 0 && std::isfinite(pos.X) && std::isfinite(pos.Y) && std::isfinite(top) && top >= bottom) {
+		constexpr float GridSize = 533.333333f;
+		const int gridX = static_cast<int>(32.0f - pos.X / GridSize);
+		const int gridY = static_cast<int>(32.0f - pos.Y / GridSize);
+
+		bool hasVMap = false;
+		float vmapGround = 0.0f;
+
+		if (gridX >= 0 && gridX < 64 && gridY >= 0 && gridY < 64) {
+			const auto vmap = VMapReader::At(
+				static_cast<unsigned>(mapID),
+				gridX, gridY, pos.X, pos.Y, top, true
+			);
+
+			if (vmap.groundFound && std::isfinite(vmap.ground)) {
+				hasVMap = true;
+				vmapGround = vmap.ground;
+			}
+		}
+
+		const auto terrain = WaterMap::MapAt(
+			static_cast<unsigned>(mapID),
+			pos.X, pos.Y, top
+		);
+
+		const bool hasMap = terrain.groundKnown && std::isfinite(terrain.ground);
+
+		if (hasVMap && hasMap) {
+			const float diffVMap = std::fabs(vmapGround - pos.Z);
+			const float diffMap = std::fabs(terrain.ground - pos.Z);
+
+			return Position(
+				pos.X,
+				pos.Y,
+				diffVMap <= diffMap ? vmapGround : terrain.ground
+			);
+		}
+
+		if (hasVMap)
+			return Position(pos.X, pos.Y, vmapGround);
+
+		if (hasMap)
+			return Position(pos.X, pos.Y, terrain.ground);
 	}
+
+	// Dernier recours : collision du client du jeu.
+	typedef bool __fastcall func(Position*, Position*, int, Position*, float*, unsigned int);
+	func* function = (func*)INTERSECT_FUN_PTR;
+	Position p1(pos.X, pos.Y, top), p2(pos.X, pos.Y, bottom);
+	Position intersection(0, 0, 0);
+	float distance = static_cast<float>(p1.DistanceTo(p2));
+
+	if (function(&p1, &p2, 0, &intersection, &distance, 0x00100111) && std::isfinite(intersection.Z))
+		return Position(pos.X, pos.Y, intersection.Z);
+
+	return Position(pos.X, pos.Y, pos.Z - 10.0f);
 }
 
 unsigned long long Functions::GetPlayerGuid() {
@@ -538,8 +583,7 @@ bool Functions::TryGroundTargetAOE(const char* spell, float diameter, float maxR
     }
 
     if (Intersect(localPlayer->position, center)) {
-        MoveToLoS(center, MoveTypes::MoveLoSAoE,
-            (targetUnit->movement_flags & MOVEFLAG_SWIMMING) != 0);
+        MoveToLoS(center, MoveTypes::MoveLoSAoE);
         groundAoERepositionRequested = Moving == MoveTypes::MoveLoSAoE;
         return groundAoERepositionRequested;
     }
@@ -590,7 +634,6 @@ bool Functions::enemyClose(Position pos, bool requireLineOfSight) {
 	//Check if there are any enemy close to position
 	for (unsigned int i = 0; i < ListUnits.size(); i++) {
 		int level_difference = ListUnits[i].level - localPlayer->level;
-		// The movement-only LoS check is last to avoid unnecessary raycasts.
 		if (ListUnits[i].attackable && (!(ListUnits[i].movement_flags & MOVEFLAG_SWIMMING) || (localPlayer->movement_flags & MOVEFLAG_SWIMMING))
 			&& !ListUnits[i].isInCombatOrEncounter() && (ListUnits[i].unitReaction < Neutral) && !FactionTemplate.isNeutral(ListUnits[i].factionTemplateID)
 			&& !(ListUnits[i].flags & UNIT_FLAG_PLAYER_CONTROLLED) && !ListUnits[i].isdead && ListUnits[i].creatureType != Totem && ListUnits[i].createdBy == 0

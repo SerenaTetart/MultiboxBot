@@ -170,14 +170,14 @@
     <ClCompile Include="Functions\FunctionsLua.cpp">
       <Filter>Source Files\Functions</Filter>
     </ClCompile>
-    <ClCompile Include="Functions\FunctionsMovement.cpp">
-      <Filter>Source Files\Functions</Filter>
-    </ClCompile>
     <ClCompile Include="BossAI\Gnomeregan.cpp">
       <Filter>Source Files\BossAI</Filter>
     </ClCompile>
     <ClCompile Include="BossAI\Uldaman.cpp">
       <Filter>Source Files\BossAI</Filter>
+    </ClCompile>
+    <ClCompile Include="Functions\FunctionsMovement.cpp">
+      <Filter>Source Files\Functions</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

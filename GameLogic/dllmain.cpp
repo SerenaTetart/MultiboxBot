@@ -4,10 +4,15 @@
 #include <string>
 // CLR errors
 #include <iostream>
+#include <filesystem>
+#include <fstream>
+#include <cstring>
 
 #include "Game.h"
 #include "Client.h"
 #include "MemoryManager.h"
+#include "FactionTemplate.h"
+#include "Navigation.h"
 
 HANDLE g_hThread = NULL;
 HANDLE client_thread = NULL;
@@ -17,8 +22,6 @@ BOOL running = true;
 DWORD WINAPI ThreadMain(void* pParam) {
     AllocConsole();
     FILE* t = freopen("CONOUT$", "w", stdout);
-
-    std::cout << "Dll injected !\n";
 
 	Client::client_running = true;
 	client_thread = CreateThread(NULL, 0, Client::MakeLoop, NULL, 0, NULL);

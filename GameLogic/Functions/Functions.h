@@ -10,7 +10,7 @@ class Functions {
 	public:
 		static bool Intersect(Position start, Position end, float z=1.25f);
 		static float GetDepth(Position pos, float height);
-		static Position ProjectPos(Position pos, float height=2.0f);
+		static Position ProjectPos(Position pos);
 		static unsigned long long GetPlayerGuid();
 		static int GetPositionCircle();
 		static void EnumerateVisibleObjects(int filter);
@@ -20,18 +20,14 @@ class Functions {
 		static void ClickAOE(Position tpos);
 		static void InteractUnit(uintptr_t target, int autoloot);
 		static void InteractObject(uintptr_t object_ptr, int autoloot);
+
 		static bool StepBack(WoWUnit* target, MoveTypes MoveType, float dist_away=15.0f);
-		static bool EscapeDangerZone();
-        static void HandleMovementStall();
-        // All movement orders and explicit stops pass through these two methods.
-        static bool StartMovement(const Position& destination, bool emergency = false,
-            bool navigationWaypoint = false, unsigned long long guid = 0);
+		static bool AscendForBreath();
         static void StopMovement();
-        static bool UpdateLateralRecovery();
 		static void FollowMultibox(int placement = 0);
-		static void MoveTo(Position target_pos, MoveTypes moveType, bool checkEnemyClose=true, bool targetSwim=false);
-		static void MoveToFast(Position target_pos, MoveTypes moveType);
-		static void MoveToLoS(Position target_pos, MoveTypes moveType, bool targetSwim = false);
+		static void MoveTo(Position target_pos, MoveTypes moveType);
+		static void MoveToLoS(Position target_pos, MoveTypes moveType);
+
 		static void CancelPlayerBuff(int buffID);
 		static unsigned int GetMapID();
 		static SpellSlotData GetSpellDataFromSlot(int slot, bool pet);

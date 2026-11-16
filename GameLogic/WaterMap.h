@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <array>
 #include <algorithm>
@@ -14,8 +14,8 @@
 #include <vector>
 
 #include "FactionTemplate.h"
+#include "VMapReader.h"
 
-// Reads the CMaNGOS TBC .map terrain/liquid chunks. VMAP WMO liquids are not covered.
 class WaterMap final {
 public:
     enum class Kind { Unknown, Dry, Shallow, Swimmable, Hazard };
@@ -24,6 +24,7 @@ public:
         Kind kind = Kind::Unknown;
         float surface = 0.0f;
         float ground = 0.0f;
+        bool groundKnown = false;
         bool Known() const { return kind != Kind::Unknown; }
         bool CanSwim() const { return kind == Kind::Swimmable; }
         float Depth() const { return surface - ground; }
@@ -38,6 +39,59 @@ public:
     };
 
     static Sample At(unsigned mapId, float x, float y, float z) {
+        if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) return {};
+        constexpr float GridSize = 533.333333f;
+        const int gridX = static_cast<int>(32.0f - x / GridSize);
+        const int gridY = static_cast<int>(32.0f - y / GridSize);
+        if (gridX < 0 || gridX > 63 || gridY < 0 || gridY > 63) return {};
+
+        const Sample terrain = MapAt(mapId, x, y, z);
+        const bool terrainHasLiquid = IsLiquid(terrain.kind);
+        const bool terrainLiquidHere = IsLiquidAtHeight(terrain, z);
+
+        // Les VMaps avec liquide sont toujours consultées. Lorsque le .map situe
+        // réellement du liquide à cette hauteur, sonder AUSSI les WMO secs.
+        // Le rayon démarre un peu au-dessus des pieds pour absorber l'imprécision
+        // numérique, sans détecter le pont au-dessus d'un nageur.
+        constexpr float WmoProbeAbove = 0.2f;
+        const auto vmap = VMapReader::At(mapId, gridX, gridY, x, y,
+            z + WmoProbeAbove, terrainLiquidHere);
+
+        // Ne pas confondre « WMO dans la même colonne X/Y » et « sur ce WMO ».
+        // Un pont à plusieurs mètres au-dessus du nageur ne masque pas la rivière.
+        constexpr float WmoMaxDistanceBelow = 1.25f;
+        const bool onWmo = terrainLiquidHere && vmap.groundFound &&
+            std::isfinite(vmap.ground) &&
+            vmap.ground >= z - WmoMaxDistanceBelow &&
+            vmap.ground <= z + WmoProbeAbove;
+
+        if (onWmo) {
+            // L'éventuel liquide du même groupe WMO gagne sur le .map.
+            // Sinon, le plancher WMO est sec, même si le .map indique de l'eau.
+            if (vmap.found) {
+                const Sample liquid = FromVMap(vmap);
+                if (IsLiquidAtHeight(liquid, z)) return liquid;
+            }
+            return { Kind::Dry, 0.0f, vmap.ground, true };
+        }
+
+        if (vmap.found) {
+            const Sample liquid = FromVMap(vmap);
+            if (IsLiquidAtHeight(liquid, z)) return liquid;
+        }
+
+        // Sans sol WMO au niveau de Z, l'eau du terrain n'est pertinente que
+        // si la position est réellement dans / au voisinage de son volume.
+        if (terrainHasLiquid && !terrainLiquidHere) {
+            Sample dry = terrain;
+            dry.kind = Kind::Dry;
+            return dry;
+        }
+        return terrain;
+    }
+
+    // Lecture directe du terrain .map, y compris quand aucun liquide n'est present.
+    static Sample MapAt(unsigned mapId, float x, float y, float z) {
         if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) return {};
         constexpr float GridSize = 533.333333f;
         const int gridX = static_cast<int>(32.0f - x / GridSize);
@@ -67,7 +121,8 @@ public:
                 static_assert(sizeof(FileHeader) == 40);
                 file.read(reinterpret_cast<char*>(&header), sizeof(header));
                 if (file && std::memcmp(header.magic, "MAPS", 4) == 0 &&
-                    std::memcmp(header.version, "s1.4", 4) == 0 &&
+                    (std::memcmp(header.version, "z1.4", 4) == 0 ||
+                     std::memcmp(header.version, "s1.4", 4) == 0) &&
                     header.heightOffset >= sizeof(header) && header.heightOffset < 4'000'000 &&
                     header.heightSize >= 16 && header.heightSize < 250'000 &&
                     ((header.liquidOffset == 0 && header.liquidSize == 0) ||
@@ -179,15 +234,6 @@ public:
             constexpr std::uint16_t bitV[] = { 0x000F, 0x00F0, 0x0F00, 0xF000 };
             if (tile.holes[cellX * 16 + cellY] & bitH[bitY] & bitV[bitX]) return {};
         }
-        const std::uint8_t type = tile.hasTypes ? tile.types[(ix >> 3) * 16 + (iy >> 3)] : tile.globalType;
-        if (!type) return { Kind::Dry };
-        const int lx = ix - tile.offsetY;
-        const int ly = iy - tile.offsetX;
-        if (lx < 0 || ly < 0 || lx >= tile.height || ly >= tile.width)
-            return { Kind::Dry };
-        const float waterZ = tile.hasHeightMap ?
-            tile.liquidHeights[lx * tile.width + ly] : tile.surface;
-        if (!std::isfinite(waterZ)) return {};
         float groundZ = tile.baseHeight;
         if (!tile.v9.empty()) {
             const float tx = gx - static_cast<int>(gx);
@@ -209,14 +255,48 @@ public:
                 (tile.compact ? tile.baseHeight : 0.0f);
         }
         if (!std::isfinite(groundZ)) return {};
-        if (waterZ <= groundZ) return { Kind::Dry };
-        if (type & (0x01 | 0x04)) return { Kind::Hazard, waterZ, groundZ };
-        if (!(type & (0x02 | 0x08))) return {};
-        if (waterZ - groundZ < 1.6f) return { Kind::Shallow, waterZ, groundZ };
-        return { Kind::Swimmable, waterZ, groundZ };
+        const std::uint8_t type = tile.hasTypes ? tile.types[(ix >> 3) * 16 + (iy >> 3)] : tile.globalType;
+        if (!type) return { Kind::Dry, 0.0f, groundZ, true };
+        const int lx = ix - tile.offsetY;
+        const int ly = iy - tile.offsetX;
+        if (lx < 0 || ly < 0 || lx >= tile.height || ly >= tile.width)
+            return { Kind::Dry, 0.0f, groundZ, true };
+        const float waterZ = tile.hasHeightMap ?
+            tile.liquidHeights[lx * tile.width + ly] : tile.surface;
+        if (!std::isfinite(waterZ)) return { Kind::Unknown, 0.0f, groundZ, true };
+        if (waterZ <= groundZ) return { Kind::Dry, 0.0f, groundZ, true };
+        if (type & (0x01 | 0x04)) return { Kind::Hazard, waterZ, groundZ, true };
+        if (!(type & (0x02 | 0x08))) return { Kind::Unknown, 0.0f, groundZ, true };
+        if (waterZ - groundZ < 1.6f) return { Kind::Shallow, waterZ, groundZ, true };
+        return { Kind::Swimmable, waterZ, groundZ, true };
     }
 
 private:
+    static bool IsLiquid(Kind kind) {
+        return kind == Kind::Shallow || kind == Kind::Swimmable || kind == Kind::Hazard;
+    }
+
+    static bool IsLiquidAtHeight(const Sample& sample, float z) {
+        // Z correspond aux pieds du personnage, pas au sommet de sa collision.
+        // Au-dessus de la surface ou sous le fond, le liquide est sur un autre étage.
+        constexpr float AboveSurfaceTolerance = 0.75f;
+        constexpr float BelowGroundTolerance = 2.0f;
+        return IsLiquid(sample.kind) && std::isfinite(sample.surface) &&
+            z <= sample.surface + AboveSurfaceTolerance &&
+            (!sample.groundKnown || (std::isfinite(sample.ground) &&
+                z >= sample.ground - BelowGroundTolerance));
+    }
+
+    static Sample FromVMap(const VMapReader::Liquid& liquid) {
+        const float depth = liquid.surface - liquid.ground;
+        if (liquid.type == 3 || liquid.type == 4 || liquid.type == 21)
+            return { Kind::Hazard, liquid.surface, liquid.ground, true };
+        if (liquid.type == 1 || liquid.type == 2 || liquid.type == 41 || liquid.type == 61)
+            return { depth < 1.6f ? Kind::Shallow : Kind::Swimmable,
+                liquid.surface, liquid.ground, true };
+        return { Kind::Unknown, liquid.surface, liquid.ground, true };
+    }
+
     struct Tile {
         std::uint64_t key = 0;
         bool valid = false, hasTypes = false, hasHeightMap = false, compact = false, hasHoles = false;

@@ -24,7 +24,7 @@ bool BossAI::ScarletMonastery() {
 				// Burn in righteous fire! -> Run away (except tank -> avoid bad positioning)
 				if (localPlayer->role != 0 && localPlayer->position.DistanceTo(safePosition) > 5.0f) {
 					ThreadSynchronizer::RunOnMainThread([safePosition]() {
-						Functions::MoveToFast(safePosition, MoveTypes::BossMechanic);
+						Functions::MoveTo(safePosition, MoveTypes::BossMechanic);
 					});
 					return true;
 				}
@@ -32,12 +32,12 @@ bool BossAI::ScarletMonastery() {
 					// Stop Attacking
 					return true;
 				}
-			} else if (localPlayer->role == 0 && unit.targetGuid == localPlayer->Guid) {
+			} else if (localPlayer->role == 0 && !localPlayer->missAggro) {
 				// Tank: Move Doan away
 				Position bossRoomEdge = Position(132.488647f, -429.408325f, 18.514610f);
 				if (localPlayer->position.DistanceTo(bossRoomEdge) > 5.0f) {
 					ThreadSynchronizer::RunOnMainThread([bossRoomEdge]() {
-						Functions::MoveToFast(bossRoomEdge, MoveTypes::BossMechanic);
+						Functions::MoveTo(bossRoomEdge, MoveTypes::BossMechanic);
 					});
 					return true;
 				}
@@ -77,7 +77,7 @@ bool BossAI::ScarletMonastery() {
 					}
 					// Run to the point furthest from Herod
 					ThreadSynchronizer::RunOnMainThread([listAwayPoints, pointIndex]() {
-						Functions::MoveTo(listAwayPoints[pointIndex], MoveTypes::BossMechanic, false, false);
+						Functions::MoveTo(listAwayPoints[pointIndex], MoveTypes::BossMechanic);
 					});
 					return true;
 				}

@@ -119,6 +119,8 @@ bool Game::CanUseMount() {
 	if (!localPlayer->isOutdoor) return false;
 	if (!PossessMount()) return false;
 
+	if (mapID == 0 && localPlayer->zoneID == 33 && localPlayer->areaID == 35) return false;
+
 	return true;
 }
 

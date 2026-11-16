@@ -1,7 +1,10 @@
 ## Warning
 
-You need to extract and place the **MMAPS** inside **test/src/mmaps/**, and the **DBC** files inside **test/src/dbc/**.
-Why? Because the program now reads various kinds of data to handle pathfinding and compute specific information.
+You need to extract all the following data from the game client: **MMAPS**, **MAPS**, **VMAPS**, and **DBC**, and place them in their respective directories under **`test/src/`**.
+
+For example, **MAPS** data should be placed in **`test/src/maps/`**.
+
+This is required because the program now relies on multiple data sources to perform pathfinding and compute specific information accurately.
 
 The client **must** be in English (enUS)!
 

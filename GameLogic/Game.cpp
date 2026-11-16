@@ -5,47 +5,44 @@
 #include "ListAI.h"
 #include "./BossAI/BossAI.h"
 #include "Navigation.h"
+#include "WaterMap.h"
 #include "FactionTemplate.h"
 
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <cstdlib>
 #include <cmath>
 #include <mutex>
-
-static time_t jumpCD = time(0);
 
 static unsigned long long playerGuid = 0;
 static unsigned long long pastPlayerGuid = 0;
 static bool TradeShow = false, TradePendingSelf = false;
 
 void Game::MainLoop() {
-	while (Client::client_running == true) {
-		if (playerGuid == 0 || playerGuid != pastPlayerGuid) {
-			ThreadSynchronizer::RunOnMainThread(
-				[]() {
-					playerGuid = Functions::GetPlayerGuid();
-					if (playerGuid > 0 && playerGuid != pastPlayerGuid) {
-						Functions::EnumerateVisibleObjects(0);
-
-						if (localPlayer != NULL) {
-							pastPlayerGuid = playerGuid;
-							std::string msg =
-								"Name " + FunctionsLua::UnitName("player") +
-								" Class " + localPlayer->className +
-								" Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0");
-							Client::sendMessage(msg);
-
-							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
-							int skills[] = { 0, 0 };
-							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, std::size(listSkills));
-							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
-							Client::sendMessage(msg);
-						}
-					}
-				}
-			);
-		}
+    const auto syncCharacter = []() {
+        playerGuid = Functions::GetPlayerGuid();
+        if (!playerGuid) { localPlayer = nullptr; return; }
+        if (playerGuid == pastPlayerGuid) {
+            if (!localPlayer) Functions::EnumerateVisibleObjects(0);
+            return;
+        }
+        localPlayer = nullptr;
+        Functions::EnumerateVisibleObjects(0);
+        if (!localPlayer || localPlayer->Guid != playerGuid) return;
+        const std::string name = FunctionsLua::UnitName("player");
+        if (name.empty()) return;
+        Client::sendMessage("Name " + name + " Class " + localPlayer->className +
+            " Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0"));
+        std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
+        int skills[] = { 0, 0 };
+        std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, std::size(listSkills));
+        Client::sendMessage("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
+        pastPlayerGuid = playerGuid;
+    };
+    bool recoveringBreath = false, holdingSurface = false;
+    while (Client::client_running == true) {
+        ThreadSynchronizer::RunOnMainThread(syncCharacter);
 
 		while (Client::bot_running == true && ((Leader != NULL && (Leader->Guid != playerGuid)) || !MCNoAuto)) {
 			// ========================================== //
@@ -55,8 +52,8 @@ void Game::MainLoop() {
 			std::cout << "Initialisation start\n";*/
 
 			ThreadSynchronizer::RunOnMainThread(
-				[]() {
-					playerGuid = Functions::GetPlayerGuid();
+				[syncCharacter]() {
+					syncCharacter();
 					if (playerGuid > 0) {
 						NumGroupMembers = FunctionsLua::GetNumGroupMembers();
 						tarType = "party";
@@ -71,20 +68,6 @@ void Game::MainLoop() {
 						Functions::EnumerateVisibleObjects(0);
                         if (localPlayer != nullptr) BossAI::UpdateDangerZones();
 
-						if (playerGuid != pastPlayerGuid && localPlayer != NULL) {
-							pastPlayerGuid = playerGuid;
-							std::string msg =
-								"Name " + FunctionsLua::UnitName("player") +
-								" Class " + localPlayer->className +
-								" Faction " + (FactionTemplate.IsHorde(localPlayer->factionTemplateID) ? "1" : "0");
-							Client::sendMessage(msg);
-
-							std::string listSkills[] = { "Skinning", "Mining", "Herbalism", "Tailoring", "Leatherworking", "Blacksmithing", "Enchanting", "Alchemy", "Engineering" };
-							int skills[] = { 0, 0 };
-							std::tie(skills[0], skills[1]) = FunctionsLua::GetTradeSkillList(listSkills, std::size(listSkills));
-							msg = ("Craft" + std::to_string(skills[0]) + std::to_string(skills[1]));
-							Client::sendMessage(msg);
-						}
 
 						if (localPlayer != NULL) {
 							targetUnit = localPlayer->getTarget();
@@ -150,8 +133,9 @@ void Game::MainLoop() {
 										elapsed = (1/GetFramerate())
 										AATimer = AATimer - elapsed
 										if(AATimer < 0) then AATimer = 0 end
-										Multibox_BreathTimer = Multibox_BreathTimer - elapsed
-										if(Multibox_BreathTimer < 0) then Multibox_BreathTimer = 0 end
+										if(Multibox_BreathTimer >= 0) then
+											Multibox_BreathTimer = math.max(0, Multibox_BreathTimer - elapsed)
+										end
 									end)
 								)");
 							}
@@ -172,7 +156,7 @@ void Game::MainLoop() {
 									Functions::LuaCall("AcceptTrade()");
 								}
 								const char* breathTimer_char = (const char*)Functions::GetText("Multibox_BreathTimer");
-								breathTimer = GetFloatFromChar(breathTimer_char);
+								breathTimer = breathTimer_char && *breathTimer_char ? std::strtof(breathTimer_char, nullptr) : -1.0f;
 							}
 
 							if (localPlayer->isMounted && (Combat || ((Leader != NULL && !Leader->isMounted) && localPlayer->speed == 0 && !autoChores))) {
@@ -184,6 +168,7 @@ void Game::MainLoop() {
 			);
 
 			if (localPlayer == NULL || playerGuid == 0) {
+                recoveringBreath = holdingSurface = false;
 				Sleep(500);
 				break;
 			}
@@ -192,59 +177,37 @@ void Game::MainLoop() {
 			Functions::countEnemies(nbrEnemy, nbrCloseEnemy, nbrCloseEnemyFacing, nbrEnemyPlayer, ccTarget);
 
 			Combat = (localPlayer->flags & UNIT_FLAG_IN_COMBAT) == UNIT_FLAG_IN_COMBAT;
-            // Combat takes priority over travel, following and looting. Preserve tactical
-            // movements (target approach, line of sight, boss mechanics and recovery).
-            if (Combat && (Moving == MoveTypes::Journey || Moving == MoveTypes::Follow ||
-                           Moving == MoveTypes::Looting)) {
-                ThreadSynchronizer::RunOnMainThread([]() {
-                    if (localPlayer && (Moving == MoveTypes::Journey || Moving == MoveTypes::Follow ||
-                                        Moving == MoveTypes::Looting))
-                        Functions::StopMovement();
-                });
+            if (Combat && (Moving == MoveTypes::Journey || Moving == MoveTypes::Follow || Moving == MoveTypes::Looting)) {
+                if (localPlayer && (Moving == MoveTypes::Journey || Moving == MoveTypes::Follow || Moving == MoveTypes::Looting))
+					Functions::StopMovement();
             }
             if (!Combat && Navigation::HasBlacklists()) Navigation::ClearBlacklists();
+            if (!(localPlayer->movement_flags & MOVEFLAG_SWIMMING) || breathTimer < 0.0f)
+                recoveringBreath = holdingSurface = false;
+            else if (breathTimer < 15.0f) recoveringBreath = true;
+            const bool breathEmergency = recoveringBreath;
+            bool atSurface = false;
+            if (breathEmergency) {
+                const auto water = WaterMap::At(mapID, localPlayer->position.X, localPlayer->position.Y, localPlayer->position.Z);
+                atSurface = water.CanSwim() && localPlayer->position.Z >= water.surface - 1.8f;
+            }
             bool lateralRecovering = false;
-            ThreadSynchronizer::RunOnMainThread([&lateralRecovering]() {
-                lateralRecovering = Functions::UpdateLateralRecovery();
-            });
-            if (Moving != MoveTypes::NotMoving && Navigation::HasCurrentMovement() &&
-                (localPlayer->movement_flags & MOVEFLAG_ROOT)) {
-                ThreadSynchronizer::RunOnMainThread([]() {
-                    Functions::StopMovement();
-                });
+            if (Moving != MoveTypes::NotMoving && Navigation::HasCurrentMovement() && (localPlayer->movement_flags & MOVEFLAG_ROOT)) {
+                Functions::StopMovement();
             }
-            // Being stationary during a cast/channel is intentional, not a stuck path.
-            if (!lateralRecovering && !(Combat && (localPlayer->castInfo || localPlayer->channelInfo)) &&
-                Moving != MoveTypes::NotMoving && Navigation::HasCurrentMovement() &&
-                !(localPlayer->movement_flags & (MOVEFLAG_ROOT | MOVEFLAG_FALLING | MOVEFLAG_FALLINGFAR)) &&
-                Navigation::IsCurrentMovementStalled(localPlayer->position,
-                    localPlayer->isMoving || (localPlayer->movement_flags &
-                        (MOVEFLAG_FORWARD | MOVEFLAG_BACKWARD | MOVEFLAG_STRAFE_LEFT | MOVEFLAG_STRAFE_RIGHT)))) {
-                ThreadSynchronizer::RunOnMainThread([]() {
-                    Functions::HandleMovementStall();
-                });
-                ThreadSynchronizer::RunOnMainThread([&lateralRecovering]() {
-                    lateralRecovering = Functions::UpdateLateralRecovery();
-                });
-            }
+            Position aquaticDestination;
+            const bool aquaticMovement = (localPlayer->movement_flags & MOVEFLAG_SWIMMING) ||
+                (Navigation::GetCurrentMovementDestination(aquaticDestination) && WaterMap::At(mapID, aquaticDestination.X, aquaticDestination.Y, aquaticDestination.Z).CanSwim());
 
             if (Moving != MoveTypes::NotMoving &&
                 Navigation::IsCurrentMovementUnsafe(static_cast<unsigned int>(mapID), localPlayer->position)) {
-                ThreadSynchronizer::RunOnMainThread([]() {
-                    Functions::StopMovement();
-                });
+                Functions::StopMovement();
             }
 
-			IsFacing = false; distTarget = 0; hasTargetAggro = false;
+			IsFacing = false; distTarget = 0;
 			if (targetUnit != NULL) {
 				if (targetUnit->attackable) IsFacing = localPlayer->isFacing(targetUnit->position, 0.3f);
 				distTarget = localPlayer->position.DistanceTo(targetUnit->position) - localPlayer->combatReach - targetUnit->combatReach;
-				for (unsigned int i = 0; i < HasAggro[0].size(); i++) {
-					if (targetUnit->Guid == HasAggro[0][i]->Guid) {
-						hasTargetAggro = true;
-						break;
-					}
-				}
 			}
 
 			/*auto end = std::chrono::high_resolution_clock::now();
@@ -258,26 +221,18 @@ void Game::MainLoop() {
 			int RaptorStrikeIDs[8] = {2973, 14260, 14261, 14262, 14263, 14264, 14265, 14266};
 			int HeroicStrikeIDs[9] = { 78, 284, 285, 1608, 11564, 11565, 11566, 11567, 25286 };
 			int CleaveIDs[5] = { 845, 7369, 11608, 11609, 20569 };
-            bool escapingDanger = false;
-            if (Navigation::IsPositionDangerous(static_cast<unsigned int>(mapID), localPlayer->position)) {
-                ThreadSynchronizer::RunOnMainThread([&escapingDanger]() {
-                    escapingDanger = Functions::EscapeDangerZone();
-                });
+            if (breathEmergency) {
+                if (!atSurface) ThreadSynchronizer::RunOnMainThread([]() { Functions::AscendForBreath(); });
+                else if (!holdingSurface) Functions::StopMovement();
             }
-            if (escapingDanger) { }
-            else if (!lateralRecovering && breathTimer < 15.0f && breathTimer > 0.0f && (time(0) - jumpCD) >= 1.0f) {
-				// Breathe quickly !
-				ThreadSynchronizer::pressKey(0x20);
-				ThreadSynchronizer::releaseKey(0x20);
-				jumpCD = time(0);
-			}
+            holdingSurface = breathEmergency && atSurface;
+            if (breathEmergency) { }
 			else if (BossAI::BossAIAction()) { }
             else if (lateralRecovering) { }
 			else if ((localPlayer->channelInfo == 0) && (localPlayer->castInfo == 0 || localPlayer->isCasting(RaptorStrikeIDs, 8) || localPlayer->isCasting(HeroicStrikeIDs, 9) || localPlayer->isCasting(CleaveIDs, 5))) {
 				Position rangedLoSTarget;
 				ThreadSynchronizer::RunOnMainThread([&rangedLoSTarget]() {
-					if (Moving == MoveTypes::MoveLoSAoE && !groundAoERepositionRequested)
-						Functions::StopMovement();
+					if (Moving == MoveTypes::MoveLoSAoE && !groundAoERepositionRequested) Functions::StopMovement();
 					groundAoERepositionRequested = false;
 					los_target = true;
 					if (targetUnit != NULL) {
@@ -322,41 +277,34 @@ void Game::MainLoop() {
 							 Moving == MoveTypes::GoToTarget || Moving == MoveTypes::MoveLoS ||
 							 Moving == MoveTypes::MoveLoSAoE)) {
 							const Position targetPosition = rangedLoSTarget;
-							const bool targetSwimming = targetUnit->movement_flags & MOVEFLAG_SWIMMING;
-							ThreadSynchronizer::RunOnMainThread([targetPosition, targetSwimming]() {
-								Functions::MoveToLoS(targetPosition, MoveTypes::MoveLoS, targetSwimming);
+							ThreadSynchronizer::RunOnMainThread([targetPosition]() {
+								Functions::MoveToLoS(targetPosition, MoveTypes::MoveLoS);
 							});
 						}
 						else if (Moving == MoveTypes::MoveLoSAoE && los_target) { }
 						// Running and (target < 30 yard) => stop
 						else if ((Moving == MoveTypes::Follow || Moving == MoveTypes::GoToTarget || Moving == MoveTypes::MoveLoSAlly) && distTarget < maxRange) {
-                            ThreadSynchronizer::RunOnMainThread([]() {
-                                Functions::StopMovement();
-                            });
+                            Functions::StopMovement();
 						}
 						else if (distTarget > maxRange && !IsSitting) {
 							// Target > 30 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
-								Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget, true, targetSwim);
+								Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget);
 							});
 						}
 						else if (Moving == MoveTypes::MoveLoS && los_target) {
 							// Looking for LoS, found it => stop
-                            ThreadSynchronizer::RunOnMainThread([]() {
-                                Functions::StopMovement();
-                            });
+                            Functions::StopMovement();
 						}
 						else if (Moving == MoveTypes::RunAway && (distTarget > 15.0f || ((!(targetUnit->flags & UNIT_FLAG_STUNNED) && !(targetUnit->movement_flags & MOVEFLAG_ROOT))
-							&& ((!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && hasTargetAggro) || ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed > 4.5))))) {
+							&& ((!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->targetGuid == localPlayer->Guid) || ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed > 4.5))))) {
 							// Walking backward and (target > 12 yard || Creature aggro || target running)
-                            ThreadSynchronizer::RunOnMainThread([]() {
-                                Functions::StopMovement();
-                            });
+                            Functions::StopMovement();
 						}
-						else if ((Moving == MoveTypes::NotMoving || Moving == MoveTypes::RunAway) && (distTarget < 15.0f
+						else if ((Moving == MoveTypes::NotMoving || Moving == MoveTypes::RunAway) && (distTarget < 14.0f
 							&& ((targetUnit->flags & UNIT_FLAG_STUNNED) || (targetUnit->movement_flags & MOVEFLAG_ROOT)
-								|| (!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !hasTargetAggro)
+								|| (!(targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && !(targetUnit->targetGuid == localPlayer->Guid))
 								|| ((targetUnit->flags & UNIT_FLAG_PLAYER_CONTROLLED) && targetUnit->speed <= 4.5 && targetUnit->speed > 0)))) {
 							// Walk backward
 							ThreadSynchronizer::RunOnMainThread([]() {
@@ -378,14 +326,15 @@ void Game::MainLoop() {
 								Dismount();
 							});
 						}
+						else Moving = MoveTypes::NotMoving;
 					}
 					else {
 						if (distTarget > 1.5f && !IsSitting) {
 							// Target > 1.5 yard => Run to it
 							bool targetSwim = false; if (targetUnit->movement_flags & MOVEFLAG_SWIMMING) targetSwim = true;
 							ThreadSynchronizer::RunOnMainThread([=]() {
-								if (Leader != NULL && (Leader->Guid == localPlayer->Guid) && Leader->indexGroup != 0) Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget, false, targetSwim);
-								else Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget, true, targetSwim);
+								if (Leader != NULL && (Leader->Guid == localPlayer->Guid) && Leader->indexGroup != 0) Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget);
+								else Functions::MoveTo(targetUnit->position, MoveTypes::GoToTarget);
 							});
 						}
 						else if (Moving == MoveTypes::NotMoving && !IsFacing && !localPlayer->isMoving) ThreadSynchronizer::RunOnMainThread([]() {
@@ -410,15 +359,13 @@ void Game::MainLoop() {
 					// Find LoS (ally)
 					const Position targetPosition = targetUnit->position;
                     const bool targetSwimming = (targetUnit->movement_flags & MOVEFLAG_SWIMMING) != 0;
-                    ThreadSynchronizer::RunOnMainThread([targetPosition, targetSwimming]() {
-                        Functions::MoveToLoS(targetPosition, MoveTypes::MoveLoSAlly, targetSwimming);
+                    ThreadSynchronizer::RunOnMainThread([targetPosition]() {
+                        Functions::MoveToLoS(targetPosition, MoveTypes::MoveLoSAlly);
                     });
 				}
 				else if (Moving == MoveTypes::MoveLoSAlly && (targetUnit == NULL || (targetUnit->unitReaction < Friendly) || ((targetUnit->unitReaction >= Friendly) && los_target))) {
 					// Found LoS (ally)
-                    ThreadSynchronizer::RunOnMainThread([]() {
-                        Functions::StopMovement();
-                    });
+                    Functions::StopMovement();
 				}
 				else if (
 					(!Combat || passiveGroup) && !localPlayer->isdead && !IsSitting && (localPlayer->castInfo == 0) && (localPlayer->channelInfo == 0) &&
@@ -534,21 +481,20 @@ void Game::MainLoop() {
 			std::cout << "Actions: elapsed time is " << float_ms.count() << " milliseconds" << std::endl;*/
 			Sleep(500);
 		}
-        if (Moving != MoveTypes::NotMoving)
-            ThreadSynchronizer::RunOnMainThread([]() { Functions::StopMovement(); });
+        if (localPlayer != NULL && Moving != MoveTypes::NotMoving) Functions::StopMovement();
 		Sleep(500);
 	}
 	Navigation::DisconnectClient();
 }
 
 std::vector<WoWUnit*> HasAggro[40]; std::vector<std::tuple<unsigned long long, time_t>> LootHistory;
-bool Combat = false, IsSitting = false, IsFacing = false, hasTargetAggro = false, MCNoAuto = false, MCAutoMove = false,
+bool Combat = false, IsSitting = false, IsFacing = false, MCNoAuto = false, MCAutoMove = false,
 los_target = false, passiveGroup = false, inInstance = false, inventoryFull = false;
 bool groundAoERepositionRequested = false;
 int AoEHeal = 0, nbrEnemy = 0, nbrCloseEnemy = 0, nbrCloseEnemyFacing = 0, nbrEnemyPlayer = 0, NumGroupMembers = 0, playerSpec = 0, positionCircle = 0,
 mapID = -1, keybindTrigger = 0, IsInGroup = 0, autoChores = 0;
 unsigned long long LastTarget = 0;
-float distTarget = 0, autoAttackTimer = 0, breathTimer = 0;
+float distTarget = 0, autoAttackTimer = 0, breathTimer = -1;
 MoveTypes Moving;
 std::string tarType = "party";
 std::mutex leaderInfosMutex;

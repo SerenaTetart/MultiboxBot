@@ -319,7 +319,6 @@ LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType 
                 //name = (char*)(*(uintptr_t*)(cacheEntryPTR + 0x8));
                 int equipSlot = *(int*)(cacheEntryPTR + 0x2C);
                 if (equipSlot > 0) {
-
                     /*int intellect = *(int*)(cacheEntryPTR + 0x90);
                     int spirit = *(int*)(cacheEntryPTR + 0x94);
                     int stamina = *(int*)(cacheEntryPTR + 0x98);
@@ -346,6 +345,7 @@ LocalPlayer::LocalPlayer(uintptr_t pointer, unsigned long long guid, ObjectType 
     corpse_position = Position(x, y, z);
     //std::cout << "corpse pos: " << corpse_position.X << ", " << corpse_position.Y << ", " << corpse_position.Z << "\n";
     zoneID = *(int*)(ZONE_ID_OFFSET);
+    areaID = *(int*)(AREA_ID_OFFSET);
 }
 
 void LocalPlayer::ClickToMove(ClickType clickType, unsigned long long interactGuid, Position pos) {

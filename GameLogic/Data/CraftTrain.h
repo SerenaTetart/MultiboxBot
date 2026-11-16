@@ -143,10 +143,10 @@ inline const Profession blacksmithCrafts = {
     { 3835, 165, 205,{ { 3575, 6 },{ 2605, 1 } } }, // Green Iron Bracers
     { 6040, 185, 222,{ { 3859, 5 },{ 3486, 2 } } }, // Golden Scale Bracers
     { 11144, 200, 210,{ { 6037, 1 },{ 3486, 1 } } }, // Truesilver Rod
-    { 7920, 205, 225,{ { 3860, 12 } } }, // Mithril Scale Pants
     { 7922, 215, 235,{ { 3859, 14 },{ 7966, 1 } } }, // Steel Plate Helm
-    { 7931, 230, 250,{ { 3860, 10 },{ 4338, 6 } } }, // Mithril Coif
-    { 7933, 235, 275,{ { 3860, 14 },{ 4304, 4 } } }, // Heavy Mithril Boots
+    { 7920, 205, 240,{ { 3860, 12 } } }, // Mithril Scale Pants
+    { 7931, 240, 260,{ { 3860, 10 },{ 4338, 6 } } }, // Mithril Coif
+    { 7933, 240, 265,{ { 3860, 14 },{ 4304, 4 } } }, // Heavy Mithril Boots
     { 15872, 275, 280,{ { 12360, 1 },{ 12644, 1 } } }, // Arcanite Skeleton Key
 };
 
@@ -184,6 +184,7 @@ inline const Profession tailoringCrafts = {
     { 9999, 205, 220,{ { 4339, 2 },{ 4291, 3 } } }, // Black Mageweave Leggings
     { 10003, 220, 230,{ { 4339, 2 },{ 8343, 2 } } }, // Black Mageweave Gloves
 
+    { 10024, 240, 270,{ { 4339, 4 },{ 2604, 2 },{8343, 2} }, 0, 0, 0, false }, // Red Mageweave Headband
     { 10024, 230, 260,{ { 4339, 3 },{ 8343, 2 } } }, // Black Mageweave Headband
     { 13856, 255, 300,{ { 14048, 3 },{ 14341, 1 } } }, // Runecloth Belt
 };
@@ -196,11 +197,13 @@ inline const Profession alchemyCrafts = {
     { 929, 110, 155,{ { 2453, 1 },{ 2450, 1 },{ 3372, 1 } } }, // Healing Potion
     { 3385, 120, 155,{ { 785, 1 },{ 3820, 1 },{ 3371, 1 } } }, // Lesser Mana Potion
     { 3390, 140, 165,{ { 3355, 1 },{ 2452, 1 },{ 3372, 1 } }, 0, 0, 0, false }, // Elixir of Lesser Agility
+    { 3391, 150, 195,{ { 2449, 1 },{ 3356, 1 },{ 3372, 1 } }, 0, 0, 0, false }, // Elixir of Ogre's Strength
     { 3388, 155, 190,{ { 2453, 2 },{ 2450, 2 },{ 3372, 1 } } }, // Strong Troll's Blood Potion
     { 1710, 155, 195,{ { 3357, 1 },{ 3356, 1 },{ 3372, 1 } } }, // Greater Healing Potion
     { 3823, 165, 205,{ { 3818, 1 },{ 3355, 1 },{ 3372, 1 } } }, // Lesser invisibility potion
     { 8949, 185, 210,{ { 3820, 1 },{ 3821, 1 },{ 3372, 1 } } }, // Elixir of Agility
     { 8951, 195, 215,{ { 3355, 1 },{ 3821, 1 },{ 3372, 1 } } }, // Elixir of Greater Defense
+    { 3828, 195, 215,{ { 3358, 1 },{ 3818, 1 },{ 3372, 1 } }, 0, 0, 0, false }, // Elixir of Detect Lesser Invisibility
     { 3928, 215, 230,{ { 8838, 1 },{ 3358, 1 },{ 8925, 1 } } }, // Superior Healing Potion
     { 9154, 230, 250,{ { 8836, 1 },{ 8925, 1 } } }, // Elixir of Detect Undead
     { 9187, 240, 265,{ { 8838, 1 },{ 3821, 1 },{ 8925, 1 } } }, // Elixir of Greater Agility

@@ -37,7 +37,10 @@ inline const std::unordered_map<int, ResistanceFlags> npcResistances = {
     { 3855, ResistanceFlags::Shadow },
     { 4978, ResistanceFlags::Frost },
     { 6220, ResistanceFlags::Frost },
-    { 7079, ResistanceFlags::Frost }
+    { 7079, ResistanceFlags::Frost },
+    { 11783, ResistanceFlags::Nature },
+    { 11784, ResistanceFlags::Nature },
+    { 12201, ResistanceFlags::Nature }
     // { 12348, ResistanceFlags::Nature | ResistanceFlags::Shadow }
 };
 
