@@ -43,4 +43,3 @@ extern std::vector<InventoryItem> virtualInventory;
 extern std::vector<SpellSlotData> virtualSpellBook;
 extern WoWUnit* ccTarget; extern WoWUnit* targetUnit; extern WoWUnit* GroupMember[40]; extern WoWUnit* PartyMember[5]; extern WoWUnit* Leader;
 extern time_t current_time;
-extern Position playerLastPos;

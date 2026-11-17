@@ -34,7 +34,7 @@ bool ListAI::DPSTargeting() {
 					&& !ListUnits[i].isFromGroup
 					&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
 					&& ListUnits[i].position.DistanceTo(localPlayer->position) < minDist
-				) {
+					) {
 					target = &ListUnits[i];
 					minDist = ListUnits[i].position.DistanceTo(localPlayer->position);
 				}
@@ -57,7 +57,7 @@ bool ListAI::DPSTargeting() {
 				&& !ListUnits[i].isFromGroup
 				&& (ListUnits[i].unitReaction < Neutral || FactionTemplate.isNeutral(ListUnits[i].factionTemplateID))
 				&& (target == NULL || isPrioritary(&ListUnits[i], target))
-			) {
+				) {
 				target = &ListUnits[i];
 			}
 		}
@@ -79,28 +79,47 @@ bool ListAI::DPSTargeting() {
 
 bool ListAI::TankTargeting() {
 	if ((Leader == NULL) || (Leader->Guid != localPlayer->Guid) || MCAutoMove || Leader->indexGroup != 0) {
-		bool targetFocusingTank = false;
-		if (targetUnit != NULL) {
-			for (int i = 0; i <= NumGroupMembers; i++) {
-				if (GroupMember[i] != NULL && targetUnit->targetGuid == GroupMember[i]->Guid && GroupMember[i]->role == 0) {
-					targetFocusingTank = true;
-					break;
+		WoWUnit* target = NULL; int maxPriority = -1; float minDist = INFINITY;
+		for (int i = NumGroupMembers; i >= 0; i--) {
+			if (GroupMember[i] == NULL || GroupMember[i]->role == 0) continue;
+			for (unsigned int j = 0; j < HasAggro[i].size(); j++) {
+				WoWUnit* unit = HasAggro[i][j];
+				if (unit == NULL || unit->isdead || !unit->attackable || unit->isFromGroup || (unit->flags & UNIT_FLAG_POSSESSED)) continue;
+				bool targetFocusingTank = (unit->targetGuid == localPlayer->Guid);
+				for (int k = 0; k <= NumGroupMembers && !targetFocusingTank; k++) {
+					if (GroupMember[k] != NULL && GroupMember[k]->role == 0 && unit->targetGuid == GroupMember[k]->Guid) {
+						targetFocusingTank = true;
+					}
+				}
+				if (targetFocusingTank) continue;
+				int priority = getCreaturePriority(unit);
+				if (priority == 999) continue;
+				float dist = unit->position.DistanceTo(localPlayer->position);
+				if (target == NULL || priority > maxPriority || (priority == maxPriority && dist < minDist)) {
+					target = unit;
+					maxPriority = priority;
+					minDist = dist;
 				}
 			}
 		}
-		if (targetUnit == NULL || targetUnit->isdead || !targetUnit->attackable || targetFocusingTank) {
-			WoWUnit* target = NULL; float minDist = INFINITY;
-			for (int i = NumGroupMembers; i > 0; i--) { //Tank also
-				if ((HasAggro[i].size() > 0) && GroupMember[i] != NULL && GroupMember[i]->role != 0 && (HasAggro[i][0]->position.DistanceTo(localPlayer->position) < minDist)) {
-					target = HasAggro[i][0];
-					minDist = HasAggro[i][0]->position.DistanceTo(localPlayer->position);
-				}
-			}
-			if (target != NULL) {
+		if (target != NULL) {
+			if (target->Guid != localPlayer->targetGuid) {
 				localPlayer->SetTarget(target->Guid);
 				return true;
 			}
-			else DPSTargeting();
+		}
+		else {
+			bool targetFocusingTank = (targetUnit != NULL && targetUnit->targetGuid == localPlayer->Guid);
+			if (targetUnit != NULL) {
+				for (int i = 0; i <= NumGroupMembers && !targetFocusingTank; i++) {
+					if (GroupMember[i] != NULL && targetUnit->targetGuid == GroupMember[i]->Guid && GroupMember[i]->role == 0) {
+						targetFocusingTank = true;
+					}
+				}
+			}
+			if (targetUnit == NULL || targetUnit->isdead || !targetUnit->attackable || targetFocusingTank) {
+				return DPSTargeting();
+			}
 		}
 	}
 	return false;

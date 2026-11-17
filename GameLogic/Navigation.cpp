@@ -23,15 +23,9 @@ namespace {
     Clock::time_point ReconnectAfter{};
     bool WinsockActive = false;
     std::string ReceivedData;
-    // Local avoidance must clear immediately; server removals can be retried later.
-    // Protected by NetworkMutex.
     std::vector<std::string> PendingBlacklistRemovals;
 }
-Position Navigation::LastMoveDestination;
-bool Navigation::HasLastMove = false;
-MovementWatchdog Navigation::MoveWatchdog;
 
-// Navigation requests share a single persistent, synchronized TCP connection.
 static bool SendAll(SOCKET socketHandle, const std::string& message) {
     size_t sent = 0;
     while (sent < message.size()) {
@@ -56,8 +50,6 @@ static void RetryNavigationLater(SOCKET& socketHandle) {
     ReconnectAfter = Clock::now() + ReconnectCooldown;
 }
 
-// Ancienne reception par buffer C (conservee pour reference) :
-// make it a C-string
 static bool ReceiveLine(SOCKET socketHandle, std::string& line) {
     while (true) {
         const size_t newline = ReceivedData.find('\n');
@@ -110,8 +102,6 @@ static bool EnsureNavigationConnected(SOCKET& socketHandle, WSADATA& wsaData, co
     return true;
 }
 
-// Called with NetworkMutex held, after the socket is connected. On a disconnect,
-// keep unconfirmed removals so a later route request can synchronize the server.
 static bool FlushPendingBlacklistRemovals(SOCKET& socketHandle) {
     while (!PendingBlacklistRemovals.empty()) {
         const std::string command = "R " + PendingBlacklistRemovals.back() + "\n";
@@ -127,7 +117,6 @@ static bool FlushPendingBlacklistRemovals(SOCKET& socketHandle) {
 }
 
 void appendPosition(std::string& msg, const Position& pos) {
-	// truncate at 4 decimals
 	std::ostringstream oss;
 	oss << std::fixed << std::setprecision(4) << pos.X << "," << pos.Y << "," << pos.Z;
 
@@ -143,13 +132,11 @@ Position Navigation::CalculatePath(unsigned int mapID, Position start, Position 
     if (!EnsureNavigationConnected(sock, WSAData, "127.0.0.1", 50002) ||
         !FlushPendingBlacklistRemovals(sock)) return start;
 
-    // Build and send: "C" + "sx,sy,sz ex,ey,ez mapID"
     std::string msg = "C";
     appendPosition(msg, start);
     msg += " ";
     appendPosition(msg, end);
     msg += " " + std::to_string(mapID) + "\n";
-    // Receive reply "nx,ny,nz"
     std::string response;
     if (!SendAll(sock, msg) || !ReceiveLine(sock, response)) {
         RetryNavigationLater(sock);
@@ -176,8 +163,6 @@ static bool ReceiveNavigationAck(SOCKET socketHandle, bool& transportOk) {
 
 bool Navigation::AddBlacklist(unsigned int mapId, const std::string& name, const Position& position, float radius, unsigned int type) {
     if (name.empty() || radius <= 0.0f) return false;
-    // Add locally *first*: even a disconnected navigation server must never
-    // cause an explicitly blacklisted zone to be ignored by CTM movement.
     {
         std::lock_guard<std::mutex> guard(AvoidanceMutex);
         if (std::any_of(Blacklists.begin(), Blacklists.end(),
@@ -241,8 +226,6 @@ void Navigation::ClearBlacklists() {
         Blacklists.clear();
         ++ZoneVersion;
     }
-    // Never block chores or keep a stale danger area just because the server is
-    // unavailable. The next navigation request synchronizes these removals.
     {
         std::lock_guard<std::mutex> networkGuard(NetworkMutex);
         for (const auto& name : names) {
@@ -309,47 +292,6 @@ bool Navigation::IsPositionDangerous(unsigned int mapId, const Position& positio
 
 bool Navigation::IsSegmentSafe(unsigned int mapId, const Position& from, const Position& to) {
     return IsSegmentSafe(GetAvoidanceSnapshot(mapId), from, to);
-}
-
-void Navigation::RecordMovement(const Position& start, const Position& destination) {
-    std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    LastMoveDestination = destination;
-    HasLastMove = true;
-    MoveWatchdog.Record(start, destination, MovementWatchdog::Clock::now());
-}
-
-bool Navigation::HasCurrentMovement() {
-    std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    return HasLastMove && MoveWatchdog.Active();
-}
-
-bool Navigation::GetCurrentMovementDestination(Position& destination) {
-    std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    if (!HasLastMove) return false;
-    destination = LastMoveDestination;
-    return true;
-}
-
-bool Navigation::IsCurrentMovementStalled(const Position& from, bool movementReported) {
-    std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    return HasLastMove && MoveWatchdog.Stalled(from, MovementWatchdog::Clock::now(), movementReported);
-}
-
-void Navigation::ClearMovement() {
-    std::lock_guard<std::mutex> guard(AvoidanceMutex);
-    HasLastMove = false;
-    MoveWatchdog.Clear();
-}
-
-bool Navigation::IsCurrentMovementUnsafe(unsigned int mapId, const Position& from) {
-    Position destination;
-    {
-        std::lock_guard<std::mutex> guard(AvoidanceMutex);
-        if (!HasLastMove) return false;
-        destination = LastMoveDestination;
-    }
-    if (from.DistanceTo2D(destination) < 1.0f) return false;
-    return !IsSegmentSafe(mapId, from, destination);
 }
 
 bool Navigation::ConnectToServer(const char* addr, int port) {

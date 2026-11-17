@@ -52,7 +52,8 @@ public:
                             if (!(spawn.flags & 1)) t.instances.push_back(std::move(spawn));
                         }
                     }
-                } else {
+                }
+                else {
                     while (file.peek() != EOF) {
                         Instance spawn;
                         std::uint32_t reference;
@@ -64,7 +65,8 @@ public:
             tiles.push_front(std::move(t));
             if (tiles.size() > 24) tiles.pop_back();
             tile = tiles.begin();
-        } else if (tile != tiles.begin()) {
+        }
+        else if (tile != tiles.begin()) {
             tiles.splice(tiles.begin(), tiles, tile);
             tile = tiles.begin();
         }
@@ -73,6 +75,9 @@ public:
         Liquid best;
         float nearestGround = -std::numeric_limits<float>::infinity();
         for (const Instance& instance : tile->instances) {
+            if (scanGround && instance.hasBounds && ValidBounds(instance.low, instance.high) &&
+                (pos.x < instance.low.x - 0.001f || pos.x > instance.high.x + 0.001f ||
+                    pos.y < instance.low.y - 0.001f || pos.y > instance.high.y + 0.001f)) continue;
             if (!scanGround && instance.hasBounds && !Inside(instance.low, instance.high, pos)) continue;
             auto model = std::find_if(models.begin(), models.end(), [&instance](const Model& m) { return m.name == instance.name; });
             if (model == models.end()) {
@@ -124,11 +129,33 @@ public:
                         m.groups.emplace_back(std::move(g));
                     }
                     if (!valid) { m.groups.clear(); m.hasLiquid = false; }
+                    else {
+                        bool boundsValid = true;
+                        for (const Group& group : m.groups) {
+                            if (group.vertices.empty() || group.bih.tree.empty()) continue;
+                            if (!ValidBounds(group.bih.low, group.bih.high)) { boundsValid = false; break; }
+                            if (!m.groundBoundsKnown) {
+                                m.groundLow = group.bih.low;
+                                m.groundHigh = group.bih.high;
+                                m.groundBoundsKnown = true;
+                            }
+                            else {
+                                m.groundLow.x = (std::min)(m.groundLow.x, group.bih.low.x);
+                                m.groundLow.y = (std::min)(m.groundLow.y, group.bih.low.y);
+                                m.groundLow.z = (std::min)(m.groundLow.z, group.bih.low.z);
+                                m.groundHigh.x = (std::max)(m.groundHigh.x, group.bih.high.x);
+                                m.groundHigh.y = (std::max)(m.groundHigh.y, group.bih.high.y);
+                                m.groundHigh.z = (std::max)(m.groundHigh.z, group.bih.high.z);
+                            }
+                        }
+                        if (!boundsValid) m.groundBoundsKnown = false;
+                    }
                 }
                 models.push_front(std::move(m));
                 if (models.size() > 12) models.pop_back();
                 model = models.begin();
-            } else if (model != models.begin()) {
+            }
+            else if (model != models.begin()) {
                 models.splice(models.begin(), models, model);
                 model = models.begin();
             }
@@ -137,6 +164,7 @@ public:
             const Vec local = Rotate(instance, delta) / instance.scale;
             const Vec down = Rotate(instance, { 0, 0, -1 });
             const Vec ray{ local.x - 0.1f * down.x, local.y - 0.1f * down.y, local.z - 0.1f * down.z };
+            if (scanGround && model->groundBoundsKnown && !RayIntersectsBounds(model->groundLow, model->groundHigh, ray, down)) continue;
             for (const Group& group : model->groups) {
                 if (group.vertices.empty() || (!scanGround && !Inside(group.low, group.high, local))) continue;
                 const float distance = GroundDistance(group, ray, down);
@@ -147,8 +175,6 @@ public:
                 best = {};
                 best.ground = ground;
                 best.groundFound = true;
-                // Même lors d'un sondage du sol, conserver le liquide du groupe WMO
-                // retenu. Cela permet de donner la priorité au bon étage (sec ou inondé).
                 const auto& liquid = group.liquid;
                 if (liquid.heights.empty()) continue;
                 constexpr float cellSize = 533.333f / 128.0f;
@@ -198,6 +224,8 @@ private:
         std::string name;
         bool hasLiquid = false;
         std::vector<Group> groups;
+        Vec groundLow, groundHigh;
+        bool groundBoundsKnown = false;
     };
     struct Instance {
         std::uint32_t flags = 0;
@@ -223,6 +251,30 @@ private:
     static bool Inside(const Vec& low, const Vec& high, const Vec& p) {
         return p.x >= low.x && p.x <= high.x && p.y >= low.y && p.y <= high.y &&
             p.z >= low.z && p.z <= high.z;
+    }
+    static bool ValidBounds(const Vec& low, const Vec& high) {
+        return std::isfinite(low.x) && std::isfinite(low.y) && std::isfinite(low.z) &&
+            std::isfinite(high.x) && std::isfinite(high.y) && std::isfinite(high.z) &&
+            low.x <= high.x && low.y <= high.y && low.z <= high.z;
+    }
+    static bool RayIntersectsBounds(const Vec& low, const Vec& high, const Vec& origin, const Vec& dir) {
+        float tMin = 0.0f, tMax = std::numeric_limits<float>::infinity();
+        for (int i = 0; i < 3; ++i) {
+            const float o = (&origin.x)[i], d = (&dir.x)[i];
+            const float lo = (&low.x)[i] - 0.001f, hi = (&high.x)[i] + 0.001f;
+            if (!std::isfinite(o) || !std::isfinite(d)) return true; // Borne non fiable : conserver la recherche exacte.
+            if (std::abs(d) < 1.0e-8f) {
+                if (o < lo || o > hi) return false;
+            }
+            else {
+                float a = (lo - o) / d, b = (hi - o) / d;
+                if (a > b) std::swap(a, b);
+                tMin = (std::max)(tMin, a);
+                tMax = (std::min)(tMax, b);
+                if (tMin > tMax) return false;
+            }
+        }
+        return true;
     }
     static Vec Rotate(const Instance& instance, const Vec& v) {
         const float* m = instance.inverse;
@@ -259,7 +311,8 @@ private:
             bih->high = high;
             bih->tree.resize(count);
             if (!Read(file, bih->tree.data(), count)) return false;
-        } else file.seekg(std::streamoff(count) * 4, std::ios::cur);
+        }
+        else file.seekg(std::streamoff(count) * 4, std::ios::cur);
         if (!Read(file, count) || count > 16000000) return false;
         if (bih) {
             bih->objects.resize(count);
@@ -321,7 +374,8 @@ private:
                         if (distance >= 0 && distance < best) best = distance;
                     }
                 }
-            } else if (axis < 3 && offset + (bvh2 ? 2u : 5u) < tree.size()) {
+            }
+            else if (axis < 3 && offset + (bvh2 ? 2u : 5u) < tree.size()) {
                 float clip0, clip1;
                 std::memcpy(&clip0, &tree[node + 1], 4);
                 std::memcpy(&clip1, &tree[node + 2], 4);
@@ -329,14 +383,16 @@ private:
                 if (bvh2) {
                     if (std::abs(d) < 1.0e-8f) {
                         if (o >= clip0 && o <= clip1) { node = offset; continue; }
-                    } else {
+                    }
+                    else {
                         float t0 = (clip0 - o) / d, t1 = (clip1 - o) / d;
                         if (t0 > t1) std::swap(t0, t1);
                         tMin = (std::max)(tMin, t0);
                         tMax = (std::min)(tMax, t1);
                         if (tMin <= tMax && tMin <= best) { node = offset; continue; }
                     }
-                } else {
+                }
+                else {
                     const std::uint32_t left = offset, right = offset + 3;
                     float firstNear = tMin, firstFar = tMax, secondNear = tMin, secondFar = tMax;
                     const bool reverse = d < 0;
@@ -345,7 +401,8 @@ private:
                     if (std::abs(d) < 1.0e-8f) {
                         if (o > clip0) firstNear = best + 1;
                         if (o < clip1) secondNear = best + 1;
-                    } else {
+                    }
+                    else {
                         firstFar = (std::min)(firstFar, (firstClip - o) / d);
                         secondNear = (std::max)(secondNear, (secondClip - o) / d);
                     }

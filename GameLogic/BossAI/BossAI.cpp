@@ -33,7 +33,7 @@ bool BossAI::PositionBehind(WoWUnit* boss) {
     ThreadSynchronizer::RunOnMainThread([destination, guid, &started]() {
         if (!localPlayer || !targetUnit || targetUnit->Guid != guid || Moving == MoveTypes::BossMechanic || Moving == MoveTypes::RunAway) return;
         Functions::MoveTo(destination, MoveTypes::GoToTarget);
-        started = Moving == MoveTypes::GoToTarget && Navigation::HasCurrentMovement();
+        started = Moving == MoveTypes::GoToTarget;
     });
     return started;
 }

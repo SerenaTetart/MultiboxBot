@@ -3,7 +3,6 @@
 #include <windows.h>
 
 #include "WoWObject.h"
-#include "MovementWatchdog.h"
 
 #include <vector>
 #include <string>
@@ -60,12 +59,6 @@ public:
     static bool IsSegmentSafe(const AvoidanceSnapshot& zones, const Position& from, const Position& to);
     static bool IsPositionDangerous(const AvoidanceSnapshot& zones, const Position& position);
 
-    static void RecordMovement(const Position& start, const Position& destination);
-    static bool HasCurrentMovement();
-    static bool IsCurrentMovementStalled(const Position& from, bool movementReported = true);
-    static bool GetCurrentMovementDestination(Position& destination);
-    static void ClearMovement();
-    static bool IsCurrentMovementUnsafe(unsigned int mapId, const Position& from);
     static void DisconnectClient();
 private:
 
@@ -76,7 +69,4 @@ private:
     static std::mutex AvoidanceMutex;
     static std::uint64_t ZoneVersion;
     static std::unordered_map<unsigned int, std::pair<std::uint64_t, AvoidanceSnapshot>> ZoneSnapshotCache;
-    static Position LastMoveDestination;
-    static bool HasLastMove;
-    static MovementWatchdog MoveWatchdog;
 };

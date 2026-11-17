@@ -48,17 +48,8 @@ public:
         const Sample terrain = MapAt(mapId, x, y, z);
         const bool terrainHasLiquid = IsLiquid(terrain.kind);
         const bool terrainLiquidHere = IsLiquidAtHeight(terrain, z);
-
-        // Les VMaps avec liquide sont toujours consultées. Lorsque le .map situe
-        // réellement du liquide à cette hauteur, sonder AUSSI les WMO secs.
-        // Le rayon démarre un peu au-dessus des pieds pour absorber l'imprécision
-        // numérique, sans détecter le pont au-dessus d'un nageur.
         constexpr float WmoProbeAbove = 0.2f;
-        const auto vmap = VMapReader::At(mapId, gridX, gridY, x, y,
-            z + WmoProbeAbove, terrainLiquidHere);
-
-        // Ne pas confondre « WMO dans la même colonne X/Y » et « sur ce WMO ».
-        // Un pont à plusieurs mètres au-dessus du nageur ne masque pas la rivière.
+        const auto vmap = VMapReader::At(mapId, gridX, gridY, x, y, z + WmoProbeAbove, terrainLiquidHere);
         constexpr float WmoMaxDistanceBelow = 1.25f;
         const bool onWmo = terrainLiquidHere && vmap.groundFound &&
             std::isfinite(vmap.ground) &&
@@ -66,8 +57,6 @@ public:
             vmap.ground <= z + WmoProbeAbove;
 
         if (onWmo) {
-            // L'éventuel liquide du même groupe WMO gagne sur le .map.
-            // Sinon, le plancher WMO est sec, même si le .map indique de l'eau.
             if (vmap.found) {
                 const Sample liquid = FromVMap(vmap);
                 if (IsLiquidAtHeight(liquid, z)) return liquid;
@@ -80,8 +69,6 @@ public:
             if (IsLiquidAtHeight(liquid, z)) return liquid;
         }
 
-        // Sans sol WMO au niveau de Z, l'eau du terrain n'est pertinente que
-        // si la position est réellement dans / au voisinage de son volume.
         if (terrainHasLiquid && !terrainLiquidHere) {
             Sample dry = terrain;
             dry.kind = Kind::Dry;
@@ -90,7 +77,6 @@ public:
         return terrain;
     }
 
-    // Lecture directe du terrain .map, y compris quand aucun liquide n'est present.
     static Sample MapAt(unsigned mapId, float x, float y, float z) {
         if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) return {};
         constexpr float GridSize = 533.333333f;
@@ -277,8 +263,6 @@ private:
     }
 
     static bool IsLiquidAtHeight(const Sample& sample, float z) {
-        // Z correspond aux pieds du personnage, pas au sommet de sa collision.
-        // Au-dessus de la surface ou sous le fond, le liquide est sur un autre étage.
         constexpr float AboveSurfaceTolerance = 0.75f;
         constexpr float BelowGroundTolerance = 2.0f;
         return IsLiquid(sample.kind) && std::isfinite(sample.surface) &&

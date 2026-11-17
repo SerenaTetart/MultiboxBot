@@ -25,20 +25,19 @@
 
 void MoveToMap(Position targetpos) {
 	if (!localPlayer || (Combat && !localPlayer->isdead)) return;
-	if (localPlayer->position.DistanceTo(targetpos) < 2.0f) {
+	else if (localPlayer->position.DistanceTo(targetpos) < 2.0f) {
 		Functions::StopMovement();
-		return;
 	}
-	if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) &&
-		targetpos.DistanceTo(localPlayer->position) > 40.0f &&
-		!localPlayer->isdead && Game::CanUseMount()) {
-		ThreadSynchronizer::RunOnMainThread([]() { Game::UseMount(); });
-		return;
+	else if (!(localPlayer->movement_flags & MOVEFLAG_FORWARD) && targetpos.DistanceTo(localPlayer->position) > 40.0f && !localPlayer->isdead && Game::CanUseMount()) {
+		ThreadSynchronizer::RunOnMainThread([]() {
+			Game::UseMount();
+		});
 	}
-	ThreadSynchronizer::RunOnMainThread([targetpos]() {
-		if (!localPlayer || (Combat && !localPlayer->isdead)) return;
-		Functions::MoveTo(targetpos, MoveTypes::Journey);
-	});
+	else {
+		ThreadSynchronizer::RunOnMainThread([targetpos]() {
+			Functions::MoveTo(targetpos, MoveTypes::Journey);
+		});
+	}
 }
 
 void Game::CorpseRun() {
